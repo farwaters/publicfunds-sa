@@ -11,6 +11,7 @@ detectors:
   D4_supplier_concentration: "One supplier won most of a buyer's tender value over three years."
   D5_award_value_gaps: "Many of a buyer's published tender awards have no value, or an obviously wrong value such as R0."
   D8_irregular_expenditure_trend: "Reported irregular expenditure rose sharply two years in a row."
+  D13_fuel_unit_price: "A payment for fuel works out at a much higher price per litre than the official fuel price at the time (reviewed internally; not published)."
 known_gaps:
   - id: KE-006
     text: "The latest financial year (2024/25) has no audited results, irregular-expenditure figures or audit opinions in the Municipal Money data yet."
@@ -23,7 +24,7 @@ known_gaps:
   - id: KE-001
     text: "The eTenders live API often fails; tender data comes from the monthly bulk file plus whatever recent updates the API returned."
   - id: KE-012
-    text: "Fuel prices come from the Department of Mineral and Petroleum Resources' monthly history table for the current year only; earlier years are not loaded yet."
+    text: "Fuel prices come from the Department of Mineral and Petroleum Resources' yearly price history tables, from January 2019. A few months are missing because their figures could not be read reliably from the PDF (Nov 2021, Sep 2022, Jan, May, Oct and Dec 2023, Dec 2025); those months show as unknown."
 population:
   status: unknown
   reason: "Population and household counts per municipality (Stats SA Census 2022) are not loaded yet: the Stats SA website blocks automated downloads (KE-003)."

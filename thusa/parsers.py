@@ -155,17 +155,51 @@ PPD_ALIASES = {
     "amount": ["amount", "payment amount", "value", "total amount"],
     "date": ["payment date", "date", "transaction date"],
     "system": ["system", "source system"],
+    # CHG-2026-009: fields the unit-price check needs (LOGIS lines carry quantity; see RB-06)
+    "financial_year": ["financial year", "fin year", "fiscal year", "year"],
+    "quantity": ["quantity", "qty", "quantity issued", "quantity received"],
+    "unit": ["unit", "unit of measure", "uom", "unit of issue"],
+    "item": ["item description", "item", "description", "miin description", "item name"],
+    "commodity_code": ["unspsc code", "commodity code", "unspsc commodity code"],
+    "commodity_title": ["unspsc title", "commodity title", "unspsc commodity title", "commodity"],
+    "province": ["province"],
 }
+PPD_REQUIRED = ("department", "supplier", "amount")       # without these a row is not a payment we can attribute
 
 
-def ppd_rows(data: bytes) -> Iterator[dict]:
-    """Best-effort CSV parser for the Power BI export; column names are matched by alias."""
+def _ppd_reader(data: bytes) -> tuple[csv.DictReader, dict]:
     text = data.decode("utf-8-sig", errors="replace")
     sample = text[:4096]
     delim = ";" if sample.count(";") > sample.count(",") else ","
     reader = csv.DictReader(io.StringIO(text), delimiter=delim)
     lower = {h.lower().strip(): h for h in reader.fieldnames or []}
-    col = {k: next((lower[a] for a in v if a in lower), None) for k, v in PPD_ALIASES.items()}
+    return reader, {k: next((lower[a] for a in v if a in lower), None) for k, v in PPD_ALIASES.items()}
+
+
+def ppd_schema(data: bytes) -> dict:
+    """Header check for a dropped PPD export: which known fields were found, which required ones are missing.
+    Only header names are reported (never row data)."""
+    reader, col = _ppd_reader(data)
+    return {"header": list(reader.fieldnames or []), "mapped": {k: v for k, v in col.items() if v},
+            "missing_required": [k for k in PPD_REQUIRED if not col[k]]}
+
+
+def _num(v) -> float | None:
+    v = (v or "").strip().replace(" ", "").replace("\u00a0", "")
+    if not v:
+        return None
+    if "," in v and "." not in v:
+        v = v.replace(",", ".")
+    try:
+        return float(v.replace(",", ""))
+    except ValueError:
+        return None
+
+
+def ppd_rows(data: bytes) -> Iterator[dict]:
+    """CSV parser for the Power BI export; column names are matched by alias. Blank cells stay None (unknown)."""
+    reader, col = _ppd_reader(data)
+    g = lambda r, k: ((r.get(col[k]) or "").strip() or None) if col[k] else None  # noqa: E731
     for i, r in enumerate(reader, start=2):
         yield {
             "department": r.get(col["department"]) if col["department"] else None,
@@ -174,6 +208,9 @@ def ppd_rows(data: bytes) -> Iterator[dict]:
             "amount_cents": to_cents(r.get(col["amount"])) if col["amount"] else None,
             "payment_date": parse_date(r.get(col["date"])) if col["date"] else None,
             "system": r.get(col["system"]) if col["system"] else None,
+            "financial_year": g(r, "financial_year"), "quantity": _num(g(r, "quantity")), "unit": g(r, "unit"),
+            "item_description": g(r, "item"), "commodity_code": g(r, "commodity_code"),
+            "commodity_title": g(r, "commodity_title"), "province": g(r, "province"),
             "source_locator": f"line {i}",
         }
 
@@ -230,6 +267,38 @@ def fuel_history_rows(blob: bytes, name: str = "") -> list[dict]:
                     out.append({"year": year, "month": mon, "grade": grade, "grade_label": label,
                                 "cents_per_litre": float(cell.replace(",", "")),
                                 "source_locator": f"{docname}#table-row{i}"})
+    return out
+
+
+_PDF_MONTH = re.compile(r"^(Jan|Feb|Mar|Apr|May|Jun|July?|Aug|Sept?|Oct|Nov|Dec)$")
+
+
+def fuel_history_pdf_rows(blob: bytes, name: str = "") -> list[dict]:
+    """Rows of a yearly DMPR 'Fuel Price History' PDF (same 7-column table as the DOCX). Each month row must
+    yield exactly 7 numbers; rows that don't (PDF text splits some figures) are skipped and stay unknown -
+    figures are never guessed or re-joined beyond a thousands gap like '2 112.00'."""
+    import pdfplumber
+    out = []
+    with pdfplumber.open(io.BytesIO(blob)) as pdf:
+        text = "\n".join(pg.extract_text() or "" for pg in pdf.pages)
+        m = re.search(r"Fuel Price History:\s*(\d{4})", text)
+        if not m:
+            raise ValueError(f"{name}: not a DMPR 'Fuel Price History' PDF (no year heading)")
+        year = int(m.group(1))
+        for pg_no, pg in enumerate(pdf.pages, 1):
+            words = pg.extract_words(x_tolerance=1.5, y_tolerance=2)
+            for mw in (w for w in words if _PDF_MONTH.match(w["text"])):
+                cy = (mw["top"] + mw["bottom"]) / 2
+                nums = sorted((w for w in words if w["x0"] > mw["x1"] and re.fullmatch(r"[\d.]+", w["text"])
+                               and abs((w["top"] + w["bottom"]) / 2 - cy) < 4), key=lambda w: w["x0"])
+                joined = re.sub(r"(?<![\d.])(\d) (\d{3}\.\d+)", r"\1\2", " ".join(w["text"] for w in nums))
+                vals = re.findall(r"\d+(?:\.\d+)?", joined)
+                if len(vals) != 7:
+                    continue
+                for (grade, label), v in zip(FUEL_GRADES, vals):
+                    out.append({"year": year, "month": _MONTHS[mw["text"][:3].lower()], "grade": grade,
+                                "grade_label": label, "cents_per_litre": float(v),
+                                "source_locator": f"{name}#page{pg_no}-{mw['text']}"})
     return out
 
 

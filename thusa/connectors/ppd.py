@@ -5,12 +5,14 @@ is no documented scriptable download (checked 19 Oct 2026). We do not automate t
 (design D-07). Operator procedure: itil/knowledge/runbooks.md RB-06.
 
 Drop files into data/drop/ppd/ as CSV exports named e.g. Procurement_Spend_Transaction_List_2026-10.csv
+A file without the required columns (department, supplier, amount) is not loaded (status schema_mismatch).
 """
 from __future__ import annotations
 
 from pathlib import Path
 
 from thusa.connectors.base import IngestResult
+from thusa.parsers import ppd_schema
 from thusa.raw import RawStore
 
 SOURCE_ID = "ppd_payments"
@@ -24,7 +26,22 @@ def run(store: RawStore, drop_dir: Path) -> IngestResult:
         res.status = "awaiting_manual_drop"
         res.notes.append(f"no CSV in {drop_dir}; see runbook RB-06")
         return res
+    rejected = []
     for f in files:
+        schema = ppd_schema(f.read_bytes())               # header only; row data never goes into notes or logs
+        if schema["missing_required"]:
+            rejected.append(f.name)
+            res.errors.append(f"{f.name}: required column(s) not found: {', '.join(schema['missing_required'])}; "
+                              f"header was: {schema['header'][:40]} (RB-06 step 6)")
+            continue
         res.files.append(store.save_file(SOURCE_ID, f.name, f, f"manual drop: {PORTAL}"))
-    res.status = "unchanged" if all(f.status == "unchanged" for f in res.files) else "ok"
+        unmapped = [h for h in schema["header"] if h not in schema["mapped"].values()]
+        if unmapped:
+            res.notes.append(f"{f.name}: columns not used: {unmapped[:40]}")
+    if rejected and not res.files:
+        res.status = "schema_mismatch"
+    elif rejected:
+        res.status = "partial"
+    else:
+        res.status = "unchanged" if all(f.status == "unchanged" for f in res.files) else "ok"
     return res

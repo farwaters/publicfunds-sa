@@ -12,3 +12,5 @@ flags:
   unconfirmed: exclude
   # Include the reviewers' public reason text next to confirmed flags (never notes, never reviewer names).
   show_review_reason: true
+  # Detectors whose flags stay in the review queue and are never published, even when confirmed (CHG-2026-009).
+  never_publish: [D13_fuel_unit_price]
