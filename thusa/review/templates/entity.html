@@ -1,0 +1,18 @@
+{% extends "base.html" %}{% from "_status.html" import badge, sev %}{% from "_cell.html" import table %}
+{% block title %}{{ e.name }}{% endblock %}
+{% block content %}
+<p><a href="/coverage">← coverage</a></p>
+<h1>{{ e.name }} <small>{{ e.gov_body_id }}</small></h1>
+<section class="card"><dl class="kv">
+  <dt>Type</dt><dd>{{ e.sphere }} {{ e.body_type or '' }}</dd>
+  {% if e.province %}<dt>Province</dt><dd>{{ e.province }}</dd>{% endif %}
+  {% if e.valid_from %}<dt>Established</dt><dd>{{ e.valid_from }}</dd>{% endif %}
+  {% if e.valid_to %}<dt>Disestablished</dt><dd>{{ e.valid_to }}</dd>{% endif %}
+  {% if e.source_sha256 %}<dt>Source</dt><dd>{{ e.source_id }} · <a href="/lineage/{{ e.source_sha256 }}">{{ e.source_file }}</a> · {{ e.source_locator }}</dd>{% endif %}
+  {% if e.demarcation_code %}<dt>Municipal Money</dt><dd><a href="https://municipalmoney.gov.za/profiles/municipality-{{ e.demarcation_code|urlencode }}/" rel="noopener noreferrer nofollow" target="_blank">profile</a></dd>{% endif %}
+</dl>
+<p class="muted">Money is shown in rand from integer cents. <span class="unknown">unknown</span> means the source has no value; it is never shown as 0. Each <code>source sha256</code> links to the raw file it came from.</p></section>
+<section class="card"><h2>Flags ({{ flags|length }})</h2>
+{% if flags %}<ul class="plain">{% for x in flags %}<li>{{ sev(x.severity) }} <a href="/flags/{{ x.flag_id }}">{{ x.title }}</a> {{ badge(x) }}</li>{% endfor %}</ul>{% else %}<p class="muted">No flags.</p>{% endif %}</section>
+{% for title, rows in e.sections %}<section class="card"><h2>{{ title }}</h2>{{ table(rows, raw_files) }}</section>{% endfor %}
+{% endblock %}

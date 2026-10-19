@@ -1,0 +1,15 @@
+{% macro cell(col, v, raw_files) -%}
+{%- if v is none and col.endswith('_cents') -%}<span class="unknown">unknown</span>
+{%- elif v is none -%}<span class="muted" title="no value">–</span>
+{%- elif col.endswith('_cents') -%}<span class="num">{{ v|rand }}</span>
+{%- elif col == 'source_sha256' or col == 'sha256' -%}{% set rf = raw_files.get(v) %}<a class="sha" href="/lineage/{{ v }}" title="{{ rf.path if rf else v }}">{{ v[:10] }}…</a>
+{%- elif col.endswith('_url') or col == 'url' -%}{% if v|safe_url %}<a href="{{ v|safe_url }}" rel="noopener noreferrer nofollow" target="_blank">link</a>{% else %}{{ v }}{% endif %}
+{%- elif col.endswith('_utc') -%}{{ v|sast }}
+{%- elif v is sameas true -%}yes{%- elif v is sameas false -%}no
+{%- else -%}{{ v }}{%- endif -%}
+{%- endmacro %}
+{% macro table(rows, raw_files) -%}
+{% if rows %}<div class="table-wrap"><table class="data"><thead><tr>{% for c in rows[0].keys() %}<th>{{ c|replace('_cents','')|replace('_',' ') }}</th>{% endfor %}</tr></thead>
+<tbody>{% for r in rows %}<tr>{% for c, v in r.items() %}<td data-l="{{ c|replace('_cents','')|replace('_',' ') }}">{{ cell(c, v, raw_files) }}</td>{% endfor %}</tr>{% endfor %}</tbody></table></div>
+{% else %}<p class="muted">No records.</p>{% endif %}
+{%- endmacro %}

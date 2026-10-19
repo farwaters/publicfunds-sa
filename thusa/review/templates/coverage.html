@@ -1,0 +1,17 @@
+{% extends "base.html" %}{% block title %}Coverage{% endblock %}
+{% block content %}
+<h1>Coverage</h1>
+<p class="muted">Each cell is one municipality × municipal financial year (FYE June) for the chosen data type:
+<span class="key s-present">✓ present</span> <span class="key s-partial">~ partial</span> <span class="key s-missing">✗ missing</span>
+<span class="key s-na">– n.a.</span> (not applicable: entity did not exist, audit not yet due, or source not live). Hover or tap a cell for the reason.</p>
+<form class="filters" method="get" action="/coverage" hx-get="/coverage" hx-target="#grid" hx-push-url="true"
+      hx-trigger="change, keyup changed delay:400ms from:input[name=q]">
+  <label>Data type <select name="data_type">{% for t in types %}<option value="{{ t }}" {% if f.data_type == t %}selected{% endif %}>{{ TYPE_LABEL[t] }}</option>{% endfor %}</select></label>
+  <label>Province <select name="province"><option value="">all</option>{% for p in provinces %}<option {% if f.province == p %}selected{% endif %}>{{ p }}</option>{% endfor %}</select></label>
+  <label>From <select name="fye_from"><option value="">first</option>{% for y in all_years %}<option value="{{ y.fye }}" {% if f.fye_from == y.fye %}selected{% endif %}>{{ y.fy_label }}</option>{% endfor %}</select></label>
+  <label>To <select name="fye_to"><option value="">last</option>{% for y in all_years %}<option value="{{ y.fye }}" {% if f.fye_to == y.fye %}selected{% endif %}>{{ y.fy_label }}</option>{% endfor %}</select></label>
+  <label class="grow">Municipality <input name="q" value="{{ f.q }}" maxlength="80" placeholder="name or code, e.g. Ugu, NW396"></label>
+  <noscript><button type="submit">Filter</button></noscript>
+</form>
+<div id="grid">{% include "_coverage_grid.html" %}</div>
+{% endblock %}

@@ -1,0 +1,20 @@
+{% from "_status.html" import badge, sev %}
+<p class="muted">{{ total }} flag(s){% if pages > 1 %} · page {{ page }} of {{ pages }}{% endif %}</p>
+<div class="table-wrap"><table class="queue">
+<thead><tr><th>Severity</th><th>Detector</th><th>Flag</th><th>Entity</th><th>Period</th><th>Status</th></tr></thead>
+<tbody>
+{% for x in flags %}
+<tr>
+  <td data-l="Severity">{{ sev(x.severity) }}</td>
+  <td data-l="Detector">{{ x.detector_id.split('_')[0] }}</td>
+  <td data-l="Flag"><a href="/flags/{{ x.flag_id }}">{{ x.title }}</a>{% if x.names_supplier %} <span class="tag" title="Names a supplier or person: two independent confirmations required">four-eyes</span>{% endif %}</td>
+  <td data-l="Entity">{% if x.gov_body_id %}<a href="/entity/{{ x.gov_body_id|urlencode }}">{{ x.body_name or x.gov_body_id }}</a>{% endif %}</td>
+  <td data-l="Period">{{ x.period_label }}</td>
+  <td data-l="Status">{{ badge(x) }}{% if x.confirmed_by %}<br><small>confirmed by {{ x.confirmed_by|join(', ') }}</small>{% endif %}</td>
+</tr>
+{% else %}<tr><td colspan="6">No flags match these filters.</td></tr>{% endfor %}
+</tbody></table></div>
+{% if pages > 1 %}<nav class="pager">
+{% if page > 1 %}<a href="?detector={{ f.detector|urlencode }}&severity={{ f.severity|urlencode }}&status={{ f.status|urlencode }}&named={{ f.named|urlencode }}&q={{ f.q|urlencode }}&page={{ page - 1 }}">← previous</a>{% endif %}
+{% if page < pages %}<a href="?detector={{ f.detector|urlencode }}&severity={{ f.severity|urlencode }}&status={{ f.status|urlencode }}&named={{ f.named|urlencode }}&q={{ f.q|urlencode }}&page={{ page + 1 }}">next →</a>{% endif %}
+</nav>{% endif %}

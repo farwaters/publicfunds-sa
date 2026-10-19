@@ -19,6 +19,8 @@ dist/
 *.jsonl.gz
 # Build artefacts
 docs/**/*.html
+!thusa/review/templates/*.html
 *.html
+!thusa/review/templates/*.html
 # OS
 .DS_Store

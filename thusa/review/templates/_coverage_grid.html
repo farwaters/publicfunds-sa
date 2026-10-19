@@ -1,0 +1,13 @@
+<p class="counts">{{ ents|length }} municipalities · present <b>{{ summary.present }}</b> · partial <b>{{ summary.partial }}</b> · missing <b>{{ summary.missing }}</b> · n.a. {{ summary['n.a.'] }}
+{% if summary.present_pct is not none %}· <b>{{ summary.present_pct }}%</b> present of applicable cells{% endif %}</p>
+<p class="muted">This grid includes years in which not every data type is due yet (e.g. audit results for the latest year); the published headline counts only years where all core data is due.</p>
+<div class="table-wrap"><table class="heat">
+<thead><tr><th class="ent">Municipality</th><th>Prov.</th>{% for y in years %}<th>{{ y.fy_label }}</th>{% endfor %}</tr></thead>
+<tbody>
+{% for e in ents %}<tr>
+  <th class="ent"><a href="/entity/{{ e.gov_body_id|urlencode }}">{{ e.name }}</a> <small>{{ e.gov_body_id[4:] }}</small></th><td>{{ e.province }}</td>
+  {% for y in years %}{% set c = e.cells.get(y.fye) %}
+  {% if c %}<td class="s-{{ 'na' if c.state == 'n.a.' else c.state }}" title="{{ c.state }}{% if c.reason_code %}: {{ c.reason_code }}{% endif %}"><span>{{ {'present': '✓', 'partial': '~', 'missing': '✗'}.get(c.state, '–') }}</span></td>{% else %}<td class="s-none"></td>{% endif %}
+  {% endfor %}
+</tr>{% else %}<tr><td colspan="{{ years|length + 2 }}">No municipalities match.</td></tr>{% endfor %}
+</tbody></table></div>

@@ -1,0 +1,24 @@
+{% extends "base.html" %}{% from "_status.html" import badge, sev %}
+{% block title %}Flag queue{% endblock %}
+{% block content %}
+<h1>Flag review queue</h1>
+<p class="counts">{% for s in STATUSES %}{% if counts.get(s) %}<a href="/flags?status={{ s|urlencode }}">{{ s }}: <b>{{ counts[s] }}</b></a> {% endif %}{% endfor %}
+{% if counts.stale %}<a href="/flags?status=stale">evidence changed: <b>{{ counts.stale }}</b></a>{% endif %}</p>
+<form class="filters" method="get" action="/flags" hx-get="/flags" hx-target="#results" hx-push-url="true"
+      hx-trigger="change, keyup changed delay:400ms from:input[name=q]">
+  <label>Detector <select name="detector"><option value="">all</option>
+    {% for d in detectors %}<option value="{{ d }}" {% if f.detector == d %}selected{% endif %}>{{ d }}</option>{% endfor %}</select></label>
+  <label>Severity <select name="severity"><option value="">all</option>
+    {% for s in severities %}<option {% if f.severity == s %}selected{% endif %}>{{ s }}</option>{% endfor %}</select></label>
+  <label>Status <select name="status"><option value="">all</option>
+    <option value="open" {% if f.status == 'open' %}selected{% endif %}>open (not finally decided)</option>
+    {% for s in STATUSES %}<option {% if f.status == s %}selected{% endif %}>{{ s }}</option>{% endfor %}
+    <option value="stale" {% if f.status == 'stale' %}selected{% endif %}>evidence changed</option></select></label>
+  <label>Names a supplier <select name="named"><option value="">any</option>
+    <option value="yes" {% if f.named == 'yes' %}selected{% endif %}>yes (four-eyes)</option>
+    <option value="no" {% if f.named == 'no' %}selected{% endif %}>no</option></select></label>
+  <label class="grow">Entity / text <input name="q" value="{{ f.q }}" maxlength="100" placeholder="e.g. Ugu, NEXTEC, MUN:DC21"></label>
+  <noscript><button type="submit">Filter</button></noscript>
+</form>
+<div id="results">{% include "_flag_rows.html" %}</div>
+{% endblock %}

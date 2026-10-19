@@ -1,0 +1,4 @@
+{% macro badge(f) -%}
+<span class="st st-{{ f.status|replace(' ', '-') }}">{{ f.status }}</span>{% if f.evidence_changed %} <span class="st st-stale" title="Evidence changed since the last decision: re-review">evidence changed</span>{% endif %}
+{%- endmacro %}
+{% macro sev(s) -%}<span class="sev sev-{{ s }}">{{ s }}</span>{%- endmacro %}
