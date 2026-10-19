@@ -34,7 +34,7 @@ uv run thusa run --as-of 2026-10-19       # ingest all sources -> build warehous
 uv run thusa run --refresh                # refetch even if today's raw copies exist
 uv run thusa ingest --only muni_api       # one source
 uv run thusa build && uv run thusa report # rebuild from raw files only (offline)
-uv run pytest -q                          # 156 tests
+uv run pytest -q                          # 162 tests
 ```
 Outputs (git-ignored):
 - `data/raw/<source>/<date>/…` (+ `.sha256`, `manifest.jsonl`, `runs.jsonl`)
@@ -46,6 +46,15 @@ Exit code 2 means a data-quality check failed and the build is not releasable.
 **PPD manual drop:** put Power BI CSV exports in `data/drop/ppd/` (runbook RB-06).
 
 **SA ID hashing key:** `THUSA_HMAC_KEY` (hex) or `~/.config/thusa/hmac.key`, created on first run with mode 0600. Never commit it.
+
+## One-command install on a fresh bot box
+```bash
+curl -fsSL https://raw.githubusercontent.com/farwaters/publicfunds-sa/main/scripts/bootstrap.sh | bash
+# or, in a checkout: scripts/bootstrap.sh   (idempotent; env PF_BRANCH, PF_DIR, PF_PORT, PF_CONFIG_DIR, PF_ADMIN_USER)
+```
+It clones or pulls into `/workspace/publicfunds`, installs uv and the locked dependencies, runs the pipeline and tests, creates
+a local admin reviewer (password in `~/.config/publicfunds/admin_credentials`, mode 600) and starts the review app on
+localhost. Bot skills for the template are in `docs/bot/skills/` (see `docs/bot/template.md`).
 
 ## Review app (v0.2.0)
 ```bash

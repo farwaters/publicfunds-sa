@@ -46,6 +46,8 @@ The review app (`pf serve`, CI-097) reads the current warehouse (read-only) and 
 `data/review/review.sqlite` (CI-098). It binds to **127.0.0.1:8765** by default and refuses a non-loopback bind
 unless you pass `--allow-remote`.
 
+**Fresh install:** `scripts/bootstrap.sh` (CI-103) does everything below and is safe to re-run. Set `PF_PORT` and `PF_CONFIG_DIR` to run a second, isolated copy.
+
 **Start, stop and check (no systemd on the box as of 19 Oct 2026):**
 - `scripts/review-app.sh start` runs `uv sync --frozen`, starts `pf serve` detached with setsid/nohup, writes
   `data/review/serve.pid`, and waits for `/healthz`.
