@@ -484,3 +484,7 @@ Practices from P1/P3 that **don't apply yet** (recorded so they're not forgotten
 | D-08 | External uptime monitor | Free SaaS / none in MVP | Free SaaS once public |
 | D-09 | Legal review (POPIA, defamation) before publishing named flags | Pro-bono (e.g. via civil-society partners) / paid | Required before any named high-severity flag goes public |
 | D-10 | Partnerships | TenderWatch, Corruption Watch, OUTA, OpenUp, OCP | Approach TenderWatch and OCP first (method overlap) |
+| D-11 | Thusa Ops Bot + daily routine (CI-003/004) | Create now / after v0.1.0 merge | After PR #1 merges |
+| D-12 | Who the second (and further) independent reviewers are; is a legal reviewer needed for D3? (CHG-2026-003, CSI-016) | Partner org staff / volunteer journalists / paid | At least one reviewer outside the owner, plus legal sign-off before the first named flag is published (D-09) |
+| D-13 | Public treatment of unconfirmed, non-named flags (`config/publication.yaml`) | `exclude` / `label` as "unreviewed lead" | `exclude` until the first reviewed release, then reconsider |
+| D-14 | Remote access to the review app | SSH tunnel only / TLS reverse proxy on an owned host name / none | SSH tunnel while there are fewer than 5 reviewers (RB-08) |

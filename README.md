@@ -7,14 +7,16 @@ Prototype design for the most comprehensive, honest taxpayer dashboard of SA gov
 |---|---|
 | `sa_public_funds_landscape.md` (+ `.pdf`, `.docx`) | Landscape of ~48 SA tools, coverage matrix, gap analysis, source inventory, exception ideas (19 Oct 2026) |
 | `docs/design/application-design.md` (+ `.pdf`) | **Application design**: vision, personas, requirements, architecture, data model, detectors, coverage model, API, UI, security/POPIA/PAIA, roadmap, testing, engineering practices, observability, ITIL summary, open decisions |
-| `docs/adr/` | Decision log (ADR-0001…0006 + template) |
+| `docs/adr/` | Decision log (ADR-0001…0008 + template) |
 | `docs/research/discoveringai-reposts.md` | The @DiscoveringAI reposts on going beyond vibe coding, and the practices adopted |
 | `itil/` | ITIL 4 practice map, service definition, SLA/SLO, change enablement, templates (change, incident, problem, release), registers (risk, CI, CSI, change, incident), knowledge (runbooks, KEDB) |
 | `config/sources.yaml`, `config/detectors.yaml` | Machine-readable CIs: data sources and red-flag detectors |
 | `sql/core_schema.sql` | Target logical schema (the implemented MVP schema is in `thusa/models/` + `thusa/staging.py`) |
-| `thusa/` | **MVP pipeline (v0.1.0)**: connectors, parsers, staging, SQL models (curated, marts/coverage), detectors, DQ suite, report, CLI |
+| `thusa/` | **MVP pipeline (v0.1.0)**: connectors, parsers, staging, SQL models (curated, marts/coverage), detectors, DQ suite, report, CLI. **`thusa/review/`** (v0.2.0): review web app, review store, `pf` CLI. `thusa/publish.py`: public snapshot of confirmed flags |
+| `docs/bot/review-skill.md` | Draft Grok Bot skill: driving reviews from chat with `pf review …` |
+| `scripts/`, `deploy/` | `review-app.sh` (start/stop), `review_screenshots.py`, systemd user unit |
 | `tests/` | pytest: unit, connectors with mock HTTP, end-to-end smoke on synthetic data, DQ suite on the real warehouse |
-| `docs/releases/v0.1.0.md` | Release notes (draft) |
+| `docs/releases/v0.1.0.md`, `v0.2.0.md` | Release notes (drafts) |
 | `AGENTS.md`, `REVIEW.md`, `.github/` | AI-agent context, review rules, PR template, CODEOWNERS |
 
 ## Running the MVP pipeline
@@ -24,7 +26,7 @@ uv run thusa run --as-of 2026-10-19       # ingest all sources -> build warehous
 uv run thusa run --refresh                # refetch even if today's raw copies exist
 uv run thusa ingest --only muni_api       # one source
 uv run thusa build && uv run thusa report # rebuild from raw files only (offline)
-uv run pytest -q                          # 99 tests
+uv run pytest -q                          # 156 tests
 ```
 Outputs (git-ignored):
 - `data/raw/<source>/<date>/…` (+ `.sha256`, `manifest.jsonl`, `runs.jsonl`)
@@ -37,12 +39,28 @@ Exit code 2 means a data-quality check failed and the build is not releasable.
 
 **SA ID hashing key:** `THUSA_HMAC_KEY` (hex) or `~/.config/thusa/hmac.key`, created on first run with mode 0600. Never commit it.
 
+## Review app (v0.2.0)
+```bash
+scripts/review-app.sh start               # http://127.0.0.1:8765 (localhost only); status | stop | restart
+uv run pf reviewer add alice --display-name "Alice" --credentials-file ~/.config/publicfunds/alice_credentials
+uv run pf reviewer token alice --out ~/.config/publicfunds/review_token   # API/CLI token (0600 file)
+uv run pf review list --status open       # JSON; also: show, decide, history, verify, export
+uv run pf publish                         # rebuild dist/public/ (confirmed flags only)
+```
+- Flags that name a supplier need **two different reviewers** to confirm on the same evidence (ADR-0008).
+- Decisions are append-only and hash-chained in `data/review/review.sqlite`, and survive pipeline rebuilds.
+- Passwords and tokens are never printed; they are written to 0600 files.
+- Remote access, accounts and backup: runbooks RB-08, RB-09 and RB-10.
+- Screenshots: `uv run --group screenshots python scripts/review_screenshots.py`.
+
 ## Not in git (by design)
 - `src/` — raw research downloads from 19 Oct 2026 (~16 MB): eTenders OCDS full mirror `full.jsonl.gz` (11.7 MB, from https://data.open-contracting.org/en/publication/143/download?name=full.jsonl.gz), PPD user guide PDF, PFMA SCM Instruction 10 PDF + page renders. Re-download from the URLs in the landscape report.
-- `data/`, `dist/`, `*.duckdb`: generated or raw data, backed up separately (D-05). Rebuild with `uv run thusa run`.
+- `data/` (incl. the review DB `data/review/`), `dist/`, `*.duckdb`: generated or raw data, backed up separately (D-05). Rebuild with `uv run thusa run`.
 
 ## Status
-MVP pipeline v0.1.0 on branch `feat/mvp-pipeline` (CHG-2026-002). Local only, nothing published.
+- MVP pipeline v0.1.0: branch `feat/mvp-pipeline` (CHG-2026-002, PR #1).
+- Review app v0.2.0: branch `feat/review-app` (CHG-2026-003), stacked on it.
+- Local only; nothing published.
 - All flags are unreviewed automated indicators.
 - Supplier-naming flags are `pending human review`.
 
