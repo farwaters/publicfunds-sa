@@ -5,6 +5,7 @@ import csv
 import gzip
 import io
 import json
+import re
 from typing import Iterator
 
 from thusa.normalise import (classify_identifier, hmac_id, muni_key, norm_name, ocds_value_cents, parse_date,
@@ -175,3 +176,69 @@ def ppd_rows(data: bytes) -> Iterator[dict]:
             "system": r.get(col["system"]) if col["system"] else None,
             "source_locator": f"line {i}",
         }
+
+
+# ------------------------------------------------------------------------------------- price benchmarks
+FUEL_GRADES = [("petrol_93_inland", "Petrol 93, inland"), ("petrol_95_coast", "Petrol 95, coast"),
+               ("petrol_95_inland", "Petrol 95, inland"), ("diesel_005_inland", "Diesel 0.05% sulphur, inland"),
+               ("diesel_005_coast", "Diesel 0.05% sulphur, coast"), ("paraffin_coast", "Illuminating paraffin, coast"),
+               ("paraffin_inland", "Illuminating paraffin, inland")]
+FUEL_SUBHEADER = ["Inland93", "Coast95", "Inland95", "Inland", "Coast", "Coast", "Inland"]
+_MONTHS = {m: i for i, m in enumerate(["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov",
+                                       "dec"], 1)}
+
+
+def _docx_tables(docx: bytes) -> list[list[list[str]]]:
+    import xml.etree.ElementTree as ET
+    import zipfile
+    w = "{http://schemas.openxmlformats.org/wordprocessingml/2006/main}"
+    root = ET.fromstring(zipfile.ZipFile(io.BytesIO(docx)).read("word/document.xml"))
+    return [[[re.sub(r"\s+", " ", "".join(t.text or "" for t in tc.iter(w + "t"))).strip()
+              for tc in tr.findall(w + "tc")] for tr in tbl.iter(w + "tr")] for tbl in root.iter(w + "tbl")]
+
+
+def fuel_history_rows(blob: bytes, name: str = "") -> list[dict]:
+    """Rows of the DMPR 'South African Fuel Price History' table (RSA cents per litre), from a DOCX or from the
+    monthly ZIP that contains it. Blank cells (months not yet published) are skipped, never zeroed. The table layout
+    is checked against the expected sub-header; an unexpected layout raises instead of guessing columns."""
+    import zipfile
+    docs: list[tuple[str, bytes]] = []
+    z = zipfile.ZipFile(io.BytesIO(blob))
+    if "word/document.xml" in z.namelist():
+        docs.append((name, blob))
+    else:
+        docs += [(n, z.read(n)) for n in z.namelist() if re.search(r"(?i)history of fuel prices.*\.docx$", n)]
+    out = []
+    for docname, doc in docs:
+        for tbl in _docx_tables(doc):
+            if not tbl or "Fuel Price History" not in " ".join(tbl[0]):
+                continue
+            m = re.match(r"(\d{4})", tbl[0][0])
+            if not m:
+                raise ValueError(f"{docname}: no year in table heading {tbl[0][0]!r}")
+            year = int(m.group(1))
+            sub = next((i for i, r in enumerate(tbl) if [c.replace(" ", "") for c in r[1:]] == FUEL_SUBHEADER), None)
+            if sub is None:
+                raise ValueError(f"{docname}: unexpected fuel table layout (sub-header not found)")
+            for i, r in enumerate(tbl[sub + 1:], sub + 2):
+                mon = _MONTHS.get(r[0][:3].lower()) if r and r[0] else None
+                if not mon:
+                    continue
+                for (grade, label), cell in zip(FUEL_GRADES, r[1:]):
+                    if not cell.strip():
+                        continue
+                    out.append({"year": year, "month": mon, "grade": grade, "grade_label": label,
+                                "cents_per_litre": float(cell.replace(",", "")),
+                                "source_locator": f"{docname}#table-row{i}"})
+    return out
+
+
+def oecd_cpi_rows(data: bytes) -> list[dict]:
+    rows = []
+    for i, r in enumerate(csv.DictReader(io.StringIO(data.decode("utf-8-sig"))), 2):
+        if r.get("REF_AREA") != "ZAF" or r.get("MEASURE") != "CPI" or not r.get("OBS_VALUE"):
+            continue
+        y, m = r["TIME_PERIOD"].split("-")
+        rows.append({"year": int(y), "month": int(m), "index_value": float(r["OBS_VALUE"]),
+                     "base_period": r.get("BASE_PER") or None, "source_locator": f"line {i}"})
+    return rows

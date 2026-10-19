@@ -87,10 +87,22 @@ sources:
     name: DMPR / CEF fuel price adjustments
     owner_org: Department of Mineral and Petroleum Resources
     url: https://www.dmpr.gov.za/Branches/Petroleum-Resources/Fuel-Prices
-    connector: pdf_table
+    connector: docx_table (thusa/connectors/prices.py)
+    licence: "Public government information"
     cadence: monthly
-    freshness_slo_days: 5
+    freshness_slo_days: 35
     mvp: true
+    mvp_load_2026_10_19: "ok: October 2026 adjustment ZIP; 'History of Fuel Prices' table Jan-Oct 2026, 7 grades (70 rows). Earlier years not loaded (KE-012)"
+  - id: oecd_cpi
+    name: Headline CPI for South Africa (Stats SA data, OECD republication)
+    owner_org: OECD (data from Statistics South Africa)
+    url: https://sdmx.oecd.org/public/rest/data/OECD.SDD.TPS,DSD_PRICES@DF_PRICES_ALL,1.0/ZAF.M.N.CPI.IX._T.N._Z
+    connector: sdmx_csv (thusa/connectors/prices.py)
+    licence: "CC BY 4.0"
+    cadence: monthly
+    freshness_slo_days: 400
+    mvp: true
+    notes: "Secondary source because statssa.gov.za blocks scripted access (KE-003). Lags: last month 2025-01 on 19 Oct 2026 (KE-012)"
   - id: statssa_cpi
     name: Stats SA CPI (incl. average prices), PPI, P0151.1
     owner_org: Statistics South Africa

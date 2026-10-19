@@ -9,7 +9,7 @@ from pathlib import Path
 from thusa.raw import sha256_file
 
 CURATED_LINEAGE_TABLES = ["gov_body", "muni_fin_line", "muni_total", "nat_budget_line", "uifw_line", "audit_outcome", "award",
-                          "ocds_release", "restriction", "payment"]
+                          "ocds_release", "restriction", "payment", "fuel_price", "cpi"]
 MIN_ROWS = {"curated.gov_body": 250, "curated.muni_fin_line": 50_000, "curated.nat_budget_line": 50,
             "curated.uifw_line": 1_000, "curated.audit_outcome": 1_000, "curated.award": 1_000,
             "curated.ocds_release": 10_000, "curated.restriction": 100, "marts.coverage_cell": 1_000}
@@ -71,6 +71,11 @@ def checks(min_rows: dict | None = None) -> list[tuple[str, str, str]]:
         ("flags_have_evidence_url", "error",
          "SELECT count(*) FROM marts.flag WHERE json_array_length(evidence_json) = 0 "
          "OR NOT list_contains(list_transform(CAST(json_extract(evidence_json, '$[*].url') AS VARCHAR[]), x -> x IS NOT NULL), true)"),
+        ("unique:fuel_price", "error",
+         "SELECT count(*) - count(DISTINCT (year, month, grade)) FROM curated.fuel_price"),
+        ("fuel_price_plausible", "error",
+         "SELECT count(*) FROM curated.fuel_price WHERE cents_per_litre <= 0 OR cents_per_litre > 10000"),
+        ("cpi_plausible", "error", "SELECT count(*) FROM curated.cpi WHERE index_value <= 0 OR index_value > 1000"),
         ("award_buyer_match_rate_info", "warn",
          "SELECT count(*) FILTER (WHERE buyer_gov_body_id IS NULL AND buyer_name ILIKE '%municipal%') FROM curated.award"),
     ]

@@ -127,6 +127,35 @@ def _nt_csv() -> bytes:
     return ("\n".join(rows) + "\n").encode("utf-8-sig")
 
 
+def fuel_docx(year: int = 2026, months=(("Jan", "2064.00"), ("Feb", "1999.00"), ("Mar", "")),
+              first_grade: str = "Inland93") -> bytes:
+    """Minimal DOCX with the DMPR 'South African Fuel Price History' table layout."""
+    import io
+    import zipfile
+
+    def row(cells):
+        return "<w:tr>" + "".join(f"<w:tc><w:p><w:r><w:t>{c}</w:t></w:r></w:p></w:tc>" for c in cells) + "</w:tr>"
+    rows = [row([f"{year}(RSAc/litre)", "South African Fuel Price History"]),
+            row(["", "Petrol", "Diesel", "IlluminatingParaffin"]),
+            row(["", "Leaded Replacement Petrol", "Unleaded", "0.05%sulphur", ""]),
+            row(["", first_grade, "Coast95", "Inland95", "Inland", "Coast", "Coast", "Inland"])]
+    for mon, v in months:
+        rows.append(row([mon] + ([v, v, v, v, v, v, v] if v else [""] * 7)))
+    doc = ('<?xml version="1.0" encoding="UTF-8"?><w:document xmlns:w="http://schemas.openxmlformats.org/'
+           'wordprocessingml/2006/main"><w:body><w:tbl>' + "".join(rows) + "</w:tbl></w:body></w:document>")
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as z:
+        z.writestr("[Content_Types].xml", "<Types/>")
+        z.writestr("word/document.xml", doc)
+    return buf.getvalue()
+
+
+def oecd_cpi_csv() -> bytes:
+    head = "STRUCTURE,STRUCTURE_ID,ACTION,REF_AREA,FREQ,MEASURE,TIME_PERIOD,OBS_VALUE,BASE_PER"
+    rows = [f"DATAFLOW,X,I,ZAF,M,CPI,2024-{m:02d},{150 + m / 10},2015" for m in range(1, 13)]
+    return ("\n".join([head, *rows, "DATAFLOW,X,I,ZAF,M,CPI,2025-01,,2015"]) + "\n").encode()
+
+
 def build_raw(root: Path) -> RawStore:
     store = RawStore(root / "data" / "raw")
     for name, payload in _muni_payloads().items():
@@ -134,4 +163,6 @@ def build_raw(root: Path) -> RawStore:
     store.save("etenders_ocds", "full.jsonl.gz", _ocds_gz(), "https://example.org/full.jsonl.gz")
     store.save("rsr", "RestrictedSuppliersReport.pdf", minimal_pdf(RSR_LINES), "https://example.org/rsr.pdf")
     store.save("nt_budget", "Budget_vs_Actual_test.csv", _nt_csv(), "https://example.org/bva.csv")
+    store.save("dmpr_fuel", "history-of-fuel-prices-test.docx", fuel_docx(), "https://example.org/fuel.docx")
+    store.save("oecd_cpi", "oecd_cpi_zaf_monthly.csv", oecd_cpi_csv(), "https://example.org/cpi.csv")
     return store
