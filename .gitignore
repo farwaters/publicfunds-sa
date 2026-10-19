@@ -24,3 +24,4 @@ docs/**/*.html
 !thusa/review/templates/*.html
 # OS
 .DS_Store
+!apps/public-dashboard/*.html
