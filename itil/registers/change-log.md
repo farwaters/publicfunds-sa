@@ -2,6 +2,7 @@
 | ID | Date (SAST) | Type | Summary | PR/commit | Outcome |
 |---|---|---|---|---|---|
 | CHG-2026-001 | 2026-10-19 | Standard | Initialise repo with landscape report, design, ITIL artefacts, ADRs | initial commits | Successful |
+| CHG-2026-002 | 2026-10-19 | Normal-high | MVP data pipeline, coverage model, detectors D1/D3/D4/D5/D8, local dashboard (v0.1.0) — itil/changes/CHG-2026-002-mvp-pipeline.md | branch feat/mvp-pipeline (PR to main, unmerged) | Awaiting review |
 
 **CHG-2026-001 update (19 Oct 2026):** the local repo is committed (6 commits on `main`). The remote is **not yet created**:
 - `gh` is not logged in.

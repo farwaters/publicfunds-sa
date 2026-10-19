@@ -1,6 +1,8 @@
 -- Thusa core schema (draft v0.1, DuckDB dialect). Design: docs/design/application-design.md §6
 -- Conventions: money = BIGINT cents (ZAR); timestamps = TIMESTAMPTZ stored UTC; NULL = unknown (never 0).
 -- Migrations: each change to this file ships as migrations/NNNN_up.sql + NNNN_down.sql (ADR-0002).
+-- NOTE (v0.1.0): the implemented MVP schema is defined by thusa/models/**/*.sql and thusa/staging.py (ADR-0007);
+-- this file remains the target logical model. Coverage states implemented: present|partial|missing|n.a.
 
 CREATE SCHEMA IF NOT EXISTS curated;
 CREATE SCHEMA IF NOT EXISTS ops;

@@ -18,3 +18,6 @@ Scoring: Likelihood (L) and Impact (I) 1–5; Score = L×I. **High ≥ 15**, Med
 | RSK-012 | Political/legal pressure or takedown demands | External | 2 | 4 | 8 | Sourced-only policy; corrections process; partner with established CSOs; legal contact | Owner | Open |
 | RSK-013 | Key-person risk (bus factor 1) | Organisational | 4 | 3 | 12 | ADRs, runbooks, README < 1 h setup, AGENTS.md; repo in owner's name; second maintainer (CSI-008) | Owner | Open |
 | RSK-014 | Legal basis for disclosure shrinks (PPA 2024 invalidated 17 Sep 2026; no s31 publication duty) | Regulatory | 4 | 3 | 12 | Rely on existing PFMA Instruction 10 data; advocacy; PAIA programme | Owner | Open |
+| RSK-015 | Source data errors read as wrongdoing (e.g. a municipal AUDA total 10× its budget; R370bn award values) | Data quality / reputational | 4 | 4 | **16** | Possible-data-error class in D1 (> 200%); implausible award-value bounds; caveats in every flag explanation; human review before publication | Owner | Open |
+| RSK-016 | D3 name-only matches (eTenders publishes no registration numbers) produce false "restricted supplier awarded" flags | Data quality / legal | 3 | 5 | **15** | Confidence ≥ 0.90 and ≥ 2-token names; `pending human review`; never published unreviewed (DQ gate); eval set CSI-014; ask OCPO to publish CSD/CIPC numbers (CSI-001) | Owner | Open |
+

@@ -1,18 +1,27 @@
 # Red-flag detector configuration. Changing thresholds = NORMAL change, risk tier HIGH (2 approvals).
-# Design: docs/design/application-design.md §6.7
+# Design: docs/design/application-design.md §6.7. v0.1.0 MVP set re-scoped under CHG-2026-002 (see ADR-0007):
+#   D1 is now "overspend vs budget" (fuel unit-price moved to D13: needs PPD/LOGIS data, manual drop pending);
+#   D5 is now "award-value gaps" (non-competitive share moved to D14: procurement-method data too sparse);
+#   D8 is now "irregular-expenditure trend" (other distress rules moved to D15: need aged-creditor/cash cubes).
+# All flags are automated indicators. Flags naming a supplier/person are 'pending human review' (ADR-0005).
 detectors:
-  D1_fuel_unit_price:
+  D1_overspend_vs_budget:
     version: 0.1.0
     mvp: true
-    inputs: [payment_agg(system=LOGIS, commodity in fuel MIIN groups), benchmark: dmpr_diesel_*, rt70]
-    rule: "avg_unit_price > benchmark * (1 + threshold)"
-    threshold: 0.20
+    inputs: [curated.muni_fin_line (AUDA vs ADJB, fallback ORGB, item 4400), curated.nat_budget_line (Audit Outcome vs Final Appropriation)]
+    rule: "audited > budget * (1 + threshold)"
+    threshold: 0.20            # municipalities: operating expenditure EXCLUDING non-cash items below
+    non_cash_items: ["3000", "3500", "3600", "4000", "4200", "4300"]  # loss on disposal, debt impairment, depreciation, write-offs, disposals, other losses
+    national_threshold: 0.0    # national votes: any overspend of the final appropriation
+    min_budget_rand: 10000000  # ignore budgets below R10m (noise)
+    suspect_data_error_ratio: 2.0  # >200% over budget: reported as 'info' / possible source data error, not overspend
     severity: {med: 0.20, high: 0.50}
     publish_requires_review: true
-  D3_barred_awarded_or_paid:
+  D3_restricted_supplier_awarded:
     version: 0.1.0
     mvp: true
-    rule: "award_date or payment period overlaps restriction window"
+    rule: "award date within [period_from, period_to] of a Restricted Supplier / Tender Defaulter entry"
+    match: "exact normalised name (companies, >=2 tokens: 0.92; 1 token: 0.60) or sorted-token person name (0.90)"
     min_match_confidence: 0.90
     severity: {high: true}
     publish_requires_review: true
@@ -22,22 +31,29 @@ detectors:
     window_years: 3
     hhi_threshold: 2500
     top_share_threshold: 0.50
+    min_awards: 10
+    min_total_rand: 10000000
     severity: {low: true}
-  D5_noncompetitive_share:
+    publish_requires_review: true
+  D5_award_value_gaps:
     version: 0.1.0
     mvp: true
-    peer_percentile: 0.90
+    rule: "share of a buyer's awards with no value, a 0 placeholder, or < R100 >= gap_share_threshold"
+    min_awards: 20
+    gap_share_threshold: 0.50
     severity: {info: true}
-  D8_municipal_distress_coverage:
+  D8_irregular_expenditure_trend:
     version: 0.1.0
     mvp: true
-    rules:
-      creditors_over_90_days_share: 0.5
-      cash_coverage_months_below: 1
-      uifw_growth_yoy: 0.5
-      s71_nonsubmission: true
-      afs_not_submitted: true
-    severity: {med: true}
+    rule: "reported irregular expenditure rises two years running and grows >= growth_yoy vs the previous year (all known)"
+    fye_min: 2020               # coverage window; earlier years are not assessed
+    growth_yoy: 0.5
+    min_prev_rand: 1000000      # ignore growth from a base below R1m
+    require_two_year_rise: true
+    min_amount_rand: 10000000
+    high_growth_yoy: 1.0
+    high_min_amount_rand: 100000000
+    severity: {med: true, high: "growth >= high_growth_yoy and amount >= high_min_amount_rand"}
   D2_unit_price_outlier:   {version: 0.0.0, mvp: false, robust_z: 3.5}
   D6_threshold_splitting:  {version: 0.0.0, mvp: false, blocked_by: "order-level data not public"}
   D7_triangulation:        {version: 0.0.0, mvp: false}
@@ -45,3 +61,6 @@ detectors:
   D10_capacity:            {version: 0.0.0, mvp: false, new_company_months: 12, value_threshold_rand: 10000000}
   D11_contract_expansion:  {version: 0.0.0, mvp: false, blocked_by: "deviation registers restricted"}
   D12_consequence_gap:     {version: 0.0.0, mvp: false}
+  D13_fuel_unit_price:     {version: 0.0.0, mvp: false, blocked_by: "PPD/LOGIS manual drop", threshold: 0.20}
+  D14_noncompetitive_share: {version: 0.0.0, mvp: false, peer_percentile: 0.90}
+  D15_municipal_distress:  {version: 0.0.0, mvp: false, creditors_over_90_days_share: 0.5, cash_coverage_months_below: 1}

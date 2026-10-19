@@ -12,6 +12,7 @@ sources:
     freshness_slo_days: 7
     mvp: true
     status_2026_10_19: "HTTP 200; 21 cubes"
+    mvp_load_2026_10_19: "ok: 17 files; incexp_v2 FYE 2018-2026 (136,124 cells), uifwexp FYE 2012-2024, audit_opinions FYE 2011-2024; incexp v1 members 500 (KE-005)"
   - id: etenders_ocds
     name: eTenders OCDS (Transparency Portal bulk + API)
     owner_org: National Treasury OCPO
@@ -25,6 +26,7 @@ sources:
     freshness_slo_days: 2
     mvp: true
     status_2026_10_19: "swagger.json 200; OCDSReleases 500/timeouts"
+    mvp_load_2026_10_19: "partial: bulk 35,309 releases (Last-Modified 2026-09-20) + 200 delta releases; delta page 3 HTTP 500 (INC-2026-001)"
   - id: ppd_payments
     name: Procurement Payments Dashboard (BAS + LOGIS) transaction list
     owner_org: National Treasury OCPO
@@ -34,6 +36,7 @@ sources:
     freshness_slo_days: 21
     mvp: true
     notes: "Power BI; Procurement_Spend_Transaction_List.csv; excludes SOEs, municipalities, Defence, SAPS, SARS, SSA, legislatures"
+    mvp_load_2026_10_19: "awaiting_manual_drop (RB-06, KE-009)"
   - id: rsr
     name: Register of Restricted Suppliers
     owner_org: National Treasury OCPO
@@ -44,6 +47,7 @@ sources:
     freshness_slo_days: 8
     mvp: true
     personal_data: "contains SA ID numbers -> HMAC, never publish"
+    mvp_load_2026_10_19: "ok: 409 entries (report generated 2026-09-15), 228 natural persons, 3 tender defaulters"
   - id: agsa_pfma
     name: AGSA PFMA general report + annexures
     owner_org: Auditor-General of South Africa
@@ -70,6 +74,7 @@ sources:
     freshness_slo_days: 10
     mvp: true
     status_2026_10_19: "vulekamali.gov.za 200; data.vulekamali.gov.za CKAN 500/timeout"
+    mvp_load_2026_10_19: "ok via public dataset page: Budget_vs_Actual_2025 CSV, 139,463 lines, FY 2022-2025, 49 national departments; CKAN TLS failure (INC-2026-002)"
   - id: s71_noncompliance
     name: MFMA s71 non-compliance lists
     owner_org: National Treasury
