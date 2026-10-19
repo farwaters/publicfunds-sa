@@ -1,0 +1,24 @@
+# Secrets
+.env
+.env.*
+*.pem
+*.key
+secrets/
+# Python
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+# Data (large / reproducible from sources; backed up separately per D-05)
+data/
+src/
+dist/
+*.duckdb
+*.duckdb.wal
+*.parquet
+*.jsonl.gz
+# Build artefacts
+docs/**/*.html
+*.html
+# OS
+.DS_Store
