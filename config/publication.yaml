@@ -1,0 +1,14 @@
+# What the public static snapshot (dist/public/) may show. Changing this file is a Normal-high change
+# (it changes what is published about named parties) - see itil/change-enablement.md and ADR-0008.
+version: "2026-10-19.1"
+flags:
+  # A flag is published as a finding only when its review status is `confirmed` AND the evidence has not changed
+  # since it was confirmed (same evidence hash). Named-supplier flags need two independent confirmations.
+  #
+  # unconfirmed: what to do with every other flag
+  #   exclude - leave it out of the public snapshot (default; lowest defamation risk)
+  #   label   - list it under "Unreviewed leads - not findings". Flags that NAME a supplier or person are
+  #             still always excluded until confirmed (ADR-0005), whatever this setting says.
+  unconfirmed: exclude
+  # Include the reviewers' public reason text next to confirmed flags (never notes, never reviewer names).
+  show_review_reason: true

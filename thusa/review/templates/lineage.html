@@ -1,0 +1,8 @@
+{% extends "base.html" %}{% from "_cell.html" import cell %}{% block title %}Lineage {{ r.sha256[:12] }}{% endblock %}
+{% block content %}
+<h1>Source file lineage</h1>
+<section class="card"><dl class="kv">
+{% for k, v in r.items() %}<dt>{{ k|replace('_',' ') }}</dt><dd>{% if k == 'url' and v|safe_url %}<a href="{{ v|safe_url }}" rel="noopener noreferrer nofollow" target="_blank">{{ v }}</a>{% elif k.endswith('_utc') %}{{ v|sast }}{% else %}<code>{{ v }}</code>{% endif %}</dd>{% endfor %}
+</dl>
+<p class="muted">To verify on the box: <code>sha256sum {{ r.path }}</code> must print <code>{{ r.sha256 }}</code>. Raw files are immutable; a new download with different content gets a new checksum.</p></section>
+{% endblock %}

@@ -1,0 +1,75 @@
+{% extends "base.html" %}{% from "_status.html" import badge, sev %}{% from "_cell.html" import table %}
+{% block title %}Flag {{ f.flag_id }}{% endblock %}
+{% block content %}
+<p><a href="/flags">← queue</a></p>
+<h1>{{ f.title }}</h1>
+{% if ok %}<p class="ok" role="status">Decision recorded.</p>{% endif %}
+{% if error %}<p class="err" role="alert">{{ error }}</p>{% endif %}
+<div class="grid2">
+<section class="card">
+  <dl class="kv">
+    <dt>Status</dt><dd>{{ badge(f) }}</dd>
+    <dt>Severity</dt><dd>{{ sev(f.severity) }} · score {{ f.score }}</dd>
+    <dt>Detector</dt><dd>{{ f.detector_id }} <small>v{{ f.detector_version }}</small></dd>
+    <dt>Entity</dt><dd>{% if f.gov_body_id %}<a href="/entity/{{ f.gov_body_id|urlencode }}">{{ f.body_name or f.gov_body_id }}</a> <small>{{ f.gov_body_id }}</small>{% endif %}</dd>
+    <dt>Period</dt><dd>{{ f.period_label }}</dd>
+    <dt>Flag ID</dt><dd><code>{{ f.flag_id }}</code> <small>(stable across rebuilds)</small></dd>
+    <dt>Evidence hash</dt><dd><code title="{{ f.evidence_hash }}">{{ f.evidence_hash[:16] }}…</code></dd>
+  </dl>
+  {% if f.names_supplier %}
+  <p class="foureyes"><b>Four-eyes:</b> this flag names a supplier or person. It becomes <i>confirmed</i> only after
+  two different reviewers confirm it on the same evidence.
+  {% if f.confirmed_by %}Confirmed so far by: <b>{{ f.confirmed_by|join(', ') }}</b>.{% else %}No confirmations yet.{% endif %}</p>
+  {% endif %}
+  <h2>Explanation</h2>
+  <p>{{ f.explanation }}</p>
+  {% if f.matched.match %}
+  <h2>Match</h2>
+  <dl class="kv">
+    <dt>Confidence</dt><dd><b>{{ f.matched.match.confidence }}</b></dd>
+    <dt>Basis</dt><dd>{{ f.matched.match.basis }}</dd>
+    <dt>Award supplier</dt><dd>{{ f.matched.match.award_supplier }}</dd>
+    <dt>Register name</dt><dd>{{ f.matched.match.register_name }}</dd>
+  </dl>
+  {% endif %}
+  <h2>Evidence</h2>
+  <ul class="evidence">
+  {% for e in f.evidence %}
+    <li>{% if e.url|safe_url %}<a href="{{ e.url|safe_url }}" rel="noopener noreferrer nofollow" target="_blank">{{ e.label }}</a>{% else %}{{ e.label }}{% endif %}
+      {% for k, v in e.items() if k not in ('label', 'url', 'sha256') %}<br><small>{{ k }}: {{ v }}</small>{% endfor %}
+      {% if e.sha256 %}<br><small>raw file: {% set rf = f.raw_files.get(e.sha256) %}<a href="/lineage/{{ e.sha256 }}">{{ rf.path if rf else e.sha256[:12] ~ '…' }}</a></small>{% endif %}</li>
+  {% endfor %}
+  </ul>
+</section>
+<section class="card">
+  <h2>Record a decision</h2>
+  <form method="post" action="/flags/{{ f.flag_id }}/decide" class="decide">
+    <input type="hidden" name="csrf_token" value="{{ user.csrf_token }}">
+    <fieldset><legend>Decision</legend>
+    {% for k, label in DECISION_LABELS.items() %}
+      <label class="radio"><input type="radio" name="decision" value="{{ k }}" required {% if form.decision == k %}checked{% endif %}> {{ label }}</label>
+    {% endfor %}
+    </fieldset>
+    <label>Reason <small>(required, min 10 characters; kept in the audit trail and may be shown publicly for confirmed flags)</small>
+      <textarea name="reason" required minlength="10" maxlength="2000" rows="4">{{ form.reason }}</textarea></label>
+    <label>Notes <small>(optional, internal only)</small>
+      <textarea name="notes" maxlength="4000" rows="3">{{ form.notes }}</textarea></label>
+    <button type="submit">Record decision as {{ user.username }}</button>
+    <p class="muted">Decisions are append-only: they cannot be edited or deleted, only superseded by a later decision.</p>
+  </form>
+  <h2>Decision history</h2>
+  {% if f.decisions %}
+  <ol class="history">
+  {% for d in f.decisions %}
+    <li><b>{{ d.decision }}</b> by {{ d.reviewer_username }} <small>({{ d.reviewer_role }}, via {{ d.channel }})</small> · {{ d.decided_label }}<br>
+      <small>{{ d.prev_status }} → <b>{{ d.new_status }}</b>{% if d.evidence_hash != f.evidence_hash %} · <span class="st st-stale">made on earlier evidence</span>{% endif %}</small>
+      <blockquote>{{ d.reason }}</blockquote>{% if d.notes %}<small>Notes: {{ d.notes }}</small>{% endif %}</li>
+  {% endfor %}
+  </ol>
+  {% else %}<p class="muted">No decisions yet.</p>{% endif %}
+</section>
+</div>
+{% for title, rows in f.matched.tables %}
+<section class="card"><h2>{{ title }}</h2>{{ table(rows, f.raw_files) }}</section>
+{% endfor %}
+{% endblock %}

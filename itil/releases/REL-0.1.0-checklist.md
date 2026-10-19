@@ -20,7 +20,7 @@ Status on 2026-10-19 10:15 SAST: **not releasable publicly**. It's ready for cod
 ## 3. Build & verify
 - [x] Manifest: `dist/summary.json` (build id, git commit, row counts, flags, DQ). Raw checksums are in `ops.raw_file`.
 - [x] Local preview: `dist/site/index.html`; screenshots in `dist/`.
-- [ ] Public preview (D-03 host): not started.
+- [ ] ~~Public preview (D-03 host)~~: superseded by Grok Bot template distribution (ADR-0009).
 
 ## 4. Deploy (production): not in scope for v0.1.0
 

@@ -33,6 +33,9 @@ def checks(min_rows: dict | None = None) -> list[tuple[str, str, str]]:
         ("nulls_preserved:muni_fin_line", "error",
          "SELECT abs((SELECT count(*) FROM staging.muni_incexp WHERE amount_cents IS NULL) - "
          "(SELECT count(*) FROM curated.muni_fin_line WHERE amount_cents IS NULL))"),
+        ("province_codes_official", "error",
+         "SELECT count(*) FROM curated.gov_body WHERE sphere = 'local' AND (province IS NULL OR province NOT IN "
+         "('EC','FS','GT','KZN','LP','MP','NC','NW','WC'))"),
         ("derived_totals_match_published", "error",
          "SELECT CASE WHEN count(*) FILTER (WHERE abs(derived_expenditure_cents - published_expenditure_cents) "
          "<= 0.005 * abs(published_expenditure_cents)) >= 0.99 * count(*) THEN 0 ELSE 1 END "

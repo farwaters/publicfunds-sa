@@ -9,7 +9,9 @@ WITH dis AS (
 )
 SELECT 'MUN:' || e.demarcation_code AS gov_body_id, e.name, e.long_name, 'local' AS sphere,
        CASE e.category WHEN 'A' THEN 'metro' WHEN 'B' THEN 'local' WHEN 'C' THEN 'district' END AS body_type,
-       e.province_code AS province, e.demarcation_code, e.name_key,
+       -- KE-011: the API uses KZ/LP for current and KZN/LIM for some disestablished munis; normalise to KZN/LP
+       CASE e.province_code WHEN 'KZ' THEN 'KZN' WHEN 'LIM' THEN 'LP' ELSE e.province_code END AS province,
+       e.demarcation_code, e.name_key,
        est.valid_from, dis.valid_to,
        rf.source_id, rf.path AS source_file, rf.sha256 AS source_sha256, rf.fetched_at_utc, e.source_locator
 FROM staging.muni_entity e

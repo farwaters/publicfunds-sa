@@ -1,0 +1,17 @@
+{% extends "base.html" %}{% block title %}Audit trail{% endblock %}
+{% block content %}
+<h1>Audit trail</h1>
+<p class="{{ 'ok' if chain.ok else 'err' }}">Hash chain {{ 'intact' if chain.ok else 'BROKEN at decision ' ~ chain.broken_at_decision_id }} · {{ chain.n }} decision(s) · head <code>{{ chain.head[:16] }}…</code></p>
+<form class="filters" method="get" action="/audit">
+  <label>Reviewer <input name="reviewer" value="{{ f.reviewer }}" maxlength="32"></label>
+  <label>Flag ID <input name="flag_id" value="{{ f.flag_id }}" maxlength="16"></label>
+  <button type="submit">Filter</button>
+</form>
+<div class="table-wrap"><table class="data">
+<thead><tr><th>#</th><th>When (SAST)</th><th>Reviewer</th><th>Flag</th><th>Decision</th><th>Status change</th><th>Reason</th><th>Via</th></tr></thead>
+<tbody>{% for d in ds %}<tr>
+<td data-l="#">{{ d.decision_id }}</td><td data-l="When">{{ d.decided_label }}</td><td data-l="Reviewer">{{ d.reviewer_username }}</td>
+<td data-l="Flag"><a href="/flags/{{ d.flag_id }}">{{ d.title or d.flag_id }}</a></td><td data-l="Decision">{{ d.decision }}</td>
+<td data-l="Status">{{ d.prev_status }} → <b>{{ d.new_status }}</b></td><td data-l="Reason">{{ d.reason }}</td><td data-l="Via">{{ d.channel }}</td>
+</tr>{% else %}<tr><td colspan="8">No decisions recorded yet.</td></tr>{% endfor %}</tbody></table></div>
+{% endblock %}

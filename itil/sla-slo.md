@@ -49,7 +49,7 @@ No external SLA is offered while in beta. These are **internal SLOs** with error
 | Impact \ Urgency | High | Medium | Low |
 |---|---|---|---|
 | **Wrong/defamatory figure public, or personal data exposed** | P1 (respond 1 h, take down immediately) | P1 | P2 |
-| **Public site down / data > 2× SLO stale** | P2 (4 h) | P3 | P3 |
+| **Bot/pipeline unavailable or data > 2× SLO stale** (no public site in the MVP, ADR-0009) | P2 (4 h) | P3 | P3 |
 | **Single source stale / DQ fail blocks release** | P3 (1 business day) | P3 | P4 |
 | **Cosmetic** | P4 | P4 | P4 |
 

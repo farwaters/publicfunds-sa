@@ -36,6 +36,13 @@ class Paths:
         return self.data / "thusa.duckdb"
 
     @property
+    def review_db(self) -> Path:
+        """Human review decisions (SQLite, append-only). Lives outside the rebuilt warehouse so reviews survive
+        every pipeline rebuild (ADR-0008). Override with THUSA_REVIEW_DB."""
+        env = os.environ.get("THUSA_REVIEW_DB")
+        return Path(env) if env else self.data / "review" / "review.sqlite"
+
+    @property
     def dist(self) -> Path:
         return self.root / "dist"
 
@@ -71,3 +78,7 @@ def hmac_secret() -> bytes:
         with os.fdopen(fd, "wb") as fh:
             fh.write(os.urandom(32))
     return path.read_bytes()
+
+
+def publication_config() -> dict:
+    return load_yaml("publication.yaml")
