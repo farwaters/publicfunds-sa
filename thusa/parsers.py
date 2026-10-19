@@ -242,3 +242,137 @@ def oecd_cpi_rows(data: bytes) -> list[dict]:
         rows.append({"year": int(y), "month": int(m), "index_value": float(r["OBS_VALUE"]),
                      "base_period": r.get("BASE_PER") or None, "source_locator": f"line {i}"})
     return rows
+
+
+# --------------------------------------------------------------------------------------------- AGSA annexures
+_XNS = {"m": "http://schemas.openxmlformats.org/spreadsheetml/2006/main"}
+_RNS = "{http://schemas.openxmlformats.org/officeDocument/2006/relationships}id"
+
+
+def _col_index(ref: str) -> int:
+    n = 0
+    for ch in re.match(r"[A-Z]+", ref).group(0):
+        n = n * 26 + ord(ch) - 64
+    return n - 1
+
+
+def xlsx_first_sheet(blob: bytes) -> list[list]:
+    """Cell values of the first worksheet (stdlib only: strings, numbers; blanks -> None)."""
+    import zipfile
+    from xml.etree import ElementTree as ET
+    z = zipfile.ZipFile(io.BytesIO(blob))
+    shared = []
+    if "xl/sharedStrings.xml" in z.namelist():
+        for si in ET.fromstring(z.read("xl/sharedStrings.xml")).findall("m:si", _XNS):
+            shared.append("".join(t.text or "" for t in si.iter(f"{{{_XNS['m']}}}t")))
+    wb = ET.fromstring(z.read("xl/workbook.xml"))
+    rid = wb.find("m:sheets/m:sheet", _XNS).get(_RNS)
+    rels = ET.fromstring(z.read("xl/_rels/workbook.xml.rels"))
+    target = next(r.get("Target") for r in rels if r.get("Id") == rid).lstrip("/")
+    sheet = ET.fromstring(z.read(target if target.startswith("xl/") else "xl/" + target))
+    rows = []
+    for row in sheet.iter(f"{{{_XNS['m']}}}row"):
+        vals: dict[int, object] = {}
+        for c in row.findall("m:c", _XNS):
+            v, t = c.find("m:v", _XNS), c.get("t")
+            if t == "inlineStr":
+                val = "".join(x.text or "" for x in c.iter(f"{{{_XNS['m']}}}t"))
+            elif v is None or v.text is None:
+                val = None
+            elif t == "s":
+                val = shared[int(v.text)]
+            elif t in ("str", "e", "b"):
+                val = v.text
+            else:
+                f = float(v.text)
+                val = int(f) if f.is_integer() else f
+            vals[_col_index(c.get("r"))] = val
+        idx = int(row.get("r")) - 1
+        while len(rows) < idx:
+            rows.append([])
+        rows.append([vals.get(i) for i in range(max(vals) + 1)] if vals else [])
+    return rows
+
+
+def _flat(v) -> str:
+    return re.sub(r"\s+", " ", str(v or "")).strip().lower()
+
+
+_AGSA_YEAR = re.compile(r"^(\d{4})-(\d{2})$")
+_AGSA_OUTCOME = re.compile(r"^(unqualified|qualified|adverse|disclaim|audit not finalised)", re.I)
+_UIFW = {"unauthorised expenditure amount r": "unauthorised", "irregular expenditure amount r": "irregular",
+         "fruitless and wasteful expenditure amount r": "fruitless_wasteful"}
+
+
+def _agsa_header(rows):
+    """(row index of the first 'Number' header row, merged header labels per column)."""
+    h = next(i for i, r in enumerate(rows[:10]) if r and _flat(r[0]) == "number")
+    top, sub, labels, cur = rows[h], rows[h + 1], [], ""
+    for j in range(max(len(top), len(sub))):
+        t = _flat(top[j]) if j < len(top) else ""
+        cur = t or cur
+        s = _flat(sub[j]) if j < len(sub) else ""
+        labels.append((cur, s))
+    return h, labels
+
+
+def _agsa_rows(blob: bytes, name: str):
+    rows = xlsx_first_sheet(blob)
+    title = _flat(rows[0][0] if rows and rows[0] else "")
+    if not title.startswith("annexure"):
+        raise ValueError(f"{name}: no 'Annexure' title in cell A1")
+    h, labels = _agsa_header(rows)
+    regime = "MFMA" if name.lower().startswith("mfma") else "PFMA"
+    group = section = None
+    for i, r in enumerate(rows[h + 2:], start=h + 3):
+        if not r or r[0] is None:
+            continue
+        if not isinstance(r[0], (int, float)):
+            head = re.sub(r"\s+", " ", str(r[0])).strip()
+            if _AGSA_OUTCOME.match(head):
+                section = head                 # outcome heading, e.g. 'Unqualified with no findings'
+            else:
+                group, section = head, None    # audit group, e.g. 'Consolidated audits (...)', 'Small auditees'
+            continue
+        cell = {lab: (r[j] if j < len(r) else None) for j, lab in enumerate(labels)}
+        base = {"regime": regime, "auditee": str(r[1]).strip() if r[1] is not None else None, "row_number": int(r[0]),
+                "audit_group": group, "section": section, "source_locator": f"{name}#row{i}"}
+        for (top, sub), v in cell.items():
+            if top in ("auditee category",):
+                base["auditee_category"] = v
+            elif top in ("auditee type", "sphere"):
+                base["auditee_type"] = v
+            elif top in ("province", "national / province"):
+                base["province"] = v
+        yield base, cell
+
+
+def agsa_opinion_rows(blob: bytes, name: str) -> Iterator[dict]:
+    """Audit opinions per auditee and year: Annexure 3 (five years) and Annexure 1 (current and prior year)."""
+    for base, cell in _agsa_rows(blob, name):
+        for (top, sub), v in cell.items():
+            y = _AGSA_YEAR.match(sub) or (sub == "audit opinion" and re.match(r"^(\d{4})-(\d{2}) audit outcomes$", top))
+            if not y or v in (None, ""):
+                continue
+            yield {**base, "fy_label": f"{y.group(1)}-{y.group(2)}", "fye": int(y.group(1)) + 1,
+                   "audit_opinion": str(v).strip()}
+
+
+def agsa_uifw_rows(blob: bytes, name: str) -> Iterator[dict]:
+    """Annexure 1 unauthorised / irregular / fruitless and wasteful expenditure for the report year, in cents.
+
+    The column header reads 'Amount R' but values are in R million: e.g. City of Cape Town 2023-24 irregular
+    expenditure 634.3 matches National Treasury's R634 262 thousand (KE-013). Blank cells stay unknown (None)."""
+    title_year = None
+    for base, cell in _agsa_rows(blob, name):
+        if title_year is None:
+            title_year = next((m.group(0)[:7] for (top, _), _v in cell.items()
+                               if (m := re.match(r"^\d{4}-\d{2} audit outcomes$", top))), None)
+        for (top, sub), v in cell.items():
+            kind = _UIFW.get(sub)
+            if not kind:
+                continue
+            cents = None if v in (None, "") else round(float(v) * 100_000_000)
+            yield {**base, "fy_label": title_year, "fye": int(title_year[:4]) + 1 if title_year else None,
+                   "uifw_type": kind, "amount_r_million": None if v in (None, "") else float(v),
+                   "amount_cents": cents}
