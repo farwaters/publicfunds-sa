@@ -1,6 +1,6 @@
 [project]
 name = "thusa"
-version = "0.1.0"
+version = "0.2.0"
 description = "Thusa MVP: South African public-spending data pipeline, coverage model and red-flag detectors"
 readme = "README.md"
 requires-python = ">=3.13,<3.14"
@@ -12,13 +12,20 @@ dependencies = [
   "jinja2==3.1.6",
   "matplotlib==3.10.7",
   "pytz==2025.2",
+  "fastapi==0.146.0",
+  "uvicorn==0.54.0",
+  "python-multipart==0.0.32",
 ]
 
 [dependency-groups]
 dev = ["pytest==8.4.2"]
+screenshots = [
+    "playwright==1.64.0",
+]
 
 [project.scripts]
 thusa = "thusa.cli:main"
+pf = "thusa.review.cli:main"
 
 [build-system]
 requires = ["hatchling"]
@@ -30,3 +37,5 @@ packages = ["thusa"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 markers = ["e2e: end-to-end smoke test against the built warehouse"]
+# starlette.testclient still works with httpx 0.28; the httpx2 migration is tracked in CSI-017
+filterwarnings = ["ignore:Using `httpx` with `starlette.testclient` is deprecated"]
