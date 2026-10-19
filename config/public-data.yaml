@@ -2,6 +2,7 @@
 # Plain-language text shown on the public dashboard. Changing what is exported is a Normal-high change.
 schema_version: "1.0.0"
 base_url: "https://raw.githubusercontent.com/farwaters/publicfunds-sa/main/public-data/v1/"
+site_url: "https://farwaters.github.io/publicfunds-sa/apps/public-dashboard/"   # public dashboard (GitHub Pages, ADR-0011)
 size_budget_bytes: 5000000        # all files together (tests enforce it)
 file_budget_bytes: 2000000        # any single file
 detectors:
