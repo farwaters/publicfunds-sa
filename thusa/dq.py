@@ -1,0 +1,98 @@
+"""Data-quality suite. Runs inside every build (results -> ops.dq_result) and again under pytest.
+
+Each check returns a failure count; 0 = pass. Severity 'error' fails the build/tests; 'warn' is reported.
+"""
+from __future__ import annotations
+
+from pathlib import Path
+
+from thusa.raw import sha256_file
+
+CURATED_LINEAGE_TABLES = ["gov_body", "muni_fin_line", "muni_total", "nat_budget_line", "uifw_line", "audit_outcome", "award",
+                          "ocds_release", "restriction", "payment"]
+MIN_ROWS = {"curated.gov_body": 250, "curated.muni_fin_line": 50_000, "curated.nat_budget_line": 50,
+            "curated.uifw_line": 1_000, "curated.audit_outcome": 1_000, "curated.award": 1_000,
+            "curated.ocds_release": 10_000, "curated.restriction": 100, "marts.coverage_cell": 1_000}
+
+
+def checks(min_rows: dict | None = None) -> list[tuple[str, str, str]]:
+    out: list[tuple[str, str, str]] = []
+    for t, n in (min_rows if min_rows is not None else MIN_ROWS).items():
+        out.append((f"row_count_min:{t}>={n}", "error", f"SELECT CASE WHEN count(*) >= {n} THEN 0 ELSE 1 END FROM {t}"))
+    for t in CURATED_LINEAGE_TABLES:
+        out.append((f"lineage_present:{t}", "error",
+                    f"SELECT count(*) FROM curated.{t} WHERE source_id IS NULL OR source_file IS NULL "
+                    f"OR source_sha256 IS NULL OR fetched_at_utc IS NULL"))
+        out.append((f"lineage_resolves:{t}", "error",
+                    f"SELECT count(*) FROM curated.{t} c LEFT JOIN ops.raw_file r ON r.sha256 = c.source_sha256 "
+                    f"WHERE r.sha256 IS NULL"))
+    out += [
+        ("money_columns_are_bigint_cents", "error",
+         "SELECT count(*) FROM information_schema.columns WHERE table_schema IN ('staging','curated','marts') "
+         "AND column_name LIKE '%cents' AND data_type <> 'BIGINT'"),
+        ("nulls_preserved:muni_fin_line", "error",
+         "SELECT abs((SELECT count(*) FROM staging.muni_incexp WHERE amount_cents IS NULL) - "
+         "(SELECT count(*) FROM curated.muni_fin_line WHERE amount_cents IS NULL))"),
+        ("derived_totals_match_published", "error",
+         "SELECT CASE WHEN count(*) FILTER (WHERE abs(derived_expenditure_cents - published_expenditure_cents) "
+         "<= 0.005 * abs(published_expenditure_cents)) >= 0.99 * count(*) THEN 0 ELSE 1 END "
+         "FROM curated.muni_total WHERE published_expenditure_cents IS NOT NULL"),
+        ("zero_placeholder_is_null:award", "error",
+         "SELECT count(*) FROM curated.award WHERE value_note IN ('missing','zero_placeholder') AND value_cents IS NOT NULL"),
+        ("no_zero_award_values", "error", "SELECT count(*) FROM curated.award WHERE value_cents = 0"),
+        ("sentinel_is_null:nt_bva", "error",
+         "SELECT count(*) FROM staging.nt_bva WHERE value_note = 'sentinel' AND amount_cents IS NOT NULL"),
+        ("unique:muni_fin_line", "error",
+         "SELECT count(*) - count(DISTINCT (gov_body_id, fye, amount_type, item_code)) FROM curated.muni_fin_line"),
+        ("unique:award", "error",
+         "SELECT count(*) - count(DISTINCT (ocid, award_id, coalesce(supplier_id,''), coalesce(supplier_name,''))) FROM curated.award"),
+        ("unique:coverage_cell", "error",
+         "SELECT count(*) - count(DISTINCT (gov_body_id, fye, data_type)) FROM marts.coverage_cell"),
+        ("coverage_states_valid", "error",
+         "SELECT count(*) FROM marts.coverage_cell WHERE state NOT IN ('present','partial','missing','n.a.')"),
+        ("coverage_reason_for_non_present", "error",
+         "SELECT count(*) FROM marts.coverage_cell WHERE state <> 'present' AND reason_code IS NULL"),
+        ("popia_no_raw_sa_id_in_restriction", "error",
+         "SELECT count(*) FROM curated.restriction WHERE regexp_matches(coalesce(name,'') || coalesce(cipc_reg_no,'') "
+         "|| coalesce(reason,''), '\\d{13}')"),
+        ("popia_no_raw_sa_id_in_staging_rsr", "error",
+         "SELECT count(*) FROM staging.rsr WHERE regexp_matches(coalesce(name,'') || coalesce(cipc_reg_no,''), '\\d{13}')"),
+        ("popia_person_hmac_shape", "error",
+         "SELECT count(*) FROM curated.restriction WHERE person_id_hmac IS NOT NULL AND NOT regexp_matches(person_id_hmac, '^[0-9a-f]{64}$')"),
+        ("popia_no_person_names_in_flags", "error",
+         "SELECT count(*) FROM marts.flag f JOIN curated.restriction r ON r.is_person AND f.subject_name = r.name"),
+        ("flags_named_supplier_pending_review", "error",
+         "SELECT count(*) FROM marts.flag WHERE names_supplier AND review_status <> 'pending human review'"),
+        ("flags_never_published_unreviewed", "error",
+         "SELECT count(*) FROM marts.flag WHERE publish_status = 'published' AND review_status <> 'reviewed'"),
+        ("flags_have_evidence_url", "error",
+         "SELECT count(*) FROM marts.flag WHERE json_array_length(evidence_json) = 0 "
+         "OR NOT list_contains(list_transform(CAST(json_extract(evidence_json, '$[*].url') AS VARCHAR[]), x -> x IS NOT NULL), true)"),
+        ("award_buyer_match_rate_info", "warn",
+         "SELECT count(*) FILTER (WHERE buyer_gov_body_id IS NULL AND buyer_name ILIKE '%municipal%') FROM curated.award"),
+    ]
+    return out
+
+
+def run(con, build_id: str, min_rows: dict | None = None, raw_root: Path | None = None) -> list[dict]:
+    con.execute("CREATE TABLE IF NOT EXISTS ops.dq_result (build_id VARCHAR, test_name VARCHAR, severity VARCHAR, "
+                "status VARCHAR, failures BIGINT, run_at_utc TIMESTAMPTZ DEFAULT now())")
+    results = []
+    for name, sev, sql in checks(min_rows):
+        try:
+            failures = int(con.execute(sql).fetchone()[0] or 0)
+            status = "pass" if failures == 0 else ("fail" if sev == "error" else "warn")
+        except Exception as exc:  # a broken check is a failure, never a silent pass
+            failures, status = -1, f"error: {exc}"
+        results.append({"test_name": name, "severity": sev, "status": status, "failures": failures})
+    if raw_root is not None:  # checksum of every referenced raw file still matches
+        bad = 0
+        for path, sha in con.execute("SELECT path, sha256 FROM ops.raw_file").fetchall():
+            p = Path(raw_root) / path
+            bad += int(not p.exists() or sha256_file(p) != sha)
+        results.append({"test_name": "raw_files_checksum_match", "severity": "error",
+                        "status": "pass" if bad == 0 else "fail", "failures": bad})
+    for r in results:
+        con.execute("INSERT INTO ops.dq_result (build_id, test_name, severity, status, failures) VALUES (?,?,?,?,?)",
+                    [build_id, r["test_name"], r["severity"], r["status"], r["failures"]])
+    return results
