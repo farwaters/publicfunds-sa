@@ -1,0 +1,22 @@
+# systemd --user unit for the Thusa review app (runbook RB-08). Install:
+#   mkdir -p ~/.config/systemd/user && cp deploy/thusa-review.service ~/.config/systemd/user/
+#   systemctl --user daemon-reload && systemctl --user enable --now thusa-review
+#   loginctl enable-linger "$USER"     # keep it running after logout
+# Paths assume the repo at /workspace/publicfunds (the Grok Bot box); edit them for another checkout.
+[Unit]
+Description=Thusa review app (localhost only)
+After=network.target
+
+[Service]
+WorkingDirectory=/workspace/publicfunds
+ExecStart=/workspace/publicfunds/.venv/bin/pf serve --host 127.0.0.1 --port 8765
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ReadWritePaths=/workspace/publicfunds/data/review
+UMask=0077
+
+[Install]
+WantedBy=default.target

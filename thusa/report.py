@@ -1,4 +1,4 @@
-"""Static local dashboard + PNG charts generated from the warehouse (dist/ is git-ignored).
+"""Static INTERNAL dashboard + PNG charts generated from the warehouse (dist/ is git-ignored).
 
 Outputs: dist/site/index.html, dist/site/muni/<CODE>.html, dist/coverage_heatmap.png, dist/coverage_by_type.png,
 dist/flags_summary.png, dist/summary.json. Screenshots: dist/screenshot_*.png (headless Chrome, if present).
@@ -177,7 +177,7 @@ INDEX = """<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Thu
 <meta name="viewport" content="width=device-width,initial-scale=1"><style>{{ css }}</style></head><body>
 <header><h1>Thusa (MVP v0.1.0) - South African public spending: what we know, what we don't, what looks odd</h1>
 <p>Local snapshot built {{ s.build_id }} from raw files fetched {{ fetched }} (SAST). Commit {{ s.git_commit }}.</p></header><main>
-<div class="banner"><b>Read this first:</b> every flag below is an <b>automated, unreviewed indicator</b>, not a finding of wrongdoing.
+<div class="banner"><b>INTERNAL working dashboard - not for publication</b> (the public snapshot is <code>dist/public/</code>, confirmed flags only). <b>Read this first:</b> every flag below is an <b>automated, unreviewed indicator</b>, not a finding of wrongdoing.
 Flags that name a supplier are <b>pending human review</b> and are not published. Blank means unknown, never zero.</div>
 <h2>Coverage headline</h2>
 <div class="kpis">
@@ -280,6 +280,8 @@ def render(paths: Paths, screenshot: bool = True) -> dict:
     out = {"site": str(site / "index.html"), "pngs": [str(dist / n) for n in
            ("coverage_heatmap.png", "coverage_by_type.png", "flags_summary.png")], "headline": h,
            "featured_muni": featured[0] if featured else None}
+    from thusa.publish import render_public   # public snapshot: confirmed flags only (ADR-0008)
+    out["public"] = render_public(paths)
     if screenshot:
         out["screenshots"] = screenshots(site, dist, featured[0]["demarcation_code"] if featured else None)
     (dist / "summary.json").write_text(json.dumps({"build": s, "report": out}, indent=1, default=str))
