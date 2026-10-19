@@ -11,7 +11,7 @@ Thusa is a **Grok Bot app**. To use it, **import the PublicFunds Bot template vi
   `docs/bot/template.md`.
 
 ## Public dashboard (v0.3.0, CHG-2026-006)
-Everybody else uses the **public website**: a no-login dashboard at **https://farwaters.github.io/publicfunds-sa/** (GitHub Pages, ADR-0011; Grok Build deferred). It reads the open data export in [`public-data/v1/`](public-data/v1/) (`manifest.json` first; money in cents, `null` = unknown, every figure with its source), which `pf publish-data` builds after each successful refresh. Only review-confirmed flags are published. Code: [`apps/public-dashboard/`](apps/public-dashboard/); served by GitHub Pages from `main` (redeploys on every push) (ADR-0010, ADR-0011; [`GROK_BUILD_PROMPT.md`](apps/public-dashboard/GROK_BUILD_PROMPT.md) kept for a later Grok Build copy). The bot template above stays the power-user and reviewer version.
+Everybody else uses the **public website**: a no-login dashboard at **https://farwaters.github.io/publicfunds-sa/** (GitHub Pages, ADR-0011; Grok Build deferred). It reads the open data export in [`public-data/v1/`](public-data/v1/) (`manifest.json` first; money in cents, `null` = unknown, every figure with its source), which `pf publish-data` builds after each successful refresh. Only review-confirmed flags are published. Code: [`apps/public-dashboard/`](apps/public-dashboard/); served by GitHub Pages from `main` (redeploys on every push) (ADR-0010, ADR-0011; [`GROK_BUILD_PROMPT.md`](apps/public-dashboard/GROK_BUILD_PROMPT.md) kept for a later Grok Build copy). The bot template above stays the power-user and reviewer version. What changed in the data: `#/changes` and the JSON Feed `public-data/v1/feed.json`; known gaps per province: `#/unknowns`; found an error? Use **Report an error** on any page (GitHub issue form, no personal data). Roadmap: [`docs/roadmap/improvements-2026-10.md`](docs/roadmap/improvements-2026-10.md).
 
 ## Contents
 | Path | What |
@@ -28,7 +28,8 @@ Everybody else uses the **public website**: a no-login dashboard at **https://fa
 | `scripts/`, `deploy/` | `review-app.sh` (start/stop), `review_screenshots.py`, systemd user unit |
 | `tests/` | pytest: unit, connectors with mock HTTP, end-to-end smoke on synthetic data, DQ suite on the real warehouse |
 | `apps/public-dashboard/`, `public-data/v1/` | Public dashboard (single-file SPA + Grok Build prompt) and the public JSON data export it reads (v0.3.0) |
-| `docs/releases/v0.1.0.md`, `v0.2.0.md`, `v0.3.0.md` | Release notes (drafts) |
+| `docs/releases/v0.1.0.md` … `v0.4.0.md` | Release notes (drafts) |
+| `docs/roadmap/` | Prioritised improvement backlog (scored; mirrored in the CSI register) |
 | `AGENTS.md`, `REVIEW.md`, `.github/` | AI-agent context, review rules, PR template, CODEOWNERS |
 
 ## Running the MVP pipeline
