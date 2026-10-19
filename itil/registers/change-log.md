@@ -7,6 +7,7 @@
 | CHG-2026-004 | 2026-10-19 | Normal-high (retrospective record) | Repository visibility changed to **public** by the owner (~11:21 SAST) after scanning the full history for secrets (clean) — itil/changes/CHG-2026-004-repo-public.md | GitHub settings (no commit) | Successful |
 | CHG-2026-005 | 2026-10-19 | Normal-high | Template packaging: 5 bot skills, template description + memory facts, `scripts/bootstrap.sh`; D-12 Parked — itil/changes/CHG-2026-005-template-packaging.md | branch feat/review-app ([PR #2](https://github.com/farwaters/publicfunds-sa/pull/2), unmerged) | Awaiting review |
 | CHG-2026-006 | 2026-10-19 | Normal-high | Public dashboard via Grok Build: `pf publish-data` public JSON export (`public-data/v1`), single-file SPA `apps/public-dashboard/`, Grok Build prompt, DMPR fuel + OECD CPI price benchmarks, refresh skill publishes data; ADR-0010 — itil/changes/CHG-2026-006-public-dashboard.md | [PR #3](https://github.com/farwaters/publicfunds-sa/pull/3), merge 2eaedb7 | **Merged 19 Oct 2026 20:29 SAST** (owner override, see note) |
+| CHG-2026-007 | 2026-10-19 | Normal-high | Public dashboard on GitHub Pages (branch `main` /, root redirect, same-origin data with raw fallback; workflow deploy blocked by token scope); Grok Build deferred by owner; ADR-0011 — itil/changes/CHG-2026-007-github-pages.md | main (owner-approved direct push, 20:30 SAST) | Implemented |
 
 **CHG-2026-001 update (19 Oct 2026):** the local repo is committed (6 commits on `main`). The remote is **not yet created**:
 - `gh` is not logged in.

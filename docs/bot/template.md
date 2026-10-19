@@ -1,6 +1,6 @@
 # PublicFunds Bot: Grok Bot template (draft)
 
-**How people get the app:** import the PublicFunds Bot template via its Grok Bot link: **`https://x.ai/bot/7Hr1hnJPXqOQbMmUZ7mTi`**.
+**How people get the app:** import the PublicFunds Bot template via its Grok Bot link: **`https://x.ai/bot/7Hr1hnJPXqOQbMmUZ7mTi`**. This is the power-user and reviewer version; everyone else can use the public dashboard at **https://farwaters.github.io/publicfunds-sa/** (no login, no Grok Bot needed).
 This is a `grokbot://` bot-template share link; the owner will fill it in (D-15). There is no website to visit
 (ADR-0009).
 

@@ -25,3 +25,4 @@ docs/**/*.html
 # OS
 .DS_Store
 !apps/public-dashboard/*.html
+!/index.html

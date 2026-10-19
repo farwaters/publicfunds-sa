@@ -1,5 +1,5 @@
 # ADR-0010: Public dashboard as a Grok Build app, reading a public JSON export from the repo
-- Status: Proposed (owner direction, 19 Oct 2026 17:47 SAST; accepted when PR for CHG-2026-006 merges)
+- Status: Accepted (PR #3 merged 19 Oct 2026 20:29 SAST); **host amended by ADR-0011**: GitHub Pages, Grok Build deferred
 - Date: 2026-10-19
 - Supersedes (in part): ADR-0009, only the parts "no public web hosting in the MVP" and "the bot chat is the only
   public UI". Also reopens D-03 (public hosting), now resolved as Grok Build.

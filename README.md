@@ -11,14 +11,14 @@ Thusa is a **Grok Bot app**. To use it, **import the PublicFunds Bot template vi
   `docs/bot/template.md`.
 
 ## Public dashboard (v0.3.0, CHG-2026-006)
-Everybody else uses the **public website**: a no-login dashboard published with Grok Build at a grok.me address (URL recorded after publishing, D-16). It reads the open data export in [`public-data/v1/`](public-data/v1/) (`manifest.json` first; money in cents, `null` = unknown, every figure with its source), which `pf publish-data` builds after each successful refresh. Only review-confirmed flags are published. Code: [`apps/public-dashboard/`](apps/public-dashboard/); publish with [`GROK_BUILD_PROMPT.md`](apps/public-dashboard/GROK_BUILD_PROMPT.md) (ADR-0010). The bot template above stays the power-user and reviewer version.
+Everybody else uses the **public website**: a no-login dashboard at **https://farwaters.github.io/publicfunds-sa/** (GitHub Pages, ADR-0011; Grok Build deferred). It reads the open data export in [`public-data/v1/`](public-data/v1/) (`manifest.json` first; money in cents, `null` = unknown, every figure with its source), which `pf publish-data` builds after each successful refresh. Only review-confirmed flags are published. Code: [`apps/public-dashboard/`](apps/public-dashboard/); served by GitHub Pages from `main` (redeploys on every push) (ADR-0010, ADR-0011; [`GROK_BUILD_PROMPT.md`](apps/public-dashboard/GROK_BUILD_PROMPT.md) kept for a later Grok Build copy). The bot template above stays the power-user and reviewer version.
 
 ## Contents
 | Path | What |
 |---|---|
 | `sa_public_funds_landscape.md` (+ `.pdf`, `.docx`) | Landscape of ~48 SA tools, coverage matrix, gap analysis, source inventory, exception ideas (19 Oct 2026) |
 | `docs/design/application-design.md` (+ `.pdf`) | **Application design**: vision, personas, requirements, architecture, data model, detectors, coverage model, API, UI, security/POPIA/PAIA, roadmap, testing, engineering practices, observability, ITIL summary, open decisions |
-| `docs/adr/` | Decision log (ADR-0001…0010 + template) |
+| `docs/adr/` | Decision log (ADR-0001…0011 + template) |
 | `docs/research/discoveringai-reposts.md` | The @DiscoveringAI reposts on going beyond vibe coding, and the practices adopted |
 | `itil/` | ITIL 4 practice map, service definition, SLA/SLO, change enablement, templates (change, incident, problem, release), registers (risk, CI, CSI, change, incident), knowledge (runbooks, KEDB) |
 | `config/sources.yaml`, `config/detectors.yaml` | Machine-readable CIs: data sources and red-flag detectors |
@@ -82,7 +82,7 @@ uv run pf publish                         # rebuild dist/public/ (confirmed flag
 ## Status
 - MVP pipeline v0.1.0: branch `feat/mvp-pipeline` (CHG-2026-002, PR #1).
 - Review app v0.2.0: branch `feat/review-app` (CHG-2026-003), stacked on it.
-- Distributed as the PublicFunds Bot template (https://x.ai/bot/7Hr1hnJPXqOQbMmUZ7mTi). Public dashboard + data export: branch `feat/public-dashboard` (CHG-2026-006); not yet published.
+- Distributed as the PublicFunds Bot template (https://x.ai/bot/7Hr1hnJPXqOQbMmUZ7mTi). Public dashboard live at https://farwaters.github.io/publicfunds-sa/ (CHG-2026-006, CHG-2026-007).
 - Published flags: none confirmed yet (0 in `public-data/v1/flags.json`).
 - All flags are unreviewed automated indicators.
 - Supplier-naming flags are `pending human review`.
