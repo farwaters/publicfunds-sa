@@ -5,8 +5,18 @@
 | Requested by / date (SAST) | Owner ("create the grok bot app that people can use to review data"), 2026-10-19 10:51 |
 | Type | **Normal-high**: it changes the publication pipeline (what may be published about named parties) and adds authentication and secrets. Two approvals needed (E11) |
 | CIs affected | CI-090, CI-091, CI-094, CI-095, CI-060, CI-070, CI-008 (gov_body province fix); new CI-096..101 |
-| Linked records | ADR-0005 (amended), **ADR-0008**; RSK-001 (updated), **RSK-017, RSK-018, RSK-019**; **KE-011**; **CSI-016..019**; RB-04 (updated), **RB-08, RB-09, RB-10**; REL-0.2.0 checklist |
+| Linked records | ADR-0005 (amended), **ADR-0008**, **ADR-0009**; RSK-001 (updated), **RSK-017, RSK-018, RSK-019**; **KE-011**; **CSI-016..019**; RB-04 (updated), **RB-08, RB-09, RB-10**; REL-0.2.0 checklist |
 | PR | branch `feat/review-app`, stacked on `feat/mvp-pipeline` (PR base = `feat/mvp-pipeline`; retarget to `main` after PR #1 merges). Not merged |
+
+## Amendment (19 Oct 2026, 11:21 SAST): Grok Bot template distribution
+The owner clarified that Thusa is a **Grok Bot app**, distributed through the **PublicFunds Bot** template link
+(`<TEMPLATE_LINK>`), not a hosted website. Recorded as **ADR-0009**:
+- **The bot chat is the primary UI.** The localhost review web app is a secondary tool that the bot opens in its own
+  box browser.
+- Public web hosting is dropped from the MVP; **D-03 and D-14 are superseded** in the decision log.
+- Docs updated: README, docs/design, `docs/bot/template.md` (new), `docs/bot/review-skill.md`, RB-08.
+- Registers updated: CI-009 retired, CI-102 added, RSK-018 updated, RSK-020 added; release checklist updated.
+- No code behaviour changed: the app was already localhost-only.
 
 ## What and why
 v0.1.0 produces 335 flags, but there was no way to review them. ADR-0005 blocks publishing named flags until a human
@@ -94,6 +104,6 @@ has reviewed them. This change adds:
 
 ## Post-implementation
 - Onboard a second reviewer (CSI-016).
-- Decide on remote access (D-14).
+- Create and verify the PublicFunds Bot template link (D-15); remote access (D-14) is superseded by ADR-0009.
 - Include `data/review/` in backups (D-05).
 - After the first reviewed release, re-score RSK-001 and start the D3/D4 eval set (CSI-014) from real decisions.

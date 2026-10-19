@@ -16,8 +16,8 @@
 | Hours | 24×7 availability target; operator response business hours SAST (Mon–Fri 08:00–17:00) |
 | Service levels | See sla-slo.md |
 | Support / requests | Corrections & objections form (phase 2); until then, owner email **[to be set; D-05]** |
-| Dependencies | Grok Bot computer (box), routines; public host (D-03); upstream publishers (CI register) |
-| Cost model | Free to users; operating cost = Grok Bot plan usage + hosting **[estimate pending]** |
+| Dependencies | Grok Bot computer (box), routines, the PublicFunds Bot template (CI-102, ADR-0009; no public web host); upstream publishers (CI register) |
+| Cost model | Free to users; operating cost = Grok Bot plan usage per bot (each importer runs their own) **[estimate pending]** |
 | Key risks | RSK-001..RSK-012 |
 
 ## SVC-02 — Thusa Public API (phase 2)

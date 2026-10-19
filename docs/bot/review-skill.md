@@ -5,6 +5,14 @@
 **Purpose:** let a reviewer work the Thusa flag queue in a Grok Bot chat. The bot lists and explains flags and records a
 decision **only when the human explicitly states it**.
 
+**Where this runs:**
+- Thusa is distributed as the **PublicFunds Bot** Grok Bot template: import it via its Grok Bot link `<TEMPLATE_LINK>`
+  (ADR-0009, docs/bot/template.md).
+- **The chat is the primary review UI.** The local review web app (`pf serve`, http://127.0.0.1:8765) is a
+  secondary tool. Open it in **your own box browser** when a visual view helps: the coverage heatmap, a long queue,
+  side-by-side evidence. The user can watch or take over through your desktop.
+- Never expose the app beyond localhost.
+
 ## When to use
 The user asks to see, explain, or decide Thusa flags ("what's in the review queue?", "show me the NEXTEC flag",
 "reject flag 6cc5… because …").
@@ -68,6 +76,12 @@ Run from the repository root: `cd /workspace/publicfunds`.
    - If the new status is `awaiting second review`, say that a **different** reviewer must confirm before it can
      be published.
 4. On exit code 3, explain the rule in plain words. Do not retry with another identity.
+5. **Visual view (optional):**
+   - Check `scripts/review-app.sh status`, and start it if needed.
+   - Open `http://127.0.0.1:8765/flags/<flag_id>` (or `/coverage?data_type=core&province=KZN`) in your box browser.
+   - If the sign-in page appears, ask the user to sign in on your desktop. **Never type the password yourself**
+     and never read the credentials file into the chat.
+   - Decisions made in the web form and in chat land in the same audit trail.
 
 ## Out of scope
 - Publishing. `pf publish` and releases follow the release checklist and need the owner's approval.

@@ -60,19 +60,17 @@ unless you pass `--allow-remote`.
 **After a pipeline rebuild:** no restart is needed. Every request opens the current warehouse read-only. Flags whose
 evidence changed show `evidence changed` and need re-review.
 
-**Exposing it to remote reviewers. Pick one; never `--host 0.0.0.0` over plain HTTP:**
-1. **SSH tunnel (recommended for a few reviewers):** `ssh -N -L 8765:127.0.0.1:8765 <box>`, then open
-   http://127.0.0.1:8765 locally. Nothing new is exposed.
-2. **TLS reverse proxy on a host name you control:**
-   - Keep `pf serve` on 127.0.0.1 and put Caddy or nginx in front, e.g. Caddyfile
-     `review.example.org { reverse_proxy 127.0.0.1:8765 }`.
-   - Run the app with:
-     - `THUSA_REVIEW_SECURE_COOKIES=1` (sets `__Host-` Secure cookies and HSTS);
-     - `THUSA_REVIEW_ALLOWED_HOSTS=review.example.org`;
-     - `pf serve --proxy-headers --forwarded-allow-ips 127.0.0.1`, so login rate limiting sees real client IPs.
-   - Optionally add an IP allow-list or SSO at the proxy.
-   - Doing this is a **Normal change** (new external interface). Record it in a CHG record and update CI-097.
-   - Whether the Grok Bot box can publish a port to the internet is not established (D-14).
+**How users reach it (ADR-0009):** through the **PublicFunds Bot**.
+- The bot chat is the primary UI: `pf review …`, skill `thusa-review`.
+- When a visual view helps, the bot opens http://127.0.0.1:8765 in its **own box browser**, and the user watches or
+  takes over through the bot's desktop and signs in there. The bot never types the password.
+- Exposing the app to the internet is **not an MVP requirement** (D-14 superseded). Don't use `--allow-remote`,
+  tunnels or public proxies.
+- If a later phase needs remote access, that is a new Normal-high change with its own ADR. Its prerequisites:
+  - a TLS reverse proxy;
+  - `THUSA_REVIEW_SECURE_COOKIES=1`;
+  - `THUSA_REVIEW_ALLOWED_HOSTS=<host>`;
+  - `pf serve --proxy-headers --forwarded-allow-ips 127.0.0.1`.
 
 ## RB-09 Reviewer accounts: add, rotate, off-board
 Run all of these in a shell on the box from the repo root. Each step writes an append-only `reviewer_event` row.

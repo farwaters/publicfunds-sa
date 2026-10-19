@@ -2,18 +2,26 @@
 
 Prototype design for the most comprehensive, honest taxpayer dashboard of SA government spending. It ingests public sources, shows **what it doesn't know**, flags exceptions with evidence, and puts benchmarks ("utilities on the glass") next to every number. It is built as a **Grok Bot-hosted app** (ADR-0001).
 
+## Get the app
+Thusa is a **Grok Bot app**. To use it, **import the PublicFunds Bot template via its Grok Bot link: `<TEMPLATE_LINK>`**
+(a `grokbot://` bot-template share link). There is no website (ADR-0009).
+- **The bot chat is the primary UI:** ask about coverage, municipalities and flags, and review flags in the chat.
+- **The local review web app** (127.0.0.1:8765) is a secondary tool that the bot opens in its own box browser for you.
+- On first run, the bot clones this repo, builds the data and creates your reviewer account. See
+  `docs/bot/template.md`.
+
 ## Contents
 | Path | What |
 |---|---|
 | `sa_public_funds_landscape.md` (+ `.pdf`, `.docx`) | Landscape of ~48 SA tools, coverage matrix, gap analysis, source inventory, exception ideas (19 Oct 2026) |
 | `docs/design/application-design.md` (+ `.pdf`) | **Application design**: vision, personas, requirements, architecture, data model, detectors, coverage model, API, UI, security/POPIA/PAIA, roadmap, testing, engineering practices, observability, ITIL summary, open decisions |
-| `docs/adr/` | Decision log (ADR-0001…0008 + template) |
+| `docs/adr/` | Decision log (ADR-0001…0009 + template) |
 | `docs/research/discoveringai-reposts.md` | The @DiscoveringAI reposts on going beyond vibe coding, and the practices adopted |
 | `itil/` | ITIL 4 practice map, service definition, SLA/SLO, change enablement, templates (change, incident, problem, release), registers (risk, CI, CSI, change, incident), knowledge (runbooks, KEDB) |
 | `config/sources.yaml`, `config/detectors.yaml` | Machine-readable CIs: data sources and red-flag detectors |
 | `sql/core_schema.sql` | Target logical schema (the implemented MVP schema is in `thusa/models/` + `thusa/staging.py`) |
 | `thusa/` | **MVP pipeline (v0.1.0)**: connectors, parsers, staging, SQL models (curated, marts/coverage), detectors, DQ suite, report, CLI. **`thusa/review/`** (v0.2.0): review web app, review store, `pf` CLI. `thusa/publish.py`: public snapshot of confirmed flags |
-| `docs/bot/review-skill.md` | Draft Grok Bot skill: driving reviews from chat with `pf review …` |
+| `docs/bot/template.md`, `docs/bot/review-skill.md` | PublicFunds Bot template (contents, instructions, first run) and the `thusa-review` skill (driving reviews from chat with `pf review …`) |
 | `scripts/`, `deploy/` | `review-app.sh` (start/stop), `review_screenshots.py`, systemd user unit |
 | `tests/` | pytest: unit, connectors with mock HTTP, end-to-end smoke on synthetic data, DQ suite on the real warehouse |
 | `docs/releases/v0.1.0.md`, `v0.2.0.md` | Release notes (drafts) |
@@ -50,7 +58,8 @@ uv run pf publish                         # rebuild dist/public/ (confirmed flag
 - Flags that name a supplier need **two different reviewers** to confirm on the same evidence (ADR-0008).
 - Decisions are append-only and hash-chained in `data/review/review.sqlite`, and survive pipeline rebuilds.
 - Passwords and tokens are never printed; they are written to 0600 files.
-- Remote access, accounts and backup: runbooks RB-08, RB-09 and RB-10.
+- The app is a local helper: it binds to localhost only, and the bot opens it in its own browser (ADR-0009).
+- Start/stop, accounts and backup: runbooks RB-08, RB-09 and RB-10.
 - Screenshots: `uv run --group screenshots python scripts/review_screenshots.py`.
 
 ## Not in git (by design)
@@ -60,7 +69,7 @@ uv run pf publish                         # rebuild dist/public/ (confirmed flag
 ## Status
 - MVP pipeline v0.1.0: branch `feat/mvp-pipeline` (CHG-2026-002, PR #1).
 - Review app v0.2.0: branch `feat/review-app` (CHG-2026-003), stacked on it.
-- Local only; nothing published.
+- Distributed as the PublicFunds Bot template (link to be added); no public web hosting in the MVP. Nothing published.
 - All flags are unreviewed automated indicators.
 - Supplier-naming flags are `pending human review`.
 

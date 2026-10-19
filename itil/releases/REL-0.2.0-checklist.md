@@ -1,7 +1,7 @@
 # REL-0.2.0 checklist: review app (draft, prepared 19 Oct 2026)
 
 Release v0.2.0 = v0.1.0 (CHG-2026-002, PR #1) + the review app (CHG-2026-003). **Not yet released:** both PRs are
-unmerged, and nothing is hosted (D-03).
+unmerged. Distribution is the PublicFunds Bot Grok Bot template (ADR-0009); the link `<TEMPLATE_LINK>` is not created yet (D-15). There is no web hosting.
 
 | Gate | Status 19 Oct 2026 (SAST) | Evidence |
 |---|---|---|
@@ -12,6 +12,7 @@ unmerged, and nothing is hosted (D-03).
 | Audit chain | ✓ `pf review verify` ok, 0 decisions | `/healthz` |
 | Reviewers | ✗ only 1 (`lootty`, admin). **Four-eyes cannot complete until a second reviewer exists** (CSI-016) | `pf reviewer list` |
 | Review DB backup | ✗ backup target D-05 is not decided | RB-10 |
-| Exposure | ✓ localhost only (127.0.0.1:8765) | RB-08 |
+| Exposure | ✓ localhost only (127.0.0.1:8765); accessed via the bot chat and the bot's own box browser (ADR-0009) | RB-08 |
+| Template contents (RSK-020) | ✗ template link not yet created; contents list drafted | docs/bot/template.md |
 | Screenshots | ✓ dist/screenshot_review_queue.png, screenshot_review_flag_detail.png, screenshot_review_coverage.png, screenshot_review_coverage_kzn_uifw.png, screenshot_review_mobile_queue.png | `scripts/review_screenshots.py` |
 | Legal review before publishing named flags (D-09) | ✗ open | — |

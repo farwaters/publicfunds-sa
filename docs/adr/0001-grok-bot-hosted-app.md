@@ -1,5 +1,5 @@
 # ADR-0001: Build as a Grok Bot-hosted app (box pipeline + routines + Ops Bot + static public snapshot)
-- Status: Accepted (prototype); revisit at public launch
+- Status: Accepted (prototype); **amended by ADR-0009** (distributed as the PublicFunds Bot Grok Bot template; decision (d) external public host superseded)
 - Date: 2026-10-19
 - Deciders: L👀ty McFreely (owner), Grok Bot (proposer)
 

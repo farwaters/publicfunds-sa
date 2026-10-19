@@ -84,7 +84,7 @@ def _actor(a) -> str:
 def _cred_text(username: str, password: str, role: str) -> str:
     now = datetime.now(timezone.utc).astimezone(SAST).strftime("%Y-%m-%d %H:%M SAST")
     return (f"# Thusa review app credentials - created {now}. Keep this file private (mode 600).\n"
-            f"# Sign in at http://127.0.0.1:8765/login (see runbook RB-08 for remote access).\n"
+            f"# Sign in at http://127.0.0.1:8765/login: the PublicFunds Bot opens it in its own browser (RB-08).\n"
             f"username={username}\nrole={role}\npassword={password}\n")
 
 

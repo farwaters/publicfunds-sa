@@ -28,16 +28,24 @@
 - **Grok Build** is a separate xAI product that publishes apps and dashboards, with connectors, secrets, custom domains and *Export to GitHub* (https://x.ai/news/grok-build-for-everyone) **[verified]**.
 - Since 0.70 (11 Oct 2026), Grok Bot can show "in-chat apps" for connectors that ship one (https://x.ai/changelog/bot) **[verified]**. There is no documented way to ship your own in-chat app **[unverified]**.
 
-**Design decision (ADR-0001):** build it as a **Grok Bot-hosted app**, made of four parts:
+**Distribution and access (ADR-0009, owner clarification 19 Oct 2026):** Thusa is a **Grok Bot app**. Users get it by
+**importing the PublicFunds Bot template via its Grok Bot link** (`<TEMPLATE_LINK>`, a `grokbot://` bot-template share
+link). It is **not a hosted website**.
+- **The bot chat is the primary UI:** questions, flag explanations and review decisions.
+- The local review web app (`pf serve` on 127.0.0.1) is a secondary tool that the bot opens in its own box browser
+  for the user.
+- Public web hosting is **not an MVP requirement** (D-03 and D-14 superseded).
+
+**Design decision (ADR-0001, amended by ADR-0009):** build it as a **Grok Bot app**, made of four parts:
 
 | Part | Role |
 |---|---|
-| (a) Data pipeline + API + web UI on the Bot's computer (the "box") | The app itself |
+| (a) Data pipeline + local review web UI + `pf` CLI on the Bot's computer (the "box") | The engine and system of record |
 | (b) Grok Bot **routines** | Scheduled ingestion, data-quality checks and alert digests |
-| (c) A dedicated **"Thusa Ops" Bot** with skills | Conversational front end ("Ask Thusa") and operator |
-| (d) A **static public snapshot** of the dashboard | Published via Vercel preview/production or Grok Build (decision D-03) |
+| (c) The **PublicFunds Bot** (template; formerly "Thusa Ops") with skills | **Primary UI**: chat front end ("Ask Thusa", flag review), operator. Distributed via its Grok Bot template link |
+| (d) A **public snapshot** artefact (`dist/public/`, confirmed flags only) | Shared by the bot as files (attachments/exports). ~~Published via Vercel or Grok Build (D-03)~~, superseded by ADR-0009 |
 
-The box is the system of record. Public hosting serves read-only snapshots.
+The box is the system of record. There is no public web host in the MVP.
 
 ---
 
@@ -142,7 +150,7 @@ flowchart LR
     BOT[Thusa Ops Bot + skills]
     RT[Routines: ingest / DQ / digest]
   end
-  PUB[Public host: Vercel or Grok Build — D-03]
+  PUB[Public snapshot files shared via the bot chat — ADR-0009, no web host]
   GIT[(Git remote backup)]
   Sources --> ING --> RAW --> DB
   DB <--> ER
@@ -359,7 +367,7 @@ Routines follow Grok Bot guidance: narrow triggers, explicit failure reporting, 
 
 **Security (informed by Posts 1 and 3, §13):**
 - **Secrets:** no secrets in the repo (`.gitignore` covers `.env`). Store them in Grok Bot secrets. Rotate any key that ever appears in chat or config. Remember that box credentials are shared by all of the user's Bots.
-- **Least privilege:** the public host serves static files only. The box API is not exposed publicly in the MVP, and the DB connection is read-only.
+- **Least privilege:** there is no public host in the MVP (ADR-0009). The review web app binds to localhost only, and its warehouse connection is read-only.
 - **Web hygiene:** security headers (CSP, HSTS, X-Content-Type-Options, frame-ancestors none), no CORS wildcard on write endpoints (there are none), server-side input validation, parameterised SQL only (DuckDB prepared statements), request size limits, rate limits.
 - **Supply chain:** lockfile (`uv.lock`), `pip-audit`/OSV scan in CI, secret scanning (gitleaks) pre-commit, verify every package an AI agent adds actually exists and is the intended one.
 - **AI-specific:** "Ask Thusa" treats source text as untrusted (prompt-injection-safe tool design). The Bot answers only from API results and cites rows. No write tools are exposed to the conversational path.
@@ -375,7 +383,7 @@ Routines follow Grok Bot guidance: narrow triggers, explicit failure reporting, 
 3. Detectors: **D1 fuel**, **D3 barred**, **D4 concentration**, **D8 municipal distress & coverage**; plus D5 as an info-level indicator.
 4. UI: Home, Municipality page, Department page, Supplier page, Flags list, Coverage explorer, Fuel benchmark tool, Sources & freshness, Methodology.
 5. Ops: three routines (daily ingest, weekly DQ report, monthly release), run ledger, SLO report, backups + restore test, ITIL artefacts live.
-6. Publishing: static snapshot to a private preview URL (Vercel preview or Grok Build), with production publication as a separate approved change (D-03).
+6. Distribution: the PublicFunds Bot Grok Bot template (`<TEMPLATE_LINK>`). The public snapshot is a confirmed-only file artefact shared by the bot; any web hosting is a later, separately approved change (ADR-0009).
 
 **Phase 2 (months 2–4):** D2, D7, D10, D12. NDoH SEP and RT57/RT70 benchmarks. Probabilistic ER with review UI. Public read API. Watchlist digests. SIU/AFU/PP ingestion. Corrections workflow. "Ask Thusa" in the Bot.
 
@@ -476,7 +484,7 @@ Practices from P1/P3 that **don't apply yet** (recorded so they're not forgotten
 |---|---|---|---|
 | D-01 | Product name | "Thusa" (placeholder) / other | User's call |
 | D-02 | Git remote | Origin private repo / GitHub private (needs `gh auth login`) | GitHub private for portability; Origin acceptable |
-| D-03 | Public hosting of snapshots | Vercel (connector) / Grok Build publish / none (private only) | Start with a private Vercel preview; decide public launch after legal review |
+| ~~D-03~~ | ~~Public hosting of snapshots~~ | **Superseded by Grok Bot template distribution (ADR-0009, 19 Oct 2026)** | No public web hosting in the MVP |
 | D-04 | Public vs private launch timing | Private beta with partners first / public from MVP | Private beta with 2–3 partners |
 | D-05 | Offsite backup target | Git LFS / Google Drive (connector) / S3-compatible | Google Drive or S3 for raw snapshots; git for code/docs only |
 | D-06 | Raw snapshot retention | 3 years / indefinite | Indefinite for non-personal; 3 years for files with ID numbers |
@@ -487,4 +495,5 @@ Practices from P1/P3 that **don't apply yet** (recorded so they're not forgotten
 | D-11 | Thusa Ops Bot + daily routine (CI-003/004) | Create now / after v0.1.0 merge | After PR #1 merges |
 | D-12 | Who the second (and further) independent reviewers are; is a legal reviewer needed for D3? (CHG-2026-003, CSI-016) | Partner org staff / volunteer journalists / paid | At least one reviewer outside the owner, plus legal sign-off before the first named flag is published (D-09) |
 | D-13 | Public treatment of unconfirmed, non-named flags (`config/publication.yaml`) | `exclude` / `label` as "unreviewed lead" | `exclude` until the first reviewed release, then reconsider |
-| D-14 | Remote access to the review app | SSH tunnel only / TLS reverse proxy on an owned host name / none | SSH tunnel while there are fewer than 5 reviewers (RB-08) |
+| ~~D-14~~ | ~~Remote access to the review app~~ | **Superseded by Grok Bot template distribution (ADR-0009, 19 Oct 2026)**: the bot chat is the primary UI; the bot opens the localhost app in its own box browser | Localhost only |
+| D-15 | Fill in and verify the PublicFunds Bot template link `<TEMPLATE_LINK>` and its contents (docs/bot/template.md) | Owner creates the share link | Before the first external import |
