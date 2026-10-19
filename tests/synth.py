@@ -54,7 +54,7 @@ RSR_LINES = [
 
 
 def _muni_payloads():
-    munis = [("TST", "Testville", "A", "GT"), ("TS1", "Sampleton", "B", "WC"), ("OLD", "Oldtown", "B", "WC")]
+    munis = [("TST", "Testville", "A", "GT"), ("TS1", "Sampleton", "B", "WC"), ("OLD", "Oldtown", "B", "KZ")]
     ent = {"total_fact_count": 3, "page_size": 10000, "page": 1, "data": [
         {"municipality.demarcation_code": c, "municipality.name": n, "municipality.long_name": f"{n}, {p}",
          "municipality.province_code": p, "municipality.province_name": p, "municipality.category": cat,
