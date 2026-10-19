@@ -1,0 +1,449 @@
+{
+ "schema": "publicfunds.public-data/v1",
+ "schema_version": "1.0.0",
+ "kind": "manifest",
+ "generated_at_sast": "2026-10-19T18:13:59+02:00",
+ "build": {
+  "id": "B20261019T155331Z",
+  "as_of": "2026-10-19",
+  "code_commit": "568736e",
+  "data_quality": {
+   "pass": 56,
+   "warn": 1,
+   "fail": 0
+  }
+ },
+ "base_url": "https://raw.githubusercontent.com/farwaters/publicfunds-sa/main/public-data/v1/",
+ "files": [
+  {
+   "name": "awards-2017.json",
+   "bytes": 2723,
+   "sha256": "43810c5f900f0051b8c7aa787f8b035c80f1745b5929d3c3c830612460c10b8e"
+  },
+  {
+   "name": "awards-2018.json",
+   "bytes": 1478,
+   "sha256": "4b591533aa9f0677c10342c9ef5a8ea4fa0aef3e761bb940625d5563f50d1055"
+  },
+  {
+   "name": "awards-2019.json",
+   "bytes": 2120,
+   "sha256": "d6cbf6f7d3327c9594feab62f162a9f339906678f22c9f40533e1c8c78f7888b"
+  },
+  {
+   "name": "awards-2020.json",
+   "bytes": 2731,
+   "sha256": "9da45d8bab5e8ed4ea6f7acbe7535b8e7a32a3bde7225b1d2f752582914cfae1"
+  },
+  {
+   "name": "awards-2021.json",
+   "bytes": 162554,
+   "sha256": "acb06bbb03c59941105ce1d5e679553840b97a19ec57e154ff8c7e7347b6f495"
+  },
+  {
+   "name": "awards-2022.json",
+   "bytes": 351779,
+   "sha256": "26baa3c768bbd445ca36c73f83d1f4d3b59f39c7f68174dbf68be075fb2ea084"
+  },
+  {
+   "name": "awards-2023.json",
+   "bytes": 476818,
+   "sha256": "6b9687ad72a942a3a5c2e1d13256ad546ed6865b0d86ab46d54d8e38e0c96421"
+  },
+  {
+   "name": "awards-2024.json",
+   "bytes": 562193,
+   "sha256": "90941e0dc3fd34e546b8b659b314e8556b0e05565ea54525184e9c9e248f3689"
+  },
+  {
+   "name": "awards-2025.json",
+   "bytes": 462877,
+   "sha256": "c5dacad3765c523934c950308185738bf0ff68db8153ccb7f8dd6238c21ebadd"
+  },
+  {
+   "name": "awards-2026.json",
+   "bytes": 235137,
+   "sha256": "8be2d68d098f076da3c9e1e724ebde9bbf6393d39c9bbec01db66707ceff65d7"
+  },
+  {
+   "name": "coverage.json",
+   "bytes": 76816,
+   "sha256": "df9e58e749d658c0230492e4d6d6b307b26068c02bd00bb19852c19aad2460ea"
+  },
+  {
+   "name": "departments.json",
+   "bytes": 46085,
+   "sha256": "3186b6fed3f0426258e46ad3963f2cf9679d3398c15e3a7fa01ee6890de2e673"
+  },
+  {
+   "name": "flags.json",
+   "bytes": 1617,
+   "sha256": "8d91c50efb9b82ac7df073fd6c1b4b7f615cad591dccfc28e8dd0660ecc2aba0"
+  },
+  {
+   "name": "municipalities.json",
+   "bytes": 1525551,
+   "sha256": "668f9e25023d10867c4119a1af4966f72f06ba2343d9d729fe4454cc8467e622"
+  },
+  {
+   "name": "prices.json",
+   "bytes": 11684,
+   "sha256": "8e44176b2557becc0d83e69b43801776cc99f5f417fcc7136184def4578c8810"
+  },
+  {
+   "name": "tenders-summary.json",
+   "bytes": 383099,
+   "sha256": "c32bb936cbde1f2b1f16d34e884633f002521278785263040ea51b7fa061001e"
+  }
+ ],
+ "counts": {
+  "municipalities": 292,
+  "departments": 49,
+  "awards": 9551,
+  "buyers": 488,
+  "fuel_rows": 70,
+  "cpi_months": 205,
+  "flags_confirmed": 0,
+  "leads_hidden": 335
+ },
+ "coverage": {
+  "applicable": 1542,
+  "complete": 1167,
+  "partial": 375,
+  "missing": 0,
+  "entities": 257,
+  "fye_min": 2020,
+  "fye_max": 2025,
+  "complete_pct": 75.7,
+  "by_type": {
+   "budget": {
+    "present": 1263,
+    "partial": 276,
+    "missing": 3,
+    "n.a.": 0,
+    "present_pct": 81.9
+   },
+   "actual_audited": {
+    "present": 1458,
+    "partial": 4,
+    "missing": 80,
+    "n.a.": 0,
+    "present_pct": 94.6
+   },
+   "uifw": {
+    "present": 1285,
+    "partial": 0,
+    "missing": 257,
+    "n.a.": 0,
+    "present_pct": 83.3
+   },
+   "audit_opinion": {
+    "present": 1238,
+    "partial": 47,
+    "missing": 257,
+    "n.a.": 0,
+    "present_pct": 80.3
+   },
+   "procurement": {
+    "present": 86,
+    "partial": 94,
+    "missing": 862,
+    "n.a.": 500,
+    "present_pct": 8.3
+   }
+  },
+  "by_year": [
+   {
+    "fye": 2020,
+    "fy": "2019/20",
+    "applicable": 257,
+    "complete": 232,
+    "all_core_due": true
+   },
+   {
+    "fye": 2021,
+    "fy": "2020/21",
+    "applicable": 257,
+    "complete": 228,
+    "all_core_due": true
+   },
+   {
+    "fye": 2022,
+    "fy": "2021/22",
+    "applicable": 257,
+    "complete": 240,
+    "all_core_due": true
+   },
+   {
+    "fye": 2023,
+    "fy": "2022/23",
+    "applicable": 257,
+    "complete": 232,
+    "all_core_due": true
+   },
+   {
+    "fye": 2024,
+    "fy": "2023/24",
+    "applicable": 257,
+    "complete": 235,
+    "all_core_due": true
+   },
+   {
+    "fye": 2025,
+    "fy": "2024/25",
+    "applicable": 257,
+    "complete": 0,
+    "all_core_due": true
+   },
+   {
+    "fye": 2026,
+    "fy": "2025/26",
+    "applicable": 257,
+    "complete": 255,
+    "all_core_due": false
+   }
+  ]
+ },
+ "sources": [
+  {
+   "id": "agsa_mfma",
+   "name": "AGSA MFMA 2024-25 microsite",
+   "publisher": "Auditor-General of South Africa",
+   "page": "https://mfma-2025.agsa.co.za/",
+   "licence": null,
+   "last_run_status": null,
+   "last_run_sast": null,
+   "last_new_data_sast": null,
+   "last_checked_sast": null,
+   "raw_files": 0,
+   "freshness_slo_days": 30,
+   "problem": "not loaded yet"
+  },
+  {
+   "id": "agsa_pfma",
+   "name": "AGSA PFMA general report + annexures",
+   "publisher": "Auditor-General of South Africa",
+   "page": "https://www.agsa.co.za/reports",
+   "licence": null,
+   "last_run_status": null,
+   "last_run_sast": null,
+   "last_new_data_sast": null,
+   "last_checked_sast": null,
+   "raw_files": 0,
+   "freshness_slo_days": 30,
+   "problem": "not loaded yet"
+  },
+  {
+   "id": "dmpr_fuel",
+   "name": "DMPR / CEF fuel price adjustments",
+   "publisher": "Department of Mineral and Petroleum Resources",
+   "page": "https://www.dmpr.gov.za/Branches/Petroleum-Resources/Fuel-Prices",
+   "licence": "Public government information (DMPR / CEF)",
+   "last_run_status": "ok",
+   "last_run_sast": "2026-10-19T17:53:21+02:00",
+   "last_new_data_sast": "2026-10-19T17:53:21+02:00",
+   "last_checked_sast": "2026-10-19T17:53:21+02:00",
+   "raw_files": 1,
+   "freshness_slo_days": 35,
+   "problem": null
+  },
+  {
+   "id": "etenders_ocds",
+   "name": "eTenders OCDS (Transparency Portal bulk + API)",
+   "publisher": "National Treasury OCPO",
+   "page": "https://data.etenders.gov.za/",
+   "licence": "CC BY 4.0 (portal) / PDDL (API spec): attribute National Treasury",
+   "last_run_status": "partial",
+   "last_run_sast": "2026-10-19T11:58:29+02:00",
+   "last_new_data_sast": "2026-10-19T10:06:09+02:00",
+   "last_checked_sast": "2026-10-19T10:06:09+02:00",
+   "raw_files": 3,
+   "freshness_slo_days": 2,
+   "problem": "delta page 3: https://ocds-api.etenders.gov.za/api/OCDSReleases failed after 5 attempts: HTTP 500"
+  },
+  {
+   "id": "muni_api",
+   "name": "Municipal Finance Data API (Municipal Money)",
+   "publisher": "National Treasury (maintained by OpenUp)",
+   "page": "https://municipalmoney.gov.za/",
+   "licence": "Municipal Money terms of use (attribute National Treasury)",
+   "last_run_status": "unchanged",
+   "last_run_sast": "2026-10-19T11:57:52+02:00",
+   "last_new_data_sast": "2026-10-19T09:39:29+02:00",
+   "last_checked_sast": "2026-10-19T11:57:52+02:00",
+   "raw_files": 17,
+   "freshness_slo_days": 7,
+   "problem": null
+  },
+  {
+   "id": "nt_budget",
+   "name": "Vulekamali / ENE / EPRE / s32 monthly statements",
+   "publisher": "National Treasury",
+   "page": "https://vulekamali.gov.za/datasets/budgeted-and-actual-national-expenditure",
+   "licence": "Vulekamali open data (attribute National Treasury)",
+   "last_run_status": "unchanged",
+   "last_run_sast": "2026-10-19T12:02:08+02:00",
+   "last_new_data_sast": "2026-10-19T09:38:04+02:00",
+   "last_checked_sast": "2026-10-19T12:02:08+02:00",
+   "raw_files": 1,
+   "freshness_slo_days": 10,
+   "problem": null
+  },
+  {
+   "id": "oecd_cpi",
+   "name": "Headline CPI for South Africa (Stats SA data, OECD republication)",
+   "publisher": "OECD (data from Statistics South Africa)",
+   "page": "https://data-explorer.oecd.org/",
+   "licence": "CC BY 4.0 (OECD); underlying data: Statistics South Africa",
+   "last_run_status": "ok",
+   "last_run_sast": "2026-10-19T17:53:22+02:00",
+   "last_new_data_sast": "2026-10-19T17:53:22+02:00",
+   "last_checked_sast": "2026-10-19T17:53:22+02:00",
+   "raw_files": 1,
+   "freshness_slo_days": 400,
+   "problem": null
+  },
+  {
+   "id": "ppd_payments",
+   "name": "Procurement Payments Dashboard (BAS + LOGIS) transaction list",
+   "publisher": "National Treasury OCPO",
+   "page": "https://data.etenders.gov.za/",
+   "licence": "National Treasury OCPO",
+   "last_run_status": "awaiting_manual_drop",
+   "last_run_sast": "2026-10-19T11:58:31+02:00",
+   "last_new_data_sast": null,
+   "last_checked_sast": null,
+   "raw_files": 0,
+   "freshness_slo_days": 21,
+   "problem": null
+  },
+  {
+   "id": "rsr",
+   "name": "Register of Restricted Suppliers",
+   "publisher": "National Treasury OCPO",
+   "page": "https://ocpo.treasury.gov.za/",
+   "licence": "Public register (National Treasury); used only to count leads, never published here",
+   "last_run_status": "unchanged",
+   "last_run_sast": "2026-10-19T11:58:31+02:00",
+   "last_new_data_sast": "2026-10-19T09:37:48+02:00",
+   "last_checked_sast": "2026-10-19T11:58:31+02:00",
+   "raw_files": 1,
+   "freshness_slo_days": 8,
+   "problem": null
+  },
+  {
+   "id": "s71_noncompliance",
+   "name": "MFMA s71 non-compliance lists",
+   "publisher": "National Treasury",
+   "page": "https://mfma.treasury.gov.za/",
+   "licence": null,
+   "last_run_status": null,
+   "last_run_sast": null,
+   "last_new_data_sast": null,
+   "last_checked_sast": null,
+   "raw_files": 0,
+   "freshness_slo_days": 21,
+   "problem": "not loaded yet"
+  },
+  {
+   "id": "statssa_cpi",
+   "name": "Stats SA CPI (incl. average prices), PPI, P0151.1",
+   "publisher": "Statistics South Africa",
+   "page": "https://www.statssa.gov.za/?page_id=1847",
+   "licence": null,
+   "last_run_status": null,
+   "last_run_sast": null,
+   "last_new_data_sast": null,
+   "last_checked_sast": null,
+   "raw_files": 0,
+   "freshness_slo_days": 10,
+   "problem": "WAF blocks scripted access -> manual drop (D-07)"
+  }
+ ],
+ "known_gaps": [
+  {
+   "id": "KE-006",
+   "text": "The latest financial year (2024/25) has no audited results, irregular-expenditure figures or audit opinions in the Municipal Money data yet."
+  },
+  {
+   "id": "KE-007",
+   "text": "Many published tender awards have no value or a R0 placeholder (the share is shown per buyer); we show these as unknown, never as zero."
+  },
+  {
+   "id": "KE-009",
+   "text": "Payments by national and provincial departments (the Procurement Payments Dashboard) can only be exported by hand and are not loaded yet."
+  },
+  {
+   "id": "KE-003",
+   "text": "Statistics South Africa's website blocks automated downloads, so inflation (CPI) comes from the OECD's copy of the Stats SA index, which can lag by months; population figures are not loaded yet."
+  },
+  {
+   "id": "KE-001",
+   "text": "The eTenders live API often fails; tender data comes from the monthly bulk file plus whatever recent updates the API returned."
+  },
+  {
+   "id": "KE-012",
+   "text": "Fuel prices come from the Department of Mineral and Petroleum Resources' monthly history table for the current year only; earlier years are not loaded yet."
+  }
+ ],
+ "known_errors": [
+  {
+   "id": "KE-001",
+   "symptom": "ocds-api.etenders.gov.za/api/OCDSReleases returns HTTP 500 or times out (19 Oct 2026). Update 09:55: PageSize > 100 always 500; page 3 of a 35-day window 500s after retries"
+  },
+  {
+   "id": "KE-002",
+   "symptom": "data.vulekamali.gov.za CKAN returns 500/timeout; from 09:31 19 Oct 2026 TLS handshake fails (UNEXPECTED_EOF)"
+  },
+  {
+   "id": "KE-003",
+   "symptom": "Stats SA, some SIU/PP pages block or time out on scripted requests"
+  },
+  {
+   "id": "KE-004",
+   "symptom": "Instruction 10 PDF is image-only"
+  },
+  {
+   "id": "KE-005",
+   "symptom": "Municipal Finance API incexp (v1) members/financial_year_end returns HTTP 500"
+  },
+  {
+   "id": "KE-006",
+   "symptom": "Municipal Finance API has no 2024/25 UIF&W amounts or audit opinions (max FYE 2024 in both cubes, checked 19 Oct 2026) and no 2024/25 adjusted budgets (ADJB). AGSA MFMA 2024-25 results are on its microsite"
+  },
+  {
+   "id": "KE-007",
+   "symptom": "eTenders award values: 2,791 of 9,551 award-supplier rows have no value or a 0 placeholder; 330 are below R100 (e.g. R10); 44 are above R20bn (e.g. R370.8bn for one SANRAL contract)"
+  },
+  {
+   "id": "KE-008",
+   "symptom": "incexp_v2 subtotals (2900 total revenue, 4400 total expenditure) are published only for some years and amount types"
+  },
+  {
+   "id": "KE-009",
+   "symptom": "PPD transaction list is only exportable from inside the Power BI report"
+  },
+  {
+   "id": "KE-010",
+   "symptom": "Vulekamali BvA CSV has 14 lines in Excel scientific notation (e.g. 1,06087E+11), i.e. about 6 significant digits"
+  },
+  {
+   "id": "KE-011",
+   "symptom": "Municipal Finance API municipalities cube mixes province codes: current KwaZulu-Natal munis use KZ and some disestablished ones KZN; Limpopo uses LP and LIM (checked 19 Oct 2026)"
+  },
+  {
+   "id": "KE-012",
+   "symptom": "Price benchmarks are partial: DMPR publishes a \"History of Fuel Prices\" table for the current year only (Jan–Oct 2026 loaded; older archive links inconsistent), and the OECD CPI series used instead of Stats SA lags (last period 2025-01 when checked 19 Oct 2026)"
+  }
+ ],
+ "population": {
+  "status": "unknown",
+  "reason": "Population and household counts per municipality (Stats SA Census 2022) are not loaded yet: the Stats SA website blocks automated downloads (KE-003)."
+ },
+ "disclaimers": [
+  "This site shows official public data as published, with its gaps. Blank means unknown, not zero.",
+  "Flags are automated indicators checked by people, not findings of wrongdoing. Only flags confirmed by review are shown; other leads stay hidden while they are checked.",
+  "Tender award records are public records published by National Treasury, shown as published."
+ ],
+ "freshness_slo": "Public data is refreshed after each successful daily pipeline run; target: no older than 48 hours (itil/sla-slo.md, SLO-PD-1)."
+}
