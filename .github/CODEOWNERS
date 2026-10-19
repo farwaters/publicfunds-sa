@@ -1,0 +1,7 @@
+# High-risk paths always need the owner (risk tier: Normal-high)
+/config/detectors.yaml   @owner
+/config/sources.yaml     @owner
+/sql/                    @owner
+/.github/                @owner
+/itil/change-enablement.md @owner
+# Replace @owner with the real GitHub/Origin handle once the remote exists.
