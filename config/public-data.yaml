@@ -11,6 +11,9 @@ detectors:
   D4_supplier_concentration: "One supplier won most of a buyer's tender value over three years."
   D5_award_value_gaps: "Many of a buyer's published tender awards have no value, or an obviously wrong value such as R0."
   D8_irregular_expenditure_trend: "Reported irregular expenditure rose sharply two years in a row."
+  D6_threshold_splitting: "Several awards by one buyer to one supplier close together, each below the competitive-bidding limit but together above it. Never published."
+  D16_repeat_awards: "One buyer gave the same supplier many awards within a year. Never published."
+  D17_just_below_threshold: "Repeated awards by one buyer to one supplier just under the competitive-bidding limit. Never published."
 known_gaps:
   - id: KE-006
     text: "The latest financial year (2024/25) has no audited results, irregular-expenditure figures or audit opinions in the Municipal Money data yet."

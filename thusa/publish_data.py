@@ -301,8 +301,10 @@ def flags(paths: Paths, con) -> dict:
     from thusa.review.service import Service
     confirmed, _leads, policy = public_flags(paths)
     hidden: dict = defaultdict(lambda: {"hidden": 0, "names_a_supplier": 0, "awaiting_second_review": 0})
+    from thusa.settings import publication_config
+    never = set(publication_config()["flags"].get("never_publish", []))
     for f in Service(paths).list_flags():
-        if f["publishable"]:
+        if f["publishable"] and f["detector_id"] not in never:
             continue
         h = hidden[f["detector_id"]]
         h["hidden"] += 1

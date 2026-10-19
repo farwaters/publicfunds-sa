@@ -24,3 +24,4 @@ Next step: the owner runs `gh auth login` (or connects GitHub), then creates the
 **D-15 resolved (19 Oct 2026, 11:47 SAST):** PublicFunds Bot template published at https://x.ai/bot/7Hr1hnJPXqOQbMmUZ7mTi; placeholder replaced in docs (CHG-2026-005).
 
 **Owner override (19 Oct 2026, 20:29 SAST):** PR #3 (CHG-2026-006) merged to `main` with owner approval only ("Yes, merge PR #3 and refresh the public data"); the two-approval rule for Normal-high changes was waived because the second reviewer (D-12) is parked. The same approval authorised one push of the refreshed `public-data/` via `scripts/publish-public-data.sh --push`.
+| CHG-2026-010 | 2026-10-20 | Normal-high | Award-pattern detectors naming suppliers: D16 repeat awards, D17 just below MFMA/PFMA bidding threshold (cited), D6 splitting; review queue only, never published — itil/changes/CHG-2026-010-award-pattern-detectors.md | branch feat/supplier-detectors | Pending owner merge |

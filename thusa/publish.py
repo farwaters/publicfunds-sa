@@ -67,6 +67,8 @@ def public_flags(paths: Paths, policy: dict | None = None) -> tuple[list[dict], 
                 "severity": f["severity"], "title": f["title"], "explanation": f["explanation"],
                 "gov_body_id": f["gov_body_id"], "body_name": f["body_name"], "period_label": f["period_label"],
                 "evidence_urls": urls}
+        if f["detector_id"] in policy.get("never_publish", []):
+            continue
         if f["publishable"]:
             last = decs[f["flag_id"]][-1]
             confirmed.append({**base, "publication_label": "confirmed by review",
