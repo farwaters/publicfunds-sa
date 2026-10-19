@@ -10,7 +10,7 @@ unmerged. Distribution is the PublicFunds Bot Grok Bot template (ADR-0009); the 
 | `thusa build` DQ | ✓ 49 pass, 0 fail, 1 warn (build B20261019T090303Z, after the KE-011 fix) | `/tmp/build3.log` on the box; `ops.dq_result` |
 | Public snapshot = confirmed only | ✓ `dist/public/flags.json` has 0 flags (no decisions yet; policy `exclude`) | `thusa report` output |
 | Audit chain | ✓ `pf review verify` ok, 0 decisions | `/healthz` |
-| Reviewers | ✗ only 1 (`lootty`, admin). **Four-eyes cannot complete until a second reviewer exists** (CSI-016) | `pf reviewer list` |
+| Reviewers | ✗ only 1 (`lootty`, admin). **Four-eyes cannot complete until a second reviewer exists** (CSI-016; D-12 **Parked** by the owner, 19 Oct 2026) | `pf reviewer list` |
 | Review DB backup | ✗ backup target D-05 is not decided | RB-10 |
 | Exposure | ✓ localhost only (127.0.0.1:8765); accessed via the bot chat and the bot's own box browser (ADR-0009) | RB-08 |
 | Template contents (RSK-020) | ✗ template link not yet created; contents list drafted | docs/bot/template.md |

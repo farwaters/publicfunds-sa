@@ -483,7 +483,7 @@ Practices from P1/P3 that **don't apply yet** (recorded so they're not forgotten
 | ID | Decision | Options | Recommendation |
 |---|---|---|---|
 | D-01 | Product name | "Thusa" (placeholder) / other | User's call |
-| D-02 | Git remote | Origin private repo / GitHub private (needs `gh auth login`) | GitHub private for portability; Origin acceptable |
+| ~~D-02~~ | ~~Git remote~~ | **Resolved:** GitHub `farwaters/publicfunds-sa` (CHG-2026-001). Made **public** by the owner on 19 Oct 2026 ~11:21 SAST, after a clean history secret scan (CHG-2026-004) | — |
 | ~~D-03~~ | ~~Public hosting of snapshots~~ | **Superseded by Grok Bot template distribution (ADR-0009, 19 Oct 2026)** | No public web hosting in the MVP |
 | D-04 | Public vs private launch timing | Private beta with partners first / public from MVP | Private beta with 2–3 partners |
 | D-05 | Offsite backup target | Git LFS / Google Drive (connector) / S3-compatible | Google Drive or S3 for raw snapshots; git for code/docs only |
@@ -493,7 +493,7 @@ Practices from P1/P3 that **don't apply yet** (recorded so they're not forgotten
 | D-09 | Legal review (POPIA, defamation) before publishing named flags | Pro-bono (e.g. via civil-society partners) / paid | Required before any named high-severity flag goes public |
 | D-10 | Partnerships | TenderWatch, Corruption Watch, OUTA, OpenUp, OCP | Approach TenderWatch and OCP first (method overlap) |
 | D-11 | Thusa Ops Bot + daily routine (CI-003/004) | Create now / after v0.1.0 merge | After PR #1 merges |
-| D-12 | Who the second (and further) independent reviewers are; is a legal reviewer needed for D3? (CHG-2026-003, CSI-016) | Partner org staff / volunteer journalists / paid | At least one reviewer outside the owner, plus legal sign-off before the first named flag is published (D-09) |
+| D-12 | **PARKED by the owner (19 Oct 2026): no second human reviewer yet. Don't raise it again; the owner will reopen it.** Who the second (and further) independent reviewers are; is a legal reviewer needed for D3? (CHG-2026-003, CSI-016) | Partner org staff / volunteer journalists / paid | Parked. Until then, named-supplier flags stop at `awaiting second review` and aren't published |
 | D-13 | Public treatment of unconfirmed, non-named flags (`config/publication.yaml`) | `exclude` / `label` as "unreviewed lead" | `exclude` until the first reviewed release, then reconsider |
 | ~~D-14~~ | ~~Remote access to the review app~~ | **Superseded by Grok Bot template distribution (ADR-0009, 19 Oct 2026)**: the bot chat is the primary UI; the bot opens the localhost app in its own box browser | Localhost only |
-| D-15 | Fill in and verify the PublicFunds Bot template link `<TEMPLATE_LINK>` and its contents (docs/bot/template.md) | Owner creates the share link | Before the first external import |
+| D-15 | Fill in and verify the PublicFunds Bot template link `<TEMPLATE_LINK>` and its contents (docs/bot/template.md, docs/bot/skills/). The repo is public, so importers need no GitHub access (CHG-2026-004) | Owner creates the share link | Before the first external import (CHG-2026-005) |

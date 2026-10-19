@@ -93,7 +93,7 @@ has reviewed them. This change adds:
   confirmation). See the risk register.
 - Residual: anyone with shell access to the box can alter the review DB. The hash chain detects this but does not
   prevent it; anchor the head hash in release records.
-- Until a second reviewer is onboarded (CSI-016), named-supplier flags can reach at most `awaiting second review`.
+- Until a second reviewer is onboarded (CSI-016; D-12 Parked by the owner on 19 Oct 2026), named-supplier flags can reach at most `awaiting second review`.
   That is intentional.
 - No change to detector thresholds. Flag IDs and counts are unchanged.
 
@@ -103,7 +103,7 @@ has reviewed them. This change adds:
 - Keep `data/review/review.sqlite`: the decisions are records and must not be deleted.
 
 ## Post-implementation
-- Onboard a second reviewer (CSI-016).
+- Onboard a second reviewer (CSI-016): **Parked** (D-12).
 - Create and verify the PublicFunds Bot template link (D-15); remote access (D-14) is superseded by ADR-0009.
 - Include `data/review/` in backups (D-05).
 - After the first reviewed release, re-score RSK-001 and start the D3/D4 eval set (CSI-014) from real decisions.
