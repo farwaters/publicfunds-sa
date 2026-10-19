@@ -3,7 +3,7 @@
 Prototype design for the most comprehensive, honest taxpayer dashboard of SA government spending. It ingests public sources, shows **what it doesn't know**, flags exceptions with evidence, and puts benchmarks ("utilities on the glass") next to every number. It is built as a **Grok Bot-hosted app** (ADR-0001).
 
 ## Get the app
-Thusa is a **Grok Bot app**. To use it, **import the PublicFunds Bot template via its Grok Bot link: `<TEMPLATE_LINK>`**
+Thusa is a **Grok Bot app**. To use it, **import the PublicFunds Bot template via its Grok Bot link: `https://x.ai/bot/7Hr1hnJPXqOQbMmUZ7mTi`**
 (a `grokbot://` bot-template share link). There is no website (ADR-0009).
 - **The bot chat is the primary UI:** ask about coverage, municipalities and flags, and review flags in the chat.
 - **The local review web app** (127.0.0.1:8765) is a secondary tool that the bot opens in its own box browser for you.

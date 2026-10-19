@@ -10,7 +10,7 @@
 
 ## Amendment (19 Oct 2026, 11:21 SAST): Grok Bot template distribution
 The owner clarified that Thusa is a **Grok Bot app**, distributed through the **PublicFunds Bot** template link
-(`<TEMPLATE_LINK>`), not a hosted website. Recorded as **ADR-0009**:
+(`https://x.ai/bot/7Hr1hnJPXqOQbMmUZ7mTi`), not a hosted website. Recorded as **ADR-0009**:
 - **The bot chat is the primary UI.** The localhost review web app is a secondary tool that the bot opens in its own
   box browser.
 - Public web hosting is dropped from the MVP; **D-03 and D-14 are superseded** in the decision log.

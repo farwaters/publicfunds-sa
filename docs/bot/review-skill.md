@@ -6,7 +6,7 @@
 decision **only when the human explicitly states it**.
 
 **Where this runs:**
-- Thusa is distributed as the **PublicFunds Bot** Grok Bot template: import it via its Grok Bot link `<TEMPLATE_LINK>`
+- Thusa is distributed as the **PublicFunds Bot** Grok Bot template: import it via its Grok Bot link `https://x.ai/bot/7Hr1hnJPXqOQbMmUZ7mTi`
   (ADR-0009, docs/bot/template.md).
 - **The chat is the primary review UI.** The local review web app (`pf serve`, http://127.0.0.1:8765) is a
   secondary tool. Open it in **your own box browser** when a visual view helps: the coverage heatmap, a long queue,

@@ -17,3 +17,5 @@ Next step: the owner runs `gh auth login` (or connects GitHub), then creates the
 **CHG-2026-001 closed (19 Oct 2026, 09:16 SAST):** GitHub sign-in completed as `farwaters`; private remote created at https://github.com/farwaters/publicfunds-sa and `main` pushed. Open decision D-02 resolved.
 
 **Owner override (19 Oct 2026, 11:43 SAST):** PR #1 and PR #2 merged to `main` with owner approval only; the two-approval rule for Normal-high changes (CHG-2026-002, CHG-2026-003) was waived because the second reviewer (D-12) is parked. Reason: the PublicFunds Bot template installs from `main`.
+
+**D-15 resolved (19 Oct 2026, 11:47 SAST):** PublicFunds Bot template published at https://x.ai/bot/7Hr1hnJPXqOQbMmUZ7mTi; placeholder replaced in docs (CHG-2026-005).

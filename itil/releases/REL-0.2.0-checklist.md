@@ -1,7 +1,7 @@
 # REL-0.2.0 checklist: review app (draft, prepared 19 Oct 2026)
 
 Release v0.2.0 = v0.1.0 (CHG-2026-002, PR #1) + the review app (CHG-2026-003). **Not yet released:** both PRs are
-unmerged. Distribution is the PublicFunds Bot Grok Bot template (ADR-0009); the link `<TEMPLATE_LINK>` is not created yet (D-15). There is no web hosting.
+unmerged. Distribution is the PublicFunds Bot Grok Bot template (ADR-0009); the link `https://x.ai/bot/7Hr1hnJPXqOQbMmUZ7mTi` is not created yet (D-15). There is no web hosting.
 
 | Gate | Status 19 Oct 2026 (SAST) | Evidence |
 |---|---|---|

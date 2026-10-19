@@ -11,7 +11,7 @@ link (`grokbot://…`), not as a hosted website. Earlier designs assumed a publi
 D-03) and asked how remote reviewers would reach the review web app (D-14). Both assumptions no longer hold.
 
 ## Decision
-1. **Distribution:** users import the **PublicFunds Bot** template via its Grok Bot link: `<TEMPLATE_LINK>` (the
+1. **Distribution:** users import the **PublicFunds Bot** template via its Grok Bot link: `https://x.ai/bot/7Hr1hnJPXqOQbMmUZ7mTi` (the
    owner will fill this in). The template carries the bot's instructions and skills, plus a pointer to this
    repository. It carries **no data, review database, credentials or tokens**. Each importer's bot builds its own
    warehouse on its own box with `thusa run` and creates its own reviewer accounts.
@@ -38,6 +38,6 @@ D-03) and asked how remote reviewers would reach the review web app (D-14). Both
   importers. Shared reviewing (e.g. a newsroom) means people using the same bot/box, or a later sync design.
 - (−) Template contents must be checked on every update so that no secrets or data ride along (RSK-020).
 - Follow-ups:
-  - Fill in `<TEMPLATE_LINK>` (README, docs/bot/template.md, CI-102).
+  - Fill in `https://x.ai/bot/7Hr1hnJPXqOQbMmUZ7mTi` (README, docs/bot/template.md, CI-102).
   - Verify the template packaging.
   - Decide whether a later phase needs public hosting (new ADR).

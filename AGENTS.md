@@ -2,7 +2,7 @@
 
 **What this is:** an evidence-first dashboard of South African public spending. Design: `docs/design/application-design.md`. Research: `sa_public_funds_landscape.md`.
 
-**Stack:** Python 3.13 (uv + lockfile), DuckDB with plain SQL models (ADR-0007; dbt deferred), httpx, pdfplumber, Jinja2 static dashboard + matplotlib PNGs, pytest. Review app (ADR-0008): FastAPI + Jinja + vendored HTMX, SQLite review store, `pf` CLI; Playwright (group `screenshots`) for UI evidence. Later: ECharts. Runs on the Grok Bot computer and is distributed as the **PublicFunds Bot** Grok Bot template (`<TEMPLATE_LINK>`, ADR-0009). **The bot chat is the primary UI**; the localhost review app is a secondary tool the bot opens in its own browser. There is no public web hosting in the MVP; `dist/public/` is a confirmed-only file artefact. Templates must never carry `data/`, credentials or keys.
+**Stack:** Python 3.13 (uv + lockfile), DuckDB with plain SQL models (ADR-0007; dbt deferred), httpx, pdfplumber, Jinja2 static dashboard + matplotlib PNGs, pytest. Review app (ADR-0008): FastAPI + Jinja + vendored HTMX, SQLite review store, `pf` CLI; Playwright (group `screenshots`) for UI evidence. Later: ECharts. Runs on the Grok Bot computer and is distributed as the **PublicFunds Bot** Grok Bot template (`https://x.ai/bot/7Hr1hnJPXqOQbMmUZ7mTi`, ADR-0009). **The bot chat is the primary UI**; the localhost review app is a secondary tool the bot opens in its own browser. There is no public web hosting in the MVP; `dist/public/` is a confirmed-only file artefact. Templates must never carry `data/`, credentials or keys.
 
 **Non-negotiables**
 1. Every number carries provenance (`source_snapshot_id`, `source_locator`). No source means it isn't shown.

@@ -31,7 +31,7 @@ Cadence: monthly data+code release (plus standard data refreshes in between that
 - [ ] Owner review of preview (screenshots of home, 1 municipality, 1 department, flags page)
 
 ## 4. Deploy (production) — needs owner approval
-- [ ] Update the **PublicFunds Bot template** (ADR-0009, CI-102): instructions and skills refreshed; contents checked against docs/bot/template.md, with **no `data/`, credentials, tokens or keys** (RSK-020); share link `<TEMPLATE_LINK>` still valid. (D-03 public web hosting is superseded: no web deploy in the MVP)
+- [ ] Update the **PublicFunds Bot template** (ADR-0009, CI-102): instructions and skills refreshed; contents checked against docs/bot/template.md, with **no `data/`, credentials, tokens or keys** (RSK-020); share link `https://x.ai/bot/7Hr1hnJPXqOQbMmUZ7mTi` still valid. (D-03 public web hosting is superseded: no web deploy in the MVP)
 - [ ] Smoke test from outside the box; external uptime check green
 - [ ] Release notes / public changelog published; methodology updated if detectors changed
 

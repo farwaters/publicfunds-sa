@@ -29,7 +29,7 @@
 - Since 0.70 (11 Oct 2026), Grok Bot can show "in-chat apps" for connectors that ship one (https://x.ai/changelog/bot) **[verified]**. There is no documented way to ship your own in-chat app **[unverified]**.
 
 **Distribution and access (ADR-0009, owner clarification 19 Oct 2026):** Thusa is a **Grok Bot app**. Users get it by
-**importing the PublicFunds Bot template via its Grok Bot link** (`<TEMPLATE_LINK>`, a `grokbot://` bot-template share
+**importing the PublicFunds Bot template via its Grok Bot link** (`https://x.ai/bot/7Hr1hnJPXqOQbMmUZ7mTi`, a `grokbot://` bot-template share
 link). It is **not a hosted website**.
 - **The bot chat is the primary UI:** questions, flag explanations and review decisions.
 - The local review web app (`pf serve` on 127.0.0.1) is a secondary tool that the bot opens in its own box browser
@@ -383,7 +383,7 @@ Routines follow Grok Bot guidance: narrow triggers, explicit failure reporting, 
 3. Detectors: **D1 fuel**, **D3 barred**, **D4 concentration**, **D8 municipal distress & coverage**; plus D5 as an info-level indicator.
 4. UI: Home, Municipality page, Department page, Supplier page, Flags list, Coverage explorer, Fuel benchmark tool, Sources & freshness, Methodology.
 5. Ops: three routines (daily ingest, weekly DQ report, monthly release), run ledger, SLO report, backups + restore test, ITIL artefacts live.
-6. Distribution: the PublicFunds Bot Grok Bot template (`<TEMPLATE_LINK>`). The public snapshot is a confirmed-only file artefact shared by the bot; any web hosting is a later, separately approved change (ADR-0009).
+6. Distribution: the PublicFunds Bot Grok Bot template (`https://x.ai/bot/7Hr1hnJPXqOQbMmUZ7mTi`). The public snapshot is a confirmed-only file artefact shared by the bot; any web hosting is a later, separately approved change (ADR-0009).
 
 **Phase 2 (months 2–4):** D2, D7, D10, D12. NDoH SEP and RT57/RT70 benchmarks. Probabilistic ER with review UI. Public read API. Watchlist digests. SIU/AFU/PP ingestion. Corrections workflow. "Ask Thusa" in the Bot.
 
@@ -496,4 +496,4 @@ Practices from P1/P3 that **don't apply yet** (recorded so they're not forgotten
 | D-12 | **PARKED by the owner (19 Oct 2026): no second human reviewer yet. Don't raise it again; the owner will reopen it.** Who the second (and further) independent reviewers are; is a legal reviewer needed for D3? (CHG-2026-003, CSI-016) | Partner org staff / volunteer journalists / paid | Parked. Until then, named-supplier flags stop at `awaiting second review` and aren't published |
 | D-13 | Public treatment of unconfirmed, non-named flags (`config/publication.yaml`) | `exclude` / `label` as "unreviewed lead" | `exclude` until the first reviewed release, then reconsider |
 | ~~D-14~~ | ~~Remote access to the review app~~ | **Superseded by Grok Bot template distribution (ADR-0009, 19 Oct 2026)**: the bot chat is the primary UI; the bot opens the localhost app in its own box browser | Localhost only |
-| D-15 | Fill in and verify the PublicFunds Bot template link `<TEMPLATE_LINK>` and its contents (docs/bot/template.md, docs/bot/skills/). The repo is public, so importers need no GitHub access (CHG-2026-004) | Owner creates the share link | Before the first external import (CHG-2026-005) |
+| D-15 | Fill in and verify the PublicFunds Bot template link `https://x.ai/bot/7Hr1hnJPXqOQbMmUZ7mTi` and its contents (docs/bot/template.md, docs/bot/skills/). The repo is public, so importers need no GitHub access (CHG-2026-004) | Owner creates the share link | Before the first external import (CHG-2026-005) |
