@@ -1,0 +1,126 @@
+# Source registry = CMDB for data-source configuration items (CI type: data_source).
+# Changing this file is a change (see itil/change-enablement.md). URLs verified 19 Oct 2026 unless noted.
+sources:
+  - id: muni_api
+    name: Municipal Finance Data API (Municipal Money)
+    owner_org: National Treasury (maintained by OpenUp)
+    url: https://municipaldata.treasury.gov.za/api/cubes
+    connector: muni_cube
+    licence: "See site terms of use"
+    cadence: quarterly
+    schedule_sast: "Mon 02:00 weekly"
+    freshness_slo_days: 7
+    mvp: true
+    status_2026_10_19: "HTTP 200; 21 cubes"
+  - id: etenders_ocds
+    name: eTenders OCDS (Transparency Portal bulk + API)
+    owner_org: National Treasury OCPO
+    url: https://data.etenders.gov.za/
+    api: https://ocds-api.etenders.gov.za/swagger/
+    fallback: https://data.open-contracting.org/en/publication/143
+    connector: ocds_bulk
+    licence: "PDDL (API spec) / CC BY 4.0 (portal) - inconsistent; attribute"
+    cadence: daily
+    schedule_sast: "daily 03:00"
+    freshness_slo_days: 2
+    mvp: true
+    status_2026_10_19: "swagger.json 200; OCDSReleases 500/timeouts"
+  - id: ppd_payments
+    name: Procurement Payments Dashboard (BAS + LOGIS) transaction list
+    owner_org: National Treasury OCPO
+    url: https://data.etenders.gov.za/Home/DownloadFile/?fileName=Procurement+Payments+Dashboard+User+Guide+Feb+2026.pdf
+    connector: csv_manual_drop
+    cadence: quarterly
+    freshness_slo_days: 21
+    mvp: true
+    notes: "Power BI; Procurement_Spend_Transaction_List.csv; excludes SOEs, municipalities, Defence, SAPS, SARS, SSA, legislatures"
+  - id: rsr
+    name: Register of Restricted Suppliers
+    owner_org: National Treasury OCPO
+    url: https://ocpo.treasury.gov.za/RestrictedSupplier/RestrictedSuppliersReport.pdf
+    connector: pdf_table
+    cadence: adhoc
+    schedule_sast: "Tue 04:00 weekly"
+    freshness_slo_days: 8
+    mvp: true
+    personal_data: "contains SA ID numbers -> HMAC, never publish"
+  - id: agsa_pfma
+    name: AGSA PFMA general report + annexures
+    owner_org: Auditor-General of South Africa
+    url: https://www.agsa.co.za/reports
+    connector: pdf_table
+    cadence: annual
+    freshness_slo_days: 30
+    mvp: true
+  - id: agsa_mfma
+    name: AGSA MFMA 2024-25 microsite
+    owner_org: Auditor-General of South Africa
+    url: https://mfma-2025.agsa.co.za/
+    connector: html_list
+    cadence: annual
+    freshness_slo_days: 30
+    mvp: true
+  - id: nt_budget
+    name: Vulekamali / ENE / EPRE / s32 monthly statements
+    owner_org: National Treasury
+    url: https://vulekamali.gov.za/datasets
+    alt_url: https://www.treasury.gov.za/comm_media/press/monthly/monthly_2026.aspx
+    connector: xls_zip
+    cadence: monthly
+    freshness_slo_days: 10
+    mvp: true
+    status_2026_10_19: "vulekamali.gov.za 200; data.vulekamali.gov.za CKAN 500/timeout"
+  - id: s71_noncompliance
+    name: MFMA s71 non-compliance lists
+    owner_org: National Treasury
+    url: https://mfma.treasury.gov.za/
+    connector: pdf_table
+    cadence: quarterly
+    freshness_slo_days: 21
+    mvp: true
+  - id: dmpr_fuel
+    name: DMPR / CEF fuel price adjustments
+    owner_org: Department of Mineral and Petroleum Resources
+    url: https://www.dmpr.gov.za/Branches/Petroleum-Resources/Fuel-Prices
+    connector: pdf_table
+    cadence: monthly
+    freshness_slo_days: 5
+    mvp: true
+  - id: statssa_cpi
+    name: Stats SA CPI (incl. average prices), PPI, P0151.1
+    owner_org: Statistics South Africa
+    url: https://www.statssa.gov.za/?page_id=1847
+    connector: xls_zip
+    cadence: monthly
+    freshness_slo_days: 10
+    mvp: true
+    notes: "WAF blocks scripted access -> manual drop (D-07)"
+  - id: siu
+    name: SIU proclamations and annual reports
+    owner_org: Special Investigating Unit
+    url: https://www.siu.org.za/proclamations/
+    connector: html_list
+    cadence: monthly
+    mvp: false
+  - id: opensanctions_za
+    name: OpenSanctions SA legislators (PEP)
+    owner_org: OpenSanctions
+    url: https://www.opensanctions.org/datasets/za_pmg_legislators/
+    connector: http_json
+    licence: "CC BY-NC (non-commercial)"
+    cadence: weekly
+    mvp: false
+  - id: ndoh_sep
+    name: NDoH Single Exit Price database
+    owner_org: National Department of Health
+    url: https://www.health.gov.za/nhi-pee/
+    connector: xls
+    cadence: monthly
+    mvp: false
+  - id: pmg_api
+    name: PMG API (SCOPA meetings, written replies)
+    owner_org: Parliamentary Monitoring Group
+    url: https://api.pmg.org.za/
+    connector: http_json
+    cadence: weekly
+    mvp: false

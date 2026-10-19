@@ -1,0 +1,47 @@
+# Red-flag detector configuration. Changing thresholds = NORMAL change, risk tier HIGH (2 approvals).
+# Design: docs/design/application-design.md §6.7
+detectors:
+  D1_fuel_unit_price:
+    version: 0.1.0
+    mvp: true
+    inputs: [payment_agg(system=LOGIS, commodity in fuel MIIN groups), benchmark: dmpr_diesel_*, rt70]
+    rule: "avg_unit_price > benchmark * (1 + threshold)"
+    threshold: 0.20
+    severity: {med: 0.20, high: 0.50}
+    publish_requires_review: true
+  D3_barred_awarded_or_paid:
+    version: 0.1.0
+    mvp: true
+    rule: "award_date or payment period overlaps restriction window"
+    min_match_confidence: 0.90
+    severity: {high: true}
+    publish_requires_review: true
+  D4_supplier_concentration:
+    version: 0.1.0
+    mvp: true
+    window_years: 3
+    hhi_threshold: 2500
+    top_share_threshold: 0.50
+    severity: {low: true}
+  D5_noncompetitive_share:
+    version: 0.1.0
+    mvp: true
+    peer_percentile: 0.90
+    severity: {info: true}
+  D8_municipal_distress_coverage:
+    version: 0.1.0
+    mvp: true
+    rules:
+      creditors_over_90_days_share: 0.5
+      cash_coverage_months_below: 1
+      uifw_growth_yoy: 0.5
+      s71_nonsubmission: true
+      afs_not_submitted: true
+    severity: {med: true}
+  D2_unit_price_outlier:   {version: 0.0.0, mvp: false, robust_z: 3.5}
+  D6_threshold_splitting:  {version: 0.0.0, mvp: false, blocked_by: "order-level data not public"}
+  D7_triangulation:        {version: 0.0.0, mvp: false}
+  D9_related_party:        {version: 0.0.0, mvp: false, publish_requires_review: true, legal_review: required}
+  D10_capacity:            {version: 0.0.0, mvp: false, new_company_months: 12, value_threshold_rand: 10000000}
+  D11_contract_expansion:  {version: 0.0.0, mvp: false, blocked_by: "deviation registers restricted"}
+  D12_consequence_gap:     {version: 0.0.0, mvp: false}
