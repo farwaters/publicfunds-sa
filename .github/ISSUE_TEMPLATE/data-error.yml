@@ -1,0 +1,52 @@
+name: Report an error in the data or the site
+description: A figure looks wrong, a source link is broken, or something on the public dashboard doesn't work.
+title: "[data] "
+labels: ["data-error", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you. This report is **public**, so please do **not** include personal information: no ID numbers,
+        phone numbers, home addresses, or allegations about named individuals. To report suspected corruption,
+        use the official channels (for example the National Anti-Corruption Hotline, 0800 701 701, or the Public
+        Protector) rather than this form.
+  - type: input
+    id: page
+    attributes:
+      label: Page address
+      description: The dashboard link where you saw it (filled in automatically when you use the site's "Report an error" link).
+      placeholder: https://farwaters.github.io/publicfunds-sa/apps/public-dashboard/#/m/MUN:BUF
+    validations:
+      required: true
+  - type: dropdown
+    id: kind
+    attributes:
+      label: What kind of problem?
+      options:
+        - A figure looks wrong
+        - A figure is missing (shown as unknown)
+        - A source link is broken
+        - Wording is unclear or misleading
+        - The site doesn't work (layout, accessibility, loading)
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What did you see, and what did you expect?
+      description: If you have an official source with the correct figure, please paste its link.
+    validations:
+      required: true
+  - type: input
+    id: source
+    attributes:
+      label: Official source link (optional)
+      placeholder: https://...
+  - type: checkboxes
+    id: privacy
+    attributes:
+      label: Privacy
+      options:
+        - label: My report contains no personal information about anyone (no ID numbers, contact details or accusations against named people).
+          required: true

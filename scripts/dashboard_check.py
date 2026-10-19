@@ -10,6 +10,7 @@ import argparse
 import functools
 import http.server
 import json
+import os
 import shutil
 import sys
 import threading
@@ -21,7 +22,10 @@ ROOT = Path(__file__).resolve().parents[1]
 PAGES = [("home", "#/"), ("coverage", "#/coverage"), ("municipalities", "#/municipalities"),
          ("municipality", "#/m/MUN:BUF"), ("departments", "#/departments"), ("department", None),
          ("tenders", "#/tenders"), ("flags", "#/flags"), ("tools", "#/tools"), ("compare", "#/tools/compare?a=MUN:BUF&b=MUN:NMA&y=2024"),
-         ("sources", "#/sources")]
+         ("sources", "#/sources"), ("unknowns", "#/unknowns"), ("changes", "#/changes")]
+# Optional accessibility scan with axe-core (npm i axe-core); serious/critical WCAG 2.x A/AA violations fail the check.
+AXE_JS = next((Path(x) for x in (os.environ.get("AXE_JS", ""), "/workspace/tools/web/node_modules/axe-core/axe.min.js",
+                                 str(ROOT / "node_modules/axe-core/axe.min.js")) if x and Path(x).is_file()), None)
 VIEWPORTS = {"desktop": {"width": 1366, "height": 900}, "mobile": {"width": 390, "height": 844}}
 
 
@@ -68,8 +72,15 @@ def main() -> int:
                 h1 = page.locator("#view h1").inner_text()
                 if h1 in ("Something went wrong", "Page not found", "Municipality not found", "Department not found"):
                     problems.append(f"{vname} {name}: {h1}: {page.locator('#view').inner_text()[:300]}")
+                if AXE_JS:
+                    page.add_script_tag(content=AXE_JS.read_text())
+                    res = page.evaluate("""() => axe.run(document, {runOnly: {type: 'tag', values: ['wcag2a','wcag2aa','wcag21a','wcag21aa']}})
+                        .then(r => r.violations.map(v => ({id: v.id, impact: v.impact, n: v.nodes.length})))""")
+                    checks.setdefault("axe", {})[f"{vname}:{name}"] = res
+                    problems += [f"{vname} {name} axe {v['impact']}: {v['id']} ({v['n']} nodes)" for v in res
+                                 if v["impact"] in ("serious", "critical")]
                 f = out / f"{name}-{vname}.png"
-                page.screenshot(path=str(f), full_page=vname == "desktop" and name in ("home", "flags", "tools"))
+                page.screenshot(path=str(f), full_page=vname == "desktop" and name in ("home", "flags", "tools", "unknowns", "changes"))
                 shots.append(str(f))
             # tools: inflation + fuel checker produce results; CSV download works
             page.goto(app.split("#")[0] + "#/tools")
