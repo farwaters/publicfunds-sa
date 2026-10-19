@@ -71,6 +71,7 @@ def build(paths: Paths, as_of: date | None = None, fye_min: int = 2020, fye_max:
     summary["rows"].update(staging.stage_rsr(con, store, sdir, secret or hmac_secret()))
     summary["rows"].update(staging.stage_nt_budget(con, store, sdir))
     summary["rows"].update(staging.stage_ppd(con, store, sdir))
+    summary["rows"].update(staging.stage_prices(con, store, sdir))
     summary["models"] = run_sql_dir(con, "curated")
     con.execute(f"SET VARIABLE as_of = DATE '{as_of.isoformat()}'")
     con.execute(f"SET VARIABLE fye_min = {int(fye_min)}")
@@ -79,7 +80,7 @@ def build(paths: Paths, as_of: date | None = None, fye_min: int = 2020, fye_max:
     summary["flags"] = detectors.build(con, detector_config(), build_id)
     for t in ("curated.gov_body", "curated.muni_fin_line", "curated.nat_budget_line", "curated.uifw_line",
               "curated.audit_outcome", "curated.award", "curated.ocds_release", "curated.restriction",
-              "curated.payment", "marts.coverage_cell", "marts.flag"):
+              "curated.payment", "curated.fuel_price", "curated.cpi", "marts.coverage_cell", "marts.flag"):
         summary["rows"][t] = con.execute(f"SELECT count(*) FROM {t}").fetchone()[0]
     results = dq.run(con, build_id, min_rows, raw_root=paths.root)
     summary["dq"] = {"pass": sum(r["status"] == "pass" for r in results),

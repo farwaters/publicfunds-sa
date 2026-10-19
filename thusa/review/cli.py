@@ -13,6 +13,8 @@
   pf review export [--format csv|json] [--all] [--out PATH]
   pf serve [--host 127.0.0.1] [--port 8765]
   pf publish                               rebuild the public static snapshot (dist/public/)
+  pf publish-data [--out DIR]              write the public JSON data for the dashboard (public-data/v1/);
+                                           refuses (exit 3) if the build failed data quality or the export is unsafe
 
 Exit codes: 0 ok · 2 invalid input / not found · 3 workflow rule (e.g. four-eyes) · 4 authentication.
 Secrets (passwords, tokens) are never printed.
@@ -207,6 +209,15 @@ def cmd_publish(a) -> int:
     return 0
 
 
+def cmd_publish_data(a) -> int:
+    from thusa.publish_data import UnsafeExport, export
+    try:
+        out(export(get_paths(), a.out))
+    except UnsafeExport as e:
+        raise CliError(f"public data not written: {e}", 3)
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(prog="pf", description="Thusa review app CLI")
     sub = ap.add_subparsers(dest="cmd", required=True)
@@ -254,10 +265,13 @@ def main(argv: list[str] | None = None) -> int:
     s.add_argument("--forwarded-allow-ips", default="127.0.0.1")
 
     sub.add_parser("publish", help="rebuild the public static snapshot from confirmed flags")
+    pdp = sub.add_parser("publish-data", help="write the public dashboard JSON (public-data/v1/)")
+    pdp.add_argument("--out", help="output directory (default: <repo>/public-data/v1)")
 
     a = ap.parse_args(argv)
     try:
-        return {"reviewer": cmd_reviewer, "review": cmd_review, "serve": cmd_serve, "publish": cmd_publish}[a.cmd](a)
+        return {"reviewer": cmd_reviewer, "review": cmd_review, "serve": cmd_serve, "publish": cmd_publish,
+                "publish-data": cmd_publish_data}[a.cmd](a)
     except CliError as e:
         print(json.dumps({"error": str(e), "exit_code": e.code}), file=sys.stderr)
         return e.code

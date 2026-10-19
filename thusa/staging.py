@@ -226,3 +226,30 @@ def stage_ppd(con, store: RawStore, sdir: Path) -> dict:
                 r["source_locator"] = f"{f.name}:{r['source_locator']}"
                 yield r
     return {"staging.ppd_payment": write_table(con, sdir, "staging.ppd_payment", rows(), PPD_COLS)}
+
+
+FUEL_COLS = {"year": "INTEGER", "month": "INTEGER", "grade": "VARCHAR", "grade_label": "VARCHAR",
+             "cents_per_litre": "DECIMAL(10,3)", "source_locator": "VARCHAR", "raw_file_id": "VARCHAR",
+             "fetched_at_utc": "VARCHAR"}
+CPI_COLS = {"year": "INTEGER", "month": "INTEGER", "index_value": "DOUBLE", "base_period": "VARCHAR",
+            "source_locator": "VARCHAR", "raw_file_id": "VARCHAR"}
+
+
+def stage_prices(con, store: RawStore, sdir: Path) -> dict:
+    """Fuel price history (DMPR) and CPI (OECD republication of Stats SA). Several monthly DMPR documents can
+    hold the same month; the most recently fetched document wins (deduplicated in the curated model)."""
+    def fuel():
+        for f in _files(store, "dmpr_fuel"):
+            for r in parsers.fuel_history_rows(store.path_of(f).read_bytes(), f.name):
+                r["raw_file_id"], r["fetched_at_utc"] = f.sha256, f.fetched_at_utc
+                r["source_locator"] = f"{f.name}:{r['source_locator']}"
+                yield r
+
+    def cpi():
+        for f in _files(store, "oecd_cpi"):
+            for r in parsers.oecd_cpi_rows(store.path_of(f).read_bytes()):
+                r["raw_file_id"] = f.sha256
+                r["source_locator"] = f"{f.name}:{r['source_locator']}"
+                yield r
+    return {"staging.fuel_price": write_table(con, sdir, "staging.fuel_price", fuel(), FUEL_COLS),
+            "staging.cpi": write_table(con, sdir, "staging.cpi", cpi(), CPI_COLS)}

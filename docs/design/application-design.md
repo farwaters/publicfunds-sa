@@ -484,7 +484,7 @@ Practices from P1/P3 that **don't apply yet** (recorded so they're not forgotten
 |---|---|---|---|
 | D-01 | Product name | "Thusa" (placeholder) / other | User's call |
 | ~~D-02~~ | ~~Git remote~~ | **Resolved:** GitHub `farwaters/publicfunds-sa` (CHG-2026-001). Made **public** by the owner on 19 Oct 2026 ~11:21 SAST, after a clean history secret scan (CHG-2026-004) | — |
-| ~~D-03~~ | ~~Public hosting of snapshots~~ | **Superseded by Grok Bot template distribution (ADR-0009, 19 Oct 2026)** | No public web hosting in the MVP |
+| ~~D-03~~ | ~~Public hosting of snapshots~~ | Superseded by Grok Bot template distribution (ADR-0009), then **reopened and resolved 19 Oct 2026 17:47 SAST: public dashboard is a Grok Build app reading `public-data/v1` from GitHub (ADR-0010, CHG-2026-006)** | Grok Build |
 | D-04 | Public vs private launch timing | Private beta with partners first / public from MVP | Private beta with 2–3 partners |
 | D-05 | Offsite backup target | Git LFS / Google Drive (connector) / S3-compatible | Google Drive or S3 for raw snapshots; git for code/docs only |
 | D-06 | Raw snapshot retention | 3 years / indefinite | Indefinite for non-personal; 3 years for files with ID numbers |
@@ -497,3 +497,6 @@ Practices from P1/P3 that **don't apply yet** (recorded so they're not forgotten
 | D-13 | Public treatment of unconfirmed, non-named flags (`config/publication.yaml`) | `exclude` / `label` as "unreviewed lead" | `exclude` until the first reviewed release, then reconsider |
 | ~~D-14~~ | ~~Remote access to the review app~~ | **Superseded by Grok Bot template distribution (ADR-0009, 19 Oct 2026)**: the bot chat is the primary UI; the bot opens the localhost app in its own box browser | Localhost only |
 | D-15 | Fill in and verify the PublicFunds Bot template link `https://x.ai/bot/7Hr1hnJPXqOQbMmUZ7mTi` and its contents (docs/bot/template.md, docs/bot/skills/). The repo is public, so importers need no GitHub access (CHG-2026-004) | Owner creates the share link | Before the first external import (CHG-2026-005) |
+| D-16 | Publish the public dashboard with Grok Build and record its grok.me URL (CI-105) | Owner pastes `apps/public-dashboard/GROK_BUILD_PROMPT.md` into grok.com Build mode | After the CHG-2026-006 PR merges (data URLs need `main`) |
+| D-17 | Custom domain for the public dashboard | none / owner's domain via Grok Build domain settings (CNAME) | Optional; keep the data base URL unchanged |
+| D-18 | Population data for per-resident figures | Stats SA manual drop (Census 2022 / mid-year estimates) / none | Manual drop (CSI-024); shown as unknown until then |

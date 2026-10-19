@@ -8,12 +8,12 @@ from datetime import date, datetime, timezone
 
 from thusa.settings import get_paths
 
-SOURCES = ["muni_api", "etenders_ocds", "rsr", "ppd_payments", "nt_budget"]
+SOURCES = ["muni_api", "etenders_ocds", "rsr", "ppd_payments", "nt_budget", "dmpr_fuel", "oecd_cpi"]
 
 
 def ingest(only: list[str] | None = None, refresh: bool = False) -> list[dict]:
     from thusa.build import git_sha
-    from thusa.connectors import muni_api, ocds, ppd, rsr, vulekamali
+    from thusa.connectors import muni_api, ocds, ppd, prices, rsr, vulekamali
     from thusa.http import Fetcher
     from thusa.raw import RawStore, log_run
 
@@ -25,6 +25,8 @@ def ingest(only: list[str] | None = None, refresh: bool = False) -> list[dict]:
         "rsr": lambda: rsr.run(store, Fetcher()),
         "ppd_payments": lambda: ppd.run(store, p.drop / "ppd"),
         "nt_budget": lambda: vulekamali.run(store, Fetcher(retries=1)),
+        "dmpr_fuel": lambda: prices.run_fuel(store, Fetcher(retries=2)),
+        "oecd_cpi": lambda: prices.run_cpi(store, Fetcher(retries=2)),
     }
     out = []
     for sid in only or SOURCES:

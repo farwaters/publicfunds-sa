@@ -1,0 +1,37 @@
+# Public data export (pf publish-data -> public-data/v1/, CHG-2026-006, ADR-0010).
+# Plain-language text shown on the public dashboard. Changing what is exported is a Normal-high change.
+schema_version: "1.0.0"
+base_url: "https://raw.githubusercontent.com/farwaters/publicfunds-sa/main/public-data/v1/"
+size_budget_bytes: 5000000        # all files together (tests enforce it)
+file_budget_bytes: 2000000        # any single file
+detectors:
+  D1_overspend_vs_budget: "Spent much more than the approved budget (audited spending compared with the budget)."
+  D3_restricted_supplier_awarded: "A tender award went to a name on National Treasury's restricted-supplier list while the restriction applied."
+  D4_supplier_concentration: "One supplier won most of a buyer's tender value over three years."
+  D5_award_value_gaps: "Many of a buyer's published tender awards have no value, or an obviously wrong value such as R0."
+  D8_irregular_expenditure_trend: "Reported irregular expenditure rose sharply two years in a row."
+known_gaps:
+  - id: KE-006
+    text: "The latest financial year (2024/25) has no audited results, irregular-expenditure figures or audit opinions in the Municipal Money data yet."
+  - id: KE-007
+    text: "Many published tender awards have no value or a R0 placeholder (the share is shown per buyer); we show these as unknown, never as zero."
+  - id: KE-009
+    text: "Payments by national and provincial departments (the Procurement Payments Dashboard) can only be exported by hand and are not loaded yet."
+  - id: KE-003
+    text: "Statistics South Africa's website blocks automated downloads, so inflation (CPI) comes from the OECD's copy of the Stats SA index, which can lag by months; population figures are not loaded yet."
+  - id: KE-001
+    text: "The eTenders live API often fails; tender data comes from the monthly bulk file plus whatever recent updates the API returned."
+  - id: KE-012
+    text: "Fuel prices come from the Department of Mineral and Petroleum Resources' monthly history table for the current year only; earlier years are not loaded yet."
+population:
+  status: unknown
+  reason: "Population and household counts per municipality (Stats SA Census 2022) are not loaded yet: the Stats SA website blocks automated downloads (KE-003)."
+display_sources:
+  # licence / human link per source id (adds to config/sources.yaml)
+  muni_api: {page: "https://municipalmoney.gov.za/", licence: "Municipal Money terms of use (attribute National Treasury)"}
+  etenders_ocds: {page: "https://data.etenders.gov.za/", licence: "CC BY 4.0 (portal) / PDDL (API spec): attribute National Treasury"}
+  rsr: {page: "https://ocpo.treasury.gov.za/", licence: "Public register (National Treasury); used only to count leads, never published here"}
+  nt_budget: {page: "https://vulekamali.gov.za/datasets/budgeted-and-actual-national-expenditure", licence: "Vulekamali open data (attribute National Treasury)"}
+  ppd_payments: {page: "https://data.etenders.gov.za/", licence: "National Treasury OCPO"}
+  dmpr_fuel: {page: "https://www.dmpr.gov.za/Branches/Petroleum-Resources/Fuel-Prices", licence: "Public government information (DMPR / CEF)"}
+  oecd_cpi: {page: "https://data-explorer.oecd.org/", licence: "CC BY 4.0 (OECD); underlying data: Statistics South Africa"}
