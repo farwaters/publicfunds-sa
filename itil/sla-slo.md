@@ -16,12 +16,20 @@ No external SLA is offered while in beta. These are **internal SLOs** with error
 | Municipal Finance API | 7 days after NT quarter load | |
 | Procurement Payments Dashboard | 21 days after NT quarterly release | manual drop in MVP |
 | Restricted Supplier Register | 8 days | |
-| DMPR fuel prices | 5 days after adjustment | |
-| Stats SA CPI | 10 days after release | manual drop |
+| DMPR fuel prices | 5 days after adjustment | `dmpr_fuel`, monthly (first Wednesday); freshness check 35 days |
+| Stats SA CPI | 10 days after release | manual drop; meanwhile OECD SDMX secondary series `oecd_cpi` (lags months, KE-012); freshness check 400 days |
 | NT s32 monthly | 10 days | |
 | AGSA reports | 30 days after tabling | |
 | s71 non-compliance lists | 21 days | |
 **Target: ≥ 95% of source-days within SLO per month.** A stale source is shown as stale in the UI (never silently).
+
+## Public data and public dashboard (CHG-2026-006, ADR-0010)
+| ID | SLI | SLO | Window | Measurement |
+|---|---|---|---|---|
+| **SLO-PD-1** | Age of the published export = now − `manifest.json` `generated_at_sast` at `raw.githubusercontent.com/…/main/public-data/v1/` | **≤ 48 h** on 95% of days | 30 days | Refresh routine reports the export time after each push; the app shows the age and warns above 48 h |
+| SLO-PD-2 | Unconfirmed leads, reviewer data or personal ID numbers in the public export | **0** (hard rule; export refuses) | always | `pf publish-data` safety scan + tests (RSK-023) |
+| SLO-PD-3 | Public dashboard pages load without console errors on desktop and mobile | 100% of pages per release | per release | `scripts/dashboard_check.py` |
+Availability of the Grok Build site itself is the host's; measure with the external uptime check once the URL exists (D-08, D-16).
 
 ## Correctness & review
 | SLI | SLO |

@@ -1,5 +1,5 @@
 # ADR-0009: Distribute Thusa as the "PublicFunds Bot" Grok Bot template; the bot chat is the primary UI; no public web hosting in the MVP
-- Status: Accepted (owner clarification, 19 Oct 2026 11:21 SAST)
+- Status: Accepted (owner clarification, 19 Oct 2026 11:21 SAST); **partly superseded by ADR-0010** (19 Oct 2026 17:47 SAST): the public GUI is now a Grok Build app; the template remains the power-user/reviewer version
 - Date: 2026-10-19
 - Supersedes: decisions **D-03** (public hosting of snapshots) and **D-14** (remote access to the review app);
   ADR-0001 decision (d) "static public snapshot deployed to an external host"; and the "public site" part of ADR-0003

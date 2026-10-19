@@ -96,3 +96,10 @@ Run all of these in a shell on the box from the repo root. Each step writes an a
   app is stopped.
 - **Restore:** stop the app, copy the backup to `data/review/review.sqlite` (mode 0600), and start the app.
   `uv run pf review verify` must report `ok: true` and the head hash recorded in the last release record.
+
+## RB-11 Public data export and public dashboard
+- **Publish after a refresh**: `scripts/publish-public-data.sh` (export + commit `public-data/` only). Add `--push` only from the owner-approved routine or with the owner's go-ahead. Exit 3 = export refused (quality gate or safety scan: read `data/publish-data.json` / `.log`); exit 4 = refused to commit/push (other staged files, wrong branch, `main` moved).
+- **Check**: `curl -s https://raw.githubusercontent.com/farwaters/publicfunds-sa/main/public-data/v1/manifest.json | python3 -m json.tool | head` (raw cache ~5 min). The site shows the data age; > 48 h breaches SLO-PD-1.
+- **Local preview**: see `apps/public-dashboard/README.md`; `uv run --group screenshots python scripts/dashboard_check.py`.
+- **Takedown** (wrong or harmful content): revert the offending `public-data/` commit and push (owner approval), or unpublish the app in Grok Build; open a P2 incident (P1 if personal data), and if personal data was exposed follow the security incident steps for RSK-021 (history and forks keep it).
+
