@@ -4,6 +4,8 @@
 | CHG-2026-001 | 2026-10-19 | Standard | Initialise repo with landscape report, design, ITIL artefacts, ADRs | initial commits | Successful |
 | CHG-2026-002 | 2026-10-19 | Normal-high | MVP data pipeline, coverage model, detectors D1/D3/D4/D5/D8, local dashboard (v0.1.0) — itil/changes/CHG-2026-002-mvp-pipeline.md | branch feat/mvp-pipeline → [PR #1](https://github.com/farwaters/publicfunds-sa/pull/1) (unmerged) | Awaiting review |
 | CHG-2026-003 | 2026-10-19 | Normal-high | Review app: flag review queue with four-eyes, append-only audit trail, reviewer auth, coverage browser, `pf` CLI for the bot, public snapshot = confirmed flags only (v0.2.0) — itil/changes/CHG-2026-003-review-app.md. Amended 11:21 SAST: Grok Bot template distribution, ADR-0009 (D-03/D-14 superseded) | branch feat/review-app, stacked on feat/mvp-pipeline (PR base feat/mvp-pipeline, unmerged) | Awaiting review |
+| CHG-2026-004 | 2026-10-19 | Normal-high (retrospective record) | Repository visibility changed to **public** by the owner (~11:21 SAST) after scanning the full history for secrets (clean) — itil/changes/CHG-2026-004-repo-public.md | GitHub settings (no commit) | Successful |
+| CHG-2026-005 | 2026-10-19 | Normal-high | Template packaging: 5 bot skills, template description + memory facts, `scripts/bootstrap.sh`; D-12 Parked — itil/changes/CHG-2026-005-template-packaging.md | branch feat/review-app ([PR #2](https://github.com/farwaters/publicfunds-sa/pull/2), unmerged) | Awaiting review |
 
 **CHG-2026-001 update (19 Oct 2026):** the local repo is committed (6 commits on `main`). The remote is **not yet created**:
 - `gh` is not logged in.
