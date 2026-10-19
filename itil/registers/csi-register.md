@@ -13,3 +13,9 @@ Value 1–5, Effort 1–5; Priority = Value / Effort (higher first). Reviewed mo
 | CSI-007 | Add circuit breaker: tighten review when revert/incident rate rises | P2 (gap they noted) | 3 | 2 | 1.5 | Proposed | Auto-switch implemented |
 | CSI-008 | Recruit a second maintainer (bus factor > 1) | P3, RSK-013 | 4 | 3 | 1.3 | Proposed | Second person can release |
 | CSI-009 | Monthly restore test automation | P1/P3 | 4 | 2 | 2.0 | Proposed | 3 consecutive passes |
+| CSI-010 | Load pre-2019 municipal income & expenditure (incexp v1) once the cube's members endpoint works; extend the coverage window back to FYE 2012 for UIF&W and audit | KE-005 | 3 | 2 | 1.5 | Proposed | FYE 2012–2019 cells computed |
+| CSI-011 | eTenders delta: page by 1-day windows; alert if the delta stays partial for 3 days | INC-2026-001 | 3 | 1 | 3.0 | Proposed | Delta `ok` 7 days running |
+| CSI-012 | Add provincial BvA + ENE resources from vulekamali dataset pages (provincial departments into coverage) | INC-2026-002 | 4 | 2 | 2.0 | Proposed | Provincial depts in grid |
+| CSI-013 | Fill 2024/25 audit opinions & UIF&W from the AGSA MFMA 2024-25 microsite until the API catches up | KE-006 | 5 | 3 | 1.7 | Proposed | 2024/25 core coverage > 75% |
+| CSI-014 | Build a labelled eval set for D3/D4 (reviewed true/false positives) before any publication; report precision | RSK-016, P2 "incidents → evals" | 5 | 3 | 1.7 | Proposed | Precision measured on ≥ 50 reviewed flags |
+| CSI-015 | Buyer-name matching beyond exact keys (e.g. "Ugu Disctrict Munucipality" typo); manual alias table with review | DQ warn `award_buyer_match_rate_info` | 3 | 2 | 1.5 | Proposed | Match rate of municipal buyers > 95% |

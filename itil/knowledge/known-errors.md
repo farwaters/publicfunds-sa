@@ -1,7 +1,13 @@
 # Known error database (KEDB)
 | ID | Symptom | Cause | Workaround | Linked |
 |---|---|---|---|---|
-| KE-001 | `ocds-api.etenders.gov.za/api/OCDSReleases` returns HTTP 500 or times out (19 Oct 2026) | Upstream API instability **[cause unverified]** | Use Treasury monthly bulk files; fallback OCP registry mirror; mark source stale if both fail | CSI-002, CSI-003 |
-| KE-002 | `data.vulekamali.gov.za` CKAN returns 500/timeout (19 Oct 2026) | Upstream | Use treasury.gov.za ENE/EPRE/s32 Excel files | RSK-003 |
+| KE-001 | `ocds-api.etenders.gov.za/api/OCDSReleases` returns HTTP 500 or times out (19 Oct 2026). Update 09:55: `PageSize` > 100 always 500; page 3 of a 35-day window 500s after retries | Upstream API instability **[cause unverified]** | OCP Data Registry bulk `full.jsonl.gz` (Last-Modified 20 Sep 2026) + best-effort delta; run marked `partial` | INC-2026-001, CSI-002, CSI-011 |
+| KE-002 | `data.vulekamali.gov.za` CKAN returns 500/timeout; from 09:31 19 Oct 2026 TLS handshake fails (`UNEXPECTED_EOF`) | Upstream | Download resource CSVs linked from the public dataset pages on vulekamali.gov.za (connector `vulekamali`) | INC-2026-002, RSK-003 |
 | KE-003 | Stats SA, some SIU/PP pages block or time out on scripted requests | WAF (Incapsula) / hosting | Manual drop folder; Bot browser download if terms allow (D-07) | CSI-005 |
 | KE-004 | Instruction 10 PDF is image-only | Scanned "Print to PDF" | Render pages to PNG + read/OCR | — |
+| KE-005 | Municipal Finance API `incexp` (v1) `members/financial_year_end` returns HTTP 500 | Upstream | MVP loads `incexp_v2` only (FYE 2018–2026; mSCOA). Coverage window is FYE 2020–2026, so pre-2019 income and expenditure isn't loaded | CSI-010 |
+| KE-006 | Municipal Finance API has no 2024/25 UIF&W amounts or audit opinions (max FYE 2024 in both cubes, checked 19 Oct 2026) and no 2024/25 adjusted budgets (ADJB). AGSA MFMA 2024-25 results are on its microsite | Publisher lag **[unverified why]** | Coverage shows these cells as `missing`/`partial` (not n.a.: they are due). That is why 2024/25 has 0% complete | CSI-013 |
+| KE-007 | eTenders award values: 2,791 of 9,551 award-supplier rows have no value or a 0 placeholder; 330 are below R100 (e.g. R10); 44 are above R20bn (e.g. R370.8bn for one SANRAL contract) | Source capture quality | 0 → NULL; < R100 and > R20bn kept but marked `implausible_*` and excluded from totals and D4; surfaced by D5 | RSK-015 |
+| KE-008 | `incexp_v2` subtotals (2900 total revenue, 4400 total expenditure) are published only for some years and amount types | Upstream | Totals come from line items (revenue 0200–2800, expenditure 3000–4300). They matched the published subtotals in 1,243 of 1,244 cases; DQ check `derived_totals_match_published` | — |
+| KE-009 | PPD transaction list is only exportable from inside the Power BI report | Publisher design | Manual-drop loader (RB-06); no browser automation (D-07) | CSI-001 |
+| KE-010 | Vulekamali BvA CSV has 14 lines in Excel scientific notation (e.g. `1,06087E+11`), i.e. about 6 significant digits | Export from Excel | Parsed, kept, counted in `nat_budget_line.n_approx_lines` | — |
