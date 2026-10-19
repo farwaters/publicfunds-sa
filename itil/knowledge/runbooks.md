@@ -18,6 +18,7 @@ Follow `itil/templates/release-checklist.md`. The routine prepares; the owner ap
 1. Copy the latest backup of `thusa.duckdb` + a sample of raw snapshots to `/tmp/restore-test/`.
 2. Rebuild one mart (`marts.municipal_scorecard`) from the raw files at the release tag.
 3. Compare row counts and a checksum of key measures with production. Log the result in the CSI register (CSI-009).
+4. Restore the latest `data/review/review.sqlite` backup to a scratch path and run `THUSA_REVIEW_DB=<path> uv run pf review verify`. It must report `ok: true` (RB-10).
 
 ## RB-05 Leaked secret
 Emergency change: revoke/rotate at the provider, purge it from the repo history if committed (needs owner confirmation: destructive git operation), check access logs, incident record.
@@ -39,3 +40,59 @@ don't automate the Power BI session (D-07).
 - Exit 0: build is releasable. Exit 2: at least one `error` DQ check failed. Don't publish; open an incident (RB-01).
 - Outputs: `data/thusa.duckdb`, `dist/site/index.html`, `dist/*.png`, and `dist/summary.json` (git-ignored).
 - Raw files are immutable and deduplicated by checksum. Re-runs on the same day reuse today's copies unless `--refresh`.
+
+## RB-08 Review app: start, stop, check, expose
+The review app (`pf serve`, CI-097) reads the current warehouse (read-only) and writes reviews to
+`data/review/review.sqlite` (CI-098). It binds to **127.0.0.1:8765** by default and refuses a non-loopback bind
+unless you pass `--allow-remote`.
+
+**Start, stop and check (no systemd on the box as of 19 Oct 2026):**
+- `scripts/review-app.sh start` runs `uv sync --frozen`, starts `pf serve` detached with setsid/nohup, writes
+  `data/review/serve.pid`, and waits for `/healthz`.
+- `scripts/review-app.sh status | stop | restart`. The log is `data/review/serve.log`.
+- Health: `curl -s http://127.0.0.1:8765/healthz` returns `{"status":"ok", "warehouse_build_id":…, "audit_chain_ok":true}`.
+  HTTP 503 or `degraded` means the warehouse is missing, or the **audit hash chain is broken**. A broken chain is
+  treated as a security incident: stop the app, keep a copy of the DB, and run `pf review verify`.
+
+**With systemd --user (other hosts):** `deploy/thusa-review.service` (see the header comment). Use
+`loginctl enable-linger` so the app keeps running after logout.
+
+**After a pipeline rebuild:** no restart is needed. Every request opens the current warehouse read-only. Flags whose
+evidence changed show `evidence changed` and need re-review.
+
+**Exposing it to remote reviewers. Pick one; never `--host 0.0.0.0` over plain HTTP:**
+1. **SSH tunnel (recommended for a few reviewers):** `ssh -N -L 8765:127.0.0.1:8765 <box>`, then open
+   http://127.0.0.1:8765 locally. Nothing new is exposed.
+2. **TLS reverse proxy on a host name you control:**
+   - Keep `pf serve` on 127.0.0.1 and put Caddy or nginx in front, e.g. Caddyfile
+     `review.example.org { reverse_proxy 127.0.0.1:8765 }`.
+   - Run the app with:
+     - `THUSA_REVIEW_SECURE_COOKIES=1` (sets `__Host-` Secure cookies and HSTS);
+     - `THUSA_REVIEW_ALLOWED_HOSTS=review.example.org`;
+     - `pf serve --proxy-headers --forwarded-allow-ips 127.0.0.1`, so login rate limiting sees real client IPs.
+   - Optionally add an IP allow-list or SSO at the proxy.
+   - Doing this is a **Normal change** (new external interface). Record it in a CHG record and update CI-097.
+   - Whether the Grok Bot box can publish a port to the internet is not established (D-14).
+
+## RB-09 Reviewer accounts: add, rotate, off-board
+Run all of these in a shell on the box from the repo root. Each step writes an append-only `reviewer_event` row.
+- **Add:**
+  `uv run pf reviewer add <username> --display-name "Full Name" [--admin] --credentials-file ~/.config/publicfunds/<username>_credentials`
+  - Writes a random 24-character password to a 0600 file and never prints it.
+  - Send the file to the person over a private channel, then delete your copy.
+- **API/CLI token** (for the person's own scripts, or the Grok Bot acting for them):
+  `uv run pf reviewer token <username> --out ~/.config/publicfunds/review_token`. Issuing a new token replaces the old one.
+- **Reset password:** `uv run pf reviewer reset-password <username> --credentials-file <path> --force`. This revokes
+  the person's sessions.
+- **Off-board:** `uv run pf reviewer disable <username>` (revokes sessions; the decision history is kept) and
+  `uv run pf reviewer revoke-token <username>`.
+- **List:** `uv run pf reviewer list`. It shows no secrets.
+- **Four-eyes needs at least two active, independent reviewers.** Don't create a second account for the same person.
+  The reviewer list is checked at each release (REL checklist).
+
+## RB-10 Review data backup and restore
+- **Back up** (with the warehouse and raw files, D-05):
+  `sqlite3 data/review/review.sqlite ".backup data/review/backup-$(date +%F).sqlite"`, or copy the file while the
+  app is stopped.
+- **Restore:** stop the app, copy the backup to `data/review/review.sqlite` (mode 0600), and start the app.
+  `uv run pf review verify` must report `ok: true` and the head hash recorded in the last release record.
