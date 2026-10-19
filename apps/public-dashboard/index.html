@@ -1,0 +1,588 @@
+<!doctype html>
+<html lang="en-ZA">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' https: http://127.0.0.1:* http://localhost:*; base-uri 'none'; form-action 'none'">
+<link rel="icon" href="data:,">
+<meta name="description" content="PublicFunds SA: where South African public money goes, from official open data - with the gaps shown honestly.">
+<title>PublicFunds SA - follow South Africa's public money</title>
+<style>
+:root{--ink:#14202b;--muted:#566370;--line:#d8dee4;--bg:#f6f8fa;--card:#fff;--brand:#0b6e4f;--brand-ink:#fff;--accent:#c8860d;
+--p:#1f8a5b;--pp:#e0b13a;--m:#c94a3a;--na:#c9d1d9;--focus:#1b5fd1;--warn-bg:#fff6dd;--warn-line:#e9cf7c;--radius:10px}
+@media (prefers-color-scheme:dark){:root{--ink:#e6edf3;--muted:#9aa7b4;--line:#33404c;--bg:#0f161d;--card:#16202a;--brand:#2fae7f;--brand-ink:#04140d;
+--warn-bg:#2b2410;--warn-line:#6b5a22;--na:#3a4652}}
+*{box-sizing:border-box}html{-webkit-text-size-adjust:100%}
+body{margin:0;font:16px/1.55 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color:var(--ink);background:var(--bg)}
+a{color:var(--brand)}a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visible,[tabindex]:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
+.skip{position:absolute;left:-999px;top:0;background:var(--card);padding:.5rem 1rem;z-index:10}.skip:focus{left:.5rem}
+header{background:var(--brand);color:var(--brand-ink);position:sticky;top:0;z-index:5}
+.bar{display:flex;align-items:center;gap:.75rem;max-width:1100px;margin:0 auto;padding:.6rem 1rem}
+.brand{font-weight:800;font-size:1.1rem;color:inherit;text-decoration:none;letter-spacing:.2px}.brand small{font-weight:500;opacity:.85}
+#navtoggle{margin-left:auto;background:transparent;border:1px solid currentColor;color:inherit;border-radius:8px;padding:.35rem .6rem;font:inherit}
+nav ul{list-style:none;margin:0;padding:0 1rem .6rem;display:none;flex-direction:column;gap:.15rem;max-width:1100px;margin:0 auto}
+nav.open ul{display:flex}nav a{color:inherit;text-decoration:none;display:block;padding:.45rem .6rem;border-radius:8px}
+nav a[aria-current=page],nav a:hover{background:rgba(255,255,255,.18)}
+@media (min-width:900px){#navtoggle{display:none}nav ul{display:flex;flex-direction:row;flex-wrap:wrap;padding:0 1rem .5rem}}
+.notice{background:var(--warn-bg);border-bottom:1px solid var(--warn-line);font-size:.92rem}.notice p{max-width:1100px;margin:0 auto;padding:.5rem 1rem}@media (max-width:600px){.notice{font-size:.8rem}.notice p{padding:.35rem .8rem}}
+main{max-width:1100px;margin:0 auto;padding:1rem}#main:focus,#main:focus-visible{outline:none}
+h1{font-size:1.6rem;line-height:1.25;margin:.4rem 0 .6rem}h2{font-size:1.2rem;margin:1.4rem 0 .5rem}h3{font-size:1.02rem;margin:1rem 0 .4rem}
+.lead{color:var(--muted);margin-top:0}
+.grid{display:grid;gap:.8rem;grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr))}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:.9rem 1rem}
+.kpi>b{display:block;font-size:1.7rem;line-height:1.15}.kpi>span{color:var(--muted);font-size:.9rem}
+.pill{display:inline-block;border-radius:999px;padding:.05rem .55rem;font-size:.8rem;border:1px solid var(--line);background:var(--bg);white-space:nowrap}
+.pill.ok{border-color:var(--p);color:var(--p)}.pill.bad{border-color:var(--m);color:var(--m)}.pill.mid{border-color:var(--accent);color:var(--accent)}
+.unknown{color:var(--muted);font-style:italic}
+.muted{color:var(--muted)}.small{font-size:.86rem}
+.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:var(--radius);background:var(--card)}
+table{border-collapse:collapse;width:100%;font-size:.92rem}th,td{padding:.45rem .6rem;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+th{background:var(--bg);font-weight:650;position:sticky;top:0}td.num,th.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+tbody tr:last-child td{border-bottom:0}
+.tools{display:flex;flex-wrap:wrap;gap:.5rem;align-items:end;margin:.6rem 0}
+label{display:flex;flex-direction:column;font-size:.85rem;color:var(--muted);gap:.2rem}
+input,select,button{font:inherit;color:var(--ink);background:var(--card);border:1px solid var(--line);border-radius:8px;padding:.45rem .6rem;min-height:2.5rem}
+button{cursor:pointer}button.primary{background:var(--brand);color:var(--brand-ink);border-color:var(--brand)}
+.btn-csv{font-size:.85rem;min-height:2.2rem}
+.heat{border-collapse:separate;border-spacing:2px;font-size:.8rem}.heat td,.heat th{border:0;padding:.15rem .3rem}
+.heat th[scope=row]{position:sticky;left:0;background:var(--card);z-index:1}.heat td.c{width:2.4rem;min-width:2rem;text-align:center;border-radius:4px;color:#fff;font-weight:700}
+.s-P{background:var(--p)}.s-p{background:var(--pp);color:#222!important}.s-m{background:var(--m)}.s--{background:var(--na);color:#333!important}.s-\?{background:#888}
+.legend{display:flex;flex-wrap:wrap;gap:.6rem;font-size:.85rem}.legend i{display:inline-block;width:1rem;height:1rem;border-radius:3px;vertical-align:-3px;margin-right:.25rem}
+.chart{width:100%;height:auto;max-height:320px}.chart text{fill:var(--muted);font-size:11px}.chart .axis{stroke:var(--line)}
+.bars rect:hover{opacity:.85}
+.op-unqualified{background:#1f8a5b;color:#fff}.op-unqualified_emphasis_of_matter{background:#5aa36f;color:#fff}.op-qualified{background:#e0b13a;color:#222}
+.op-adverse{background:#c94a3a;color:#fff}.op-disclaimer{background:#8e2b20;color:#fff}.op-outstanding{background:#6b7785;color:#fff}
+.chip{display:inline-block;border-radius:6px;padding:.1rem .45rem;font-size:.8rem;margin:.1rem}
+.gap li{margin:.25rem 0}
+.result{font-size:1.05rem}.result b{font-size:1.25rem}
+footer{max-width:1100px;margin:2rem auto 0;padding:1rem;color:var(--muted);font-size:.85rem;border-top:1px solid var(--line)}
+.err{border-color:var(--m);background:var(--warn-bg)}
+details summary{cursor:pointer;font-weight:600}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+@media print{header,nav,.tools,.btn-csv,footer{display:none}}
+</style>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<header>
+  <div class="bar"><a class="brand" href="#/">PublicFunds SA <small>follow the public money</small></a>
+    <button id="navtoggle" aria-expanded="false" aria-controls="nav">Menu</button></div>
+  <nav id="nav" aria-label="Main"><ul>
+    <li><a href="#/">Home</a></li><li><a href="#/coverage">Data coverage</a></li><li><a href="#/municipalities">Municipalities</a></li>
+    <li><a href="#/departments">National departments</a></li><li><a href="#/tenders">Tenders</a></li><li><a href="#/flags">Flags</a></li>
+    <li><a href="#/tools">Tools</a></li><li><a href="#/sources">Sources &amp; method</a></li></ul></nav>
+</header>
+<div class="notice" role="note"><p><b>Indicators, not findings.</b> This site shows official public data as published, gaps included. Blank or "unknown" means the figure is not available, never zero. Flags are automated indicators that people check; only flags confirmed by review are shown.</p></div>
+<main id="main" tabindex="-1"><div id="view" aria-live="polite" aria-busy="true"><p>Loading…</p></div></main>
+<footer><p id="foot">PublicFunds SA uses official open data from National Treasury, the Auditor-General (via Municipal Money), eTenders, the Department of Mineral and Petroleum Resources and Statistics South Africa (via the OECD). Code and data: <a href="https://github.com/farwaters/publicfunds-sa" rel="noopener">github.com/farwaters/publicfunds-sa</a>.</p></footer>
+<script>
+"use strict";
+/* ---------------------------------------------------------------- config */
+const DEFAULT_BASE = "https://raw.githubusercontent.com/farwaters/publicfunds-sa/main/public-data/v1/";
+const BASE = (() => {
+  const q = new URLSearchParams(location.search).get("data") || window.PUBLICFUNDS_DATA_BASE || DEFAULT_BASE;
+  try { const u = new URL(q, location.href); if (!/^https?:$/.test(u.protocol)) throw 0; return u.href.replace(/\/?$/, "/"); }
+  catch (e) { return DEFAULT_BASE; }
+})();
+const PROVINCES = {EC:"Eastern Cape",FS:"Free State",GT:"Gauteng",KZN:"KwaZulu-Natal",LP:"Limpopo",MP:"Mpumalanga",NC:"Northern Cape",NW:"North West",WC:"Western Cape"};
+const TYPES = {metro:"Metro",local:"Local municipality",district:"District municipality"};
+const DT = {budget:"Budget",actual_audited:"Audited actuals",uifw:"Irregular & wasteful spending",audit_opinion:"Audit opinion",procurement:"Tender awards"};
+const STATE = {P:"present",p:"partial",m:"missing","-":"not applicable","?":"not computed"};
+const SYM = {P:"✓",p:"~",m:"✗","-":"–","?":"?"};
+const REASON = {audit_not_yet_due:"audit not yet due",source_not_publishing_yet:"source was not publishing yet",components_missing:"some parts missing",
+  not_in_loaded_sources:"not in the loaded sources",opinion_outstanding:"audit outstanding",entity_not_in_existence:"municipality did not exist that year",
+  award_values_missing:"many award values missing"};
+const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+
+/* ---------------------------------------------------------------- helpers */
+const $ = (s, r = document) => r.querySelector(s);
+function el(tag, attrs, ...kids) {
+  const e = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs || {})) {
+    if (v == null || v === false) continue;
+    if (k === "class") e.className = v; else if (k.startsWith("on")) e.addEventListener(k.slice(2), v);
+    else if (k === "html") throw new Error("no html"); else e.setAttribute(k, v === true ? "" : v);
+  }
+  for (const k of kids.flat(Infinity)) if (k != null && k !== false) e.append(k instanceof Node ? k : String(k));
+  return e;
+}
+function safeUrl(u) { try { const x = new URL(u); return /^https?:$/.test(x.protocol) ? x.href : null; } catch (e) { return null; } }
+function link(u, text, attrs) { const s = safeUrl(u); return s ? el("a", {href: s, rel: "noopener nofollow", target: "_blank", ...attrs}, text) : el("span", {}, text); }
+function unknown(t) { return el("span", {class: "unknown"}, t || "unknown"); }
+function randText(c) {
+  if (c == null) return null; const v = c / 100, a = Math.abs(v);
+  if (a >= 1e9) return "R" + (v / 1e9).toLocaleString("en-ZA", {maximumFractionDigits: 2}) + " bn";
+  if (a >= 1e6) return "R" + (v / 1e6).toLocaleString("en-ZA", {maximumFractionDigits: 1}) + " m";
+  return "R" + v.toLocaleString("en-ZA", {maximumFractionDigits: 0});
+}
+function randFull(c) { return c == null ? "" : "R" + (c / 100).toLocaleString("en-ZA", {minimumFractionDigits: 2, maximumFractionDigits: 2}); }
+function rand(c) { return c == null ? unknown() : el("span", {title: randFull(c)}, randText(c)); }
+function num(v, d = 2) { return v == null ? "" : Number(v).toLocaleString("en-ZA", {minimumFractionDigits: d, maximumFractionDigits: d}); }
+function pct(x, d = 1) { return x == null ? null : (x * 100).toLocaleString("en-ZA", {maximumFractionDigits: d}) + "%"; }
+function fyLabel(fye) { fye = +fye; return `${fye - 1}/${String(fye).slice(-2)}`; }
+function natFy(fy) { fy = +fy; return `${fy}/${String(fy + 1).slice(-2)}`; }
+function dateSast(iso) { if (!iso) return null; const d = new Date(iso); return isNaN(d) ? iso : d.toLocaleString("en-ZA", {timeZone: "Africa/Johannesburg", dateStyle: "medium", timeStyle: "short"}) + " SAST"; }
+function ageDays(iso) { const d = new Date(iso); return isNaN(d) ? null : (Date.now() - d) / 864e5; }
+function prov(p) { return PROVINCES[p] || p || "unknown"; }
+function srcLink(file, key, text = "source") { const s = file && file.sources && file.sources[key]; return s ? link(s.url, text, {title: `${s.file} · fetched ${dateSast(s.fetched_at_sast)}`}) : unknown("no source"); }
+function srcUrl(file, key) { const s = file && file.sources && file.sources[key]; return s ? s.url : ""; }
+function opinionChip(code, labels) { return el("span", {class: "chip op-" + code}, (labels && labels[code]) || code); }
+
+/* CSV of any view: every table is built from {columns, rows}; cells are {v, csv} or plain values */
+function csvCell(x) { let s = x == null ? "" : String(x); if (/^[=+\-@\t\r]/.test(s)) s = "'" + s; return /[",\n;]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; }
+function downloadCSV(name, columns, rows) {
+  const lines = [columns.map(c => csvCell(c.csv || c.label)).join(",")];
+  for (const r of rows) lines.push(columns.map(c => csvCell(c.csvValue ? c.csvValue(r) : (c.value ? c.value(r) : r[c.key]))).join(","));
+  const blob = new Blob(["\ufeff" + lines.join("\r\n") + "\r\n"], {type: "text/csv;charset=utf-8"});
+  const a = el("a", {href: URL.createObjectURL(blob), download: name}); document.body.append(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500);
+}
+function table(caption, allColumns, rows, csvName, opts = {}) {
+  const limit = opts.limit || 500, shown = rows.slice(0, limit), columns = allColumns.filter(c => !c.csvOnly);
+  const t = el("table", {}, el("caption", {class: "small muted", style: "text-align:left;padding:.4rem .6rem"}, caption),
+    el("thead", {}, el("tr", {}, columns.map(c => el("th", {scope: "col", class: c.num ? "num" : null}, c.label)))),
+    el("tbody", {}, shown.map(r => el("tr", {}, columns.map(c => el("td", {class: c.num ? "num" : null}, c.render ? c.render(r) : (c.value ? c.value(r) : r[c.key]) ?? unknown()))))));
+  const tools = el("div", {class: "tools"},
+    csvName ? el("button", {class: "btn-csv", onclick: () => downloadCSV(csvName, allColumns, rows)}, `Download CSV (${rows.length} rows)`) : null,
+    rows.length > limit ? el("span", {class: "small muted"}, `Showing ${limit} of ${rows.length}; the CSV has all rows.`) : null);
+  return el("div", {}, el("div", {class: "tablewrap"}, t), tools);
+}
+/* small accessible SVG charts (the table next to each chart carries the same numbers) */
+function chart(title, labels, series, opts = {}) {
+  const W = 640, H = 240, L = 64, R = 10, T = 18, B = 34, w = W - L - R, h = H - T - B;
+  const vals = series.flatMap(s => s.values.filter(v => v != null)); if (!vals.length) return el("p", {class: "muted small"}, "No known values to chart.");
+  const max = Math.max(...vals, 0) || 1, min = Math.min(0, ...vals);
+  const y = v => T + h - (v - min) / (max - min) * h, n = labels.length, gw = w / n;
+  const ns = "http://www.w3.org/2000/svg", s = (t, a) => { const e = document.createElementNS(ns, t); for (const k in a) e.setAttribute(k, a[k]); return e; };
+  const svg = s("svg", {viewBox: `0 0 ${W} ${H}`, class: "chart", role: "img", "aria-label": title});
+  const tt = s("title", {}); tt.textContent = title; svg.append(tt);
+  for (let i = 0; i <= 4; i++) { const v = min + (max - min) * i / 4, yy = y(v);
+    svg.append(s("line", {x1: L, x2: W - R, y1: yy, y2: yy, class: "axis"}));
+    const tx = s("text", {x: L - 6, y: yy + 4, "text-anchor": "end"}); tx.textContent = opts.fmt ? opts.fmt(v) : randText(v); svg.append(tx); }
+  labels.forEach((lb, i) => { const tx = s("text", {x: L + gw * i + gw / 2, y: H - 12, "text-anchor": "middle"}); tx.textContent = lb; svg.append(tx); });
+  const bw = Math.max(2, (gw * 0.8) / series.length), g = s("g", {class: "bars"}); svg.append(g);
+  series.forEach((se, k) => se.values.forEach((v, i) => {
+    const x = L + gw * i + gw * 0.1 + bw * k;
+    if (v == null) { const tx = s("text", {x: x + bw / 2, y: T + h - 4, "text-anchor": "middle"}); tx.textContent = "?"; g.append(tx); return; }
+    const r = s("rect", {x, width: bw - 1, y: Math.min(y(v), y(0)), height: Math.abs(y(v) - y(0)) || 1, fill: se.color, rx: 2});
+    const ti = s("title", {}); ti.textContent = `${se.name}, ${labels[i]}: ${opts.fmt ? opts.fmt(v) : randFull(v)}`; r.append(ti); g.append(r); }));
+  const leg = el("div", {class: "legend", "aria-hidden": "true"}, series.map(se => el("span", {}, el("i", {style: `background:${se.color}`}), se.name)), el("span", {class: "muted"}, "? = unknown"));
+  return el("figure", {style: "margin:0"}, svg, leg);
+}
+
+/* ---------------------------------------------------------------- data */
+const cache = {};
+function load(name) {
+  if (!cache[name]) cache[name] = fetch(BASE + name, {cache: "no-cache"}).then(r => { if (!r.ok) throw new Error(`${name}: HTTP ${r.status}`); return r.json(); });
+  return cache[name];
+}
+async function loadAwards() {
+  const t = await load("tenders-summary.json");
+  const files = await Promise.all(Object.values(t.award_files).map(load));
+  return files;
+}
+function awardDoc(file, d) { if (!d) return null; if (/^https?:/.test(d)) return d; const [b, f] = d.split("|"); return file.doc_prefix + b + (f != null ? "&downloadedFileName=" + encodeURIComponent(f) : ""); }
+
+/* ---------------------------------------------------------------- views */
+const view = () => $("#view");
+function setView(title, ...kids) {
+  document.title = title + " · PublicFunds SA";
+  const v = view(); v.replaceChildren(el("h1", {}, title), ...kids); v.setAttribute("aria-busy", "false");
+}
+function errorBox(e) { return el("div", {class: "card err"}, el("b", {}, "Couldn't load the data. "), String(e.message || e),
+  el("p", {class: "small"}, "Data comes from ", link(BASE + "manifest.json", BASE), ". If the public data has just been set up it may not be live yet.")); }
+
+async function vHome() {
+  const [m, f] = await Promise.all([load("manifest.json"), load("flags.json")]);
+  const c = m.coverage, ctr = m.counts;
+  const gen = ageDays(m.generated_at_sast);
+  const kp = (big, small) => el("div", {class: "card kpi"}, el("b", {}, big), el("span", {}, small));
+  const notLoaded = m.sources.filter(s => !s.last_run_status || /blocked|failed|manual|partial/.test(s.last_run_status || ""));
+  setView("Where does South Africa's public money go?",
+    el("p", {class: "lead"}, "Budgets, spending, audit results and tenders for every municipality and national department - from official open data, with what is missing shown as clearly as what is there."),
+    el("div", {class: "grid"},
+      kp(c.complete_pct == null ? "unknown" : c.complete_pct + "%", `of municipality-years have complete core data (${c.complete} of ${c.applicable}; ${c.entities} municipalities, ${fyLabel(c.fye_min)}–${fyLabel(c.fye_max)})`),
+      kp(ctr.municipalities, "municipalities and districts"),
+      kp(ctr.departments, "national departments with budget data"),
+      kp(ctr.awards.toLocaleString("en-ZA"), "published tender award records"),
+      kp(ctr.flags_confirmed, `flags confirmed by review · ${ctr.leads_hidden} automated leads still being checked (hidden)`)),
+    el("h2", {}, "How fresh is this?"),
+    el("div", {class: "card"}, el("p", {}, "Data published ", el("b", {}, dateSast(m.generated_at_sast)), gen != null && gen > 2 ? el("span", {class: "pill bad", style: "margin-left:.5rem"}, "older than our 48-hour target") : el("span", {class: "pill ok", style: "margin-left:.5rem"}, "up to date")),
+      el("p", {class: "small muted"}, `Build ${m.build.id} · data-quality checks: ${m.build.data_quality.pass} passed, ${m.build.data_quality.warn} warning(s), ${m.build.data_quality.fail} failed.`),
+      table("Last new data per source", [
+        {label: "Source", render: s => s.name || s.id, value: s => s.name || s.id},
+        {label: "Last new data", render: s => s.last_new_data_sast ? dateSast(s.last_new_data_sast) : unknown("none yet"), value: s => s.last_new_data_sast},
+        {label: "Freshness", render: s => {
+          const age = s.last_new_data_sast ? (Date.now() - Date.parse(s.last_new_data_sast)) / 864e5 : null;
+          if (age == null || !s.freshness_slo_days) return unknown("no target");
+          return age > s.freshness_slo_days ? el("span", {class: "pill bad"}, `stale (target ${s.freshness_slo_days} days)`) : el("span", {class: "pill ok"}, `within ${s.freshness_slo_days}-day target`);
+        }, value: s => s.freshness_slo_days || ""},
+        {label: "Status", render: s => s.last_run_status ? el("span", {class: "pill " + (/^(ok|unchanged)$/.test(s.last_run_status) ? "ok" : "mid")}, s.last_run_status) : unknown("not loaded"), value: s => s.last_run_status || "not loaded"}],
+        m.sources, "sources-freshness.csv")),
+    el("h2", {}, "What we don't know"),
+    el("div", {class: "card"}, el("ul", {class: "gap"},
+      m.known_gaps.map(g => el("li", {}, g.text, " ", el("span", {class: "muted small"}, `(${g.id})`))),
+      el("li", {}, "Population: ", m.population.reason),
+      notLoaded.filter(s => !s.last_run_status).map(s => el("li", {}, `${s.name}: not loaded yet.`))),
+      el("p", {class: "small"}, el("a", {href: "#/sources"}, "All sources, known errors and the method →"))),
+    el("h2", {}, "Start exploring"),
+    el("div", {class: "grid"},
+      el("a", {class: "card", href: "#/municipalities"}, el("b", {}, "Your municipality"), el("br"), el("span", {class: "muted small"}, "Budget vs actual, irregular spending, audit results, tenders")),
+      el("a", {class: "card", href: "#/coverage"}, el("b", {}, "Data coverage map"), el("br"), el("span", {class: "muted small"}, "Which data exists, per municipality and year")),
+      el("a", {class: "card", href: "#/tools"}, el("b", {}, "Tools"), el("br"), el("span", {class: "muted small"}, "Inflation adjuster, fuel price checker, compare two municipalities")),
+      el("a", {class: "card", href: "#/flags"}, el("b", {}, "Flags"), el("br"), el("span", {class: "muted small"}, f.disclaimer.split(".")[0] + "."))));
+}
+
+async function vCoverage(params) {
+  const [cov, mun] = await Promise.all([load("coverage.json"), load("municipalities.json")]);
+  const byId = Object.fromEntries(mun.municipalities.map(x => [x.id, x]));
+  const st = {dt: params.get("dt") || "budget", p: params.get("p") || "", t: params.get("t") || "", q: params.get("q") || ""};
+  const body = el("div");
+  const sel = (name, label, opts, val) => el("label", {}, label, el("select", {name, onchange: e => { st[name] = e.target.value; draw(); }}, opts.map(([v, t]) => el("option", {value: v, selected: v === val}, t))));
+  const filters = el("div", {class: "tools", role: "search"},
+    sel("dt", "Data type", Object.entries(DT), st.dt),
+    sel("p", "Province", [["", "All provinces"], ...Object.entries(PROVINCES)], st.p),
+    sel("t", "Type", [["", "All types"], ...Object.entries(TYPES)], st.t),
+    el("label", {}, "Search", el("input", {type: "search", value: st.q, placeholder: "e.g. Buffalo City", oninput: e => { st.q = e.target.value; draw(); }})));
+  const h = cov.headline.by_type;
+  const summary = table("Share of applicable municipality-years with each data type present (years whose audits are due)", [
+    {label: "Data type", value: r => DT[r[0]] || r[0]},
+    {label: "Present", num: 1, value: r => r[1].present}, {label: "Partial", num: 1, value: r => r[1].partial}, {label: "Missing", num: 1, value: r => r[1].missing},
+    {label: "Present %", num: 1, value: r => r[1].present_pct == null ? null : r[1].present_pct + "%"}], Object.entries(h), "coverage-by-type.csv");
+  function draw() {
+    const i = cov.data_types.indexOf(st.dt), q = st.q.toLowerCase();
+    const ents = cov.entities.map(e => ({e, m: byId[e.id]})).filter(({m}) => m && (!st.p || m.province === st.p) && (!st.t || m.type === st.t) && (!q || (m.name + " " + m.code).toLowerCase().includes(q)))
+      .sort((a, b) => a.m.province.localeCompare(b.m.province) || a.m.name.localeCompare(b.m.name));
+    const cell = (e, k) => { const s = e.c[st.dt][k], r = +e.r[st.dt][k], why = r ? REASON[cov.reasons[r - 1]] || cov.reasons[r - 1] : "";
+      return el("td", {class: "c s-" + s, title: `${STATE[s]}${why ? ": " + why : ""}`, "aria-label": `${cov.fy_labels[k]}: ${STATE[s]}${why ? ", " + why : ""}`}, SYM[s]); };
+    const t = el("table", {class: "heat"}, el("caption", {class: "small muted", style: "text-align:left"}, `${DT[st.dt]}: ${ents.length} municipalities. Hover or focus a cell for the reason.`),
+      el("thead", {}, el("tr", {}, el("th", {scope: "col"}, "Municipality"), cov.fy_labels.map(y => el("th", {scope: "col"}, el("abbr", {title: y}, y.slice(2)))))),
+      el("tbody", {}, ents.map(({e, m}) => el("tr", {}, el("th", {scope: "row", style: "font-weight:500"}, el("a", {href: "#/m/" + encodeURIComponent(m.id)}, m.name), " ", el("span", {class: "muted"}, m.province)),
+        cov.years.map((_, k) => cell(e, k))))));
+    const rows = ents.map(({e, m}) => [m, e]);
+    body.replaceChildren(el("div", {class: "tablewrap"}, t), el("div", {class: "tools"}, el("button", {class: "btn-csv", onclick: () =>
+      downloadCSV(`coverage-${st.dt}.csv`, [{label: "municipality", value: r => r[0].name}, {label: "code", value: r => r[0].code}, {label: "province", value: r => r[0].province},
+        ...cov.years.map((y, k) => ({label: cov.fy_labels[k], value: r => { const s = r[1].c[st.dt][k], rr = +r[1].r[st.dt][k]; return STATE[s] + (rr ? " (" + cov.reasons[rr - 1] + ")" : ""); }}))], rows)}, `Download CSV (${rows.length} rows)`)));
+  }
+  setView("Data coverage", el("p", {class: "lead"}, "Which official data exists for each municipality and financial year (July–June). Missing data is a finding in itself: it is shown, never hidden or filled in."),
+    el("div", {class: "legend"}, Object.entries(STATE).filter(([k]) => k !== "?").map(([k, v]) => el("span", {}, el("i", {class: "s-" + k}), `${SYM[k]} ${v}`))),
+    filters, body, el("h2", {}, "Summary"), summary,
+    el("p", {class: "small muted"}, `Headline: ${cov.headline.complete_pct}% of municipality-years from ${fyLabel(cov.headline.fye_min)} to ${fyLabel(cov.headline.fye_max)} have every core data type (budget, audited actuals, irregular & wasteful spending, audit opinion).`));
+  draw();
+}
+
+function latestYear(m, key) { const ys = Object.keys(m.years).filter(y => m.years[y][key]).sort(); return ys.length ? ys[ys.length - 1] : null; }
+
+async function vMunicipalities(params) {
+  const mun = await load("municipalities.json");
+  const st = {p: params.get("p") || "", q: params.get("q") || ""};
+  const out = el("div");
+  function draw() {
+    const q = st.q.toLowerCase();
+    const rows = mun.municipalities.filter(m => (!st.p || m.province === st.p) && (!q || (m.name + " " + m.code + " " + (m.long_name || "")).toLowerCase().includes(q)));
+    const ly = m => latestYear(m, "audited");
+    out.replaceChildren(table("Municipalities (latest audited year shown)", [
+      {label: "Municipality", render: m => el("a", {href: "#/m/" + encodeURIComponent(m.id)}, m.name), value: m => m.name},
+      {label: "Province", value: m => prov(m.province)}, {label: "Type", value: m => TYPES[m.type] || m.type},
+      {label: "Latest audited year", value: m => ly(m) ? fyLabel(ly(m)) : null},
+      {label: "Audited spending", num: 1, render: m => ly(m) ? rand(m.years[ly(m)].audited.exp) : unknown(), csvValue: m => ly(m) ? m.years[ly(m)].audited.exp / 100 : null, csv: "audited_spending_rand"},
+      {label: "Latest audit opinion", render: m => { const y = latestYear(m, "audit"); return y ? [opinionChip(m.years[y].audit.code, mun.audit_opinions), " ", fyLabel(y)] : unknown(); },
+       value: m => { const y = latestYear(m, "audit"); return y ? `${mun.audit_opinions[m.years[y].audit.code]} (${fyLabel(y)})` : null; }}],
+      rows, "municipalities.csv", {limit: 400}));
+  }
+  setView("Municipalities", el("p", {class: "lead"}, "All metros, local and district municipalities. Pick one for its budget, spending, audit results and tenders."),
+    el("div", {class: "tools", role: "search"},
+      el("label", {}, "Search", el("input", {type: "search", value: st.q, placeholder: "name or code", oninput: e => { st.q = e.target.value; draw(); }})),
+      el("label", {}, "Province", el("select", {onchange: e => { st.p = e.target.value; draw(); }}, [["", "All provinces"], ...Object.entries(PROVINCES)].map(([v, t]) => el("option", {value: v, selected: v === st.p}, t))))),
+    out);
+  draw();
+}
+
+function muniYearRows(m) {
+  return Object.keys(m.years).sort().map(y => ({y, d: m.years[y]}));
+}
+async function vMunicipality(id) {
+  const [mun, cov, ts, man] = await Promise.all([load("municipalities.json"), load("coverage.json"), load("tenders-summary.json"), load("manifest.json")]);
+  const m = mun.municipalities.find(x => x.id === id);
+  if (!m) return setView("Municipality not found", el("p", {}, "No municipality with id ", id, ". ", el("a", {href: "#/municipalities"}, "Back to the list")));
+  const rows = muniYearRows(m).filter(r => +r.y >= 2017);
+  const exp = k => rows.map(r => r.d[k] ? r.d[k].exp : null);
+  const ly = latestYear(m, "audited"), lyd = ly && m.years[ly];
+  const base = lyd && (m.years[ly].adjusted || m.years[ly].budget);
+  const variance = lyd && base && lyd.audited.exp != null && base.exp ? (lyd.audited.exp - base.exp) / base.exp : null;
+  const uifwRows = muniYearRows(m).filter(r => r.d.uifw);
+  const audits = muniYearRows(m).filter(r => r.d.audit);
+  const buyers = ts.buyers.filter(b => b.gov_body_id === id);
+  const covE = cov.entities.find(e => e.id === id);
+  const awardsBox = el("div");
+  setView(m.name,
+    el("p", {class: "lead"}, `${TYPES[m.type] || m.type} · ${prov(m.province)} · code ${m.code}${m.category ? " · category " + m.category : ""}. `, link(m.profile, "Municipal Money profile")),
+    el("div", {class: "grid"},
+      el("div", {class: "card kpi"}, el("b", {}, lyd ? rand(lyd.audited.exp) : unknown()), el("span", {}, ly ? `audited spending ${fyLabel(ly)} · ` : "audited spending · ", lyd ? srcLink(mun, lyd.audited.src) : "")),
+      el("div", {class: "card kpi"}, el("b", {}, variance == null ? unknown() : (variance >= 0 ? "+" : "") + pct(variance)), el("span", {}, `audited spending vs the ${m.years[ly] && m.years[ly].adjusted ? "adjusted" : "original"} budget${ly ? ", " + fyLabel(ly) : ""}`)),
+      el("div", {class: "card kpi"}, el("b", {}, uifwRows.length ? rand(uifwRows[uifwRows.length - 1].d.uifw.irregular) : unknown()), el("span", {}, uifwRows.length ? `irregular expenditure reported for ${fyLabel(uifwRows[uifwRows.length - 1].y)}` : "irregular expenditure")),
+      el("div", {class: "card kpi"}, el("b", {}, audits.length ? opinionChip(audits[audits.length - 1].d.audit.code, mun.audit_opinions) : unknown()), el("span", {}, audits.length ? `audit opinion ${fyLabel(audits[audits.length - 1].y)}` : "audit opinion")),
+      el("div", {class: "card kpi"}, el("b", {}, unknown()), el("span", {title: man.population.reason}, "spending per resident: population data not loaded yet (", el("a", {href: "#/sources"}, "why"), ")"))),
+    el("h2", {}, "Budget vs actual spending"),
+    el("p", {class: "small muted"}, "Operating expenditure. Original budget = approved at the start of the year; adjusted = mid-year revision; audited = what the audited financial statements show. Financial years run July–June."),
+    chart(`Budget vs audited spending, ${m.name}`, rows.map(r => fyLabel(r.y)), [
+      {name: "Original budget", color: "#9db4c8", values: exp("budget")}, {name: "Adjusted budget", color: "#4f7ea8", values: exp("adjusted")},
+      {name: "Audited actual", color: "#0b6e4f", values: exp("audited")}]),
+    table("Budget vs actual (operating revenue and expenditure)", [
+      {label: "Year", value: r => fyLabel(r.y)},
+      ...[["budget", "Original budget"], ["adjusted", "Adjusted budget"], ["audited", "Audited actual"]].flatMap(([k, lb]) => [
+        {label: lb + " spending", num: 1, render: r => r.d[k] ? rand(r.d[k].exp) : unknown(), csvValue: r => r.d[k] && r.d[k].exp != null ? r.d[k].exp / 100 : null, csv: k + "_expenditure_rand"},
+        {label: lb + " revenue", num: 1, render: r => r.d[k] ? rand(r.d[k].rev) : unknown(), csvValue: r => r.d[k] && r.d[k].rev != null ? r.d[k].rev / 100 : null, csv: k + "_revenue_rand"}]),
+      {label: "Source", render: r => { const s = (r.d.audited || r.d.adjusted || r.d.budget); return s ? srcLink(mun, s.src) : unknown("none"); }, csvValue: r => { const s = (r.d.audited || r.d.adjusted || r.d.budget); return s ? srcUrl(mun, s.src) : ""; }, csv: "source_url"}],
+      rows.filter(r => r.d.budget || r.d.adjusted || r.d.audited), `${m.code}-budget-vs-actual.csv`),
+    el("h2", {}, "Irregular, fruitless & wasteful and unauthorised expenditure"),
+    el("p", {class: "small muted"}, "As reported in the notes to the audited financial statements. Irregular does not necessarily mean money was stolen: it means rules (often procurement rules) were not followed."),
+    chart(`Irregular, fruitless and wasteful, and unauthorised expenditure, ${m.name}`, uifwRows.map(r => fyLabel(r.y)), [
+      {name: "Irregular", color: "#c8860d", values: uifwRows.map(r => r.d.uifw.irregular ?? null)},
+      {name: "Fruitless & wasteful", color: "#c94a3a", values: uifwRows.map(r => r.d.uifw.fruitless_wasteful ?? null)},
+      {name: "Unauthorised", color: "#6b7785", values: uifwRows.map(r => r.d.uifw.unauthorised ?? null)}]),
+    table("Reported UIF&W expenditure", [
+      {label: "Year", value: r => fyLabel(r.y)},
+      ...[["irregular", "Irregular"], ["fruitless_wasteful", "Fruitless & wasteful"], ["unauthorised", "Unauthorised"]].map(([k, lb]) => (
+        {label: lb, num: 1, render: r => rand(r.d.uifw[k] ?? null), csvValue: r => r.d.uifw[k] == null ? null : r.d.uifw[k] / 100, csv: k + "_rand"})),
+      {label: "Source", render: r => srcLink(mun, r.d.uifw.src), csvValue: r => srcUrl(mun, r.d.uifw.src), csv: "source_url"}], uifwRows, `${m.code}-uifw.csv`),
+    el("h2", {}, "Audit opinions"),
+    el("p", {class: "small muted"}, "From the Auditor-General. Best to worst: unqualified with no findings ('clean'), unqualified with findings, qualified, adverse, disclaimer. 'Outstanding' means the audit was not finished."),
+    table("Audit opinion history", [
+      {label: "Year", value: r => fyLabel(r.y)}, {label: "Opinion", render: r => opinionChip(r.d.audit.code, mun.audit_opinions), value: r => mun.audit_opinions[r.d.audit.code]},
+      {label: "Audit report", render: r => r.d.audit.report ? link(/^https?:/.test(r.d.audit.report) ? r.d.audit.report : mun.report_prefix + r.d.audit.report, "report") : unknown("none"),
+       value: r => r.d.audit.report ? (/^https?:/.test(r.d.audit.report) ? r.d.audit.report : mun.report_prefix + r.d.audit.report) : ""},
+      {label: "Source", render: r => srcLink(mun, r.d.audit.src), csvValue: r => srcUrl(mun, r.d.audit.src), csv: "source_url"}], audits.slice().reverse(), `${m.code}-audit-opinions.csv`),
+    el("h2", {}, "Tenders"),
+    buyers.length ? [
+      table("Published tender awards by year (eTenders)", [
+        {label: "Year", value: r => r[0]}, {label: "Awards", num: 1, value: r => r[1].awards}, {label: "Known value", num: 1, render: r => rand(r[1].known_value), csvValue: r => r[1].known_value == null ? null : r[1].known_value / 100, csv: "known_value_rand"},
+        {label: "No value published", num: 1, value: r => pct(r[1].missing_share, 0)}, {label: "Largest supplier's share", num: 1, value: r => pct(r[1].top_supplier_share, 0)}],
+        buyers.flatMap(b => Object.entries(b.years).filter(([k]) => k !== "all")), `${m.code}-tenders.csv`),
+      el("p", {class: "small muted"}, "Supplier concentration is shown without names. Values: only plausible published values are summed; awards without a value are counted, never treated as R0."),
+      el("button", {onclick: async e => { e.target.disabled = true; e.target.textContent = "Loading award records…"; await showAwards(awardsBox, new Set(buyers.map(b => b.id)), m.code); e.target.remove(); }}, "Show award records (downloads about 2 MB)"), awardsBox]
+      : el("p", {class: "muted"}, "No eTenders awards are matched to this municipality yet (municipal tender publication on eTenders is incomplete; see Data coverage)."),
+    el("h2", {}, "Data coverage for this municipality"),
+    covE ? table("Coverage", [{label: "Data type", value: r => DT[r]}, ...cov.years.map((y, k) => ({label: cov.fy_labels[k], render: r => el("span", {class: "chip s-" + covE.c[r][k], style: "color:#fff"}, SYM[covE.c[r][k]] + " " + STATE[covE.c[r][k]]), value: r => STATE[covE.c[r][k]]}))], cov.data_types, `${m.code}-coverage.csv`) : unknown(),
+    el("p", {}, el("a", {href: "#/tools/compare?a=" + encodeURIComponent(m.id)}, "Compare with another municipality →")));
+}
+
+async function showAwards(box, buyerIds, name) {
+  const files = await loadAwards(), ts = await load("tenders-summary.json");
+  const bname = Object.fromEntries(ts.buyers.map(b => [b.id, b.name]));
+  const rows = [];
+  for (const f of files) for (const r of f.rows) if (buyerIds.has(r[4])) rows.push({f, r});
+  rows.sort((a, b) => (b.r[2] || "").localeCompare(a.r[2] || ""));
+  box.replaceChildren(table("Award records as published on eTenders (public records, not findings)", [
+    {label: "Date", value: x => x.r[2]}, {label: "Buyer", value: x => bname[x.r[4]]}, {label: "Supplier", value: x => x.r[5]},
+    {label: "Value", num: 1, render: x => x.r[6] == null ? unknown(x.r[7] ? x.r[7].replace(/_/g, " ") : "unknown") : rand(x.r[6]), csvValue: x => x.r[6] == null ? null : x.r[6] / 100, csv: "value_rand"},
+    {label: "Reference", value: x => x.r[8]}, {label: "Method", value: x => x.r[9]},
+    {label: "Document", render: x => { const d = awardDoc(x.f, x.r[11]); return d ? link(d, "tender document") : unknown("none"); }, value: x => awardDoc(x.f, x.r[11]) || ""},
+    {label: "Source", render: x => srcLink(x.f, x.r[12]), csvValue: x => srcUrl(x.f, x.r[12]), csv: "source_url"}], rows.map(x => x), `${name}-awards.csv`, {limit: 200}));
+}
+
+async function vDepartments() {
+  const dep = await load("departments.json");
+  const lastFy = d => Object.keys(d.years).sort().pop();
+  const rows = dep.departments.map(d => ({d, fy: lastFy(d)})).sort((a, b) => ((b.d.years[b.fy].main || b.d.years[b.fy].final || {}).amount || 0) - ((a.d.years[a.fy].main || a.d.years[a.fy].final || {}).amount || 0));
+  setView("National departments", el("p", {class: "lead"}, "Budgets and actual spending of national government departments (financial years start in April). From National Treasury's Vulekamali budget data."),
+    table("National departments: latest main budget", [
+      {label: "Department", render: x => el("a", {href: "#/d/" + encodeURIComponent(x.d.id)}, x.d.name), value: x => x.d.name}, {label: "Vote", value: x => x.d.vote},
+      {label: "Year", value: x => natFy(x.fy)},
+      {label: "Main budget", num: 1, render: x => x.d.years[x.fy].main ? rand(x.d.years[x.fy].main.amount) : unknown(), csvValue: x => x.d.years[x.fy].main && x.d.years[x.fy].main.amount != null ? x.d.years[x.fy].main.amount / 100 : null, csv: "main_budget_rand"},
+      {label: "Source", render: x => { const p = x.d.years[x.fy].main || Object.values(x.d.years[x.fy]).find(v => v && v.src); return p ? srcLink(dep, p.src) : unknown(); }, csvValue: x => { const p = x.d.years[x.fy].main || Object.values(x.d.years[x.fy]).find(v => v && v.src); return p ? srcUrl(dep, p.src) : ""; }, csv: "source_url"}],
+      rows, "national-departments.csv"));
+}
+async function vDepartment(id) {
+  const dep = await load("departments.json");
+  const d = dep.departments.find(x => x.id === id);
+  if (!d) return setView("Department not found", el("a", {href: "#/departments"}, "Back to the list"));
+  const fys = Object.keys(d.years).sort(), ph = [["main", "Main budget", "#9db4c8"], ["adjusted", "Adjusted", "#4f7ea8"], ["final", "Final appropriation", "#2a5d8a"], ["audited", "Actually spent (audited)", "#0b6e4f"]];
+  const am = (fy, k) => d.years[fy][k] ? d.years[fy][k].amount : null;
+  setView(d.name, el("p", {class: "lead"}, `National department, vote ${d.vote}.`),
+    chart(`Budget and spending, ${d.name}`, fys.map(natFy), ph.map(([k, n, c]) => ({name: n, color: c, values: fys.map(fy => am(fy, k))}))),
+    table("Budget phases per financial year", [{label: "Year", value: fy => natFy(fy)},
+      ...ph.map(([k, n]) => ({label: n, num: 1, render: fy => rand(am(fy, k)), csvValue: fy => am(fy, k) == null ? null : am(fy, k) / 100, csv: k + "_rand"})),
+      {label: "Spent vs final", num: 1, value: fy => am(fy, "audited") != null && am(fy, "final") ? pct((am(fy, "audited") - am(fy, "final")) / am(fy, "final")) : null},
+      {label: "Lines without a value", num: 1, value: fy => Object.values(d.years[fy]).reduce((s, v) => s + (v && v.unknown_lines || 0), 0)},
+      {label: "Source", render: fy => { const p = Object.values(d.years[fy]).find(v => v && v.src); return p ? srcLink(dep, p.src) : unknown(); }, csvValue: fy => { const p = Object.values(d.years[fy]).find(v => v && v.src); return p ? srcUrl(dep, p.src) : ""; }, csv: "source_url"}],
+      fys, `${d.id.replace(/[^a-z0-9-]/gi, "")}-budget.csv`),
+    el("p", {class: "small muted"}, dep.about.join(" ")));
+}
+
+async function vTenders(params) {
+  const ts = await load("tenders-summary.json");
+  const st = {q: params.get("q") || "", sort: "awards"};
+  const nat = Object.entries(ts.all_years).filter(([k]) => k !== "all");
+  const out = el("div"), awardsBox = el("div");
+  function draw() {
+    const q = st.q.toLowerCase();
+    const rows = ts.buyers.filter(b => !q || (b.name || "").toLowerCase().includes(q))
+      .sort((a, b) => st.sort === "missing" ? b.years.all.missing_share - a.years.all.missing_share : st.sort === "value" ? (b.years.all.known_value || 0) - (a.years.all.known_value || 0) : b.years.all.awards - a.years.all.awards);
+    out.replaceChildren(table("Buyers (all years)", [
+      {label: "Buyer", render: b => b.gov_body_id ? el("a", {href: "#/m/" + encodeURIComponent(b.gov_body_id)}, b.name) : b.name, value: b => b.name},
+      {label: "Awards", num: 1, value: b => b.years.all.awards}, {label: "Known value", num: 1, render: b => rand(b.years.all.known_value), csvValue: b => b.years.all.known_value == null ? null : b.years.all.known_value / 100, csv: "known_value_rand"},
+      {label: "No value published", num: 1, value: b => pct(b.years.all.missing_share, 0)}, {label: "Largest supplier's share", num: 1, value: b => pct(b.years.all.top_supplier_share, 0)},
+      {label: "Records", render: b => el("button", {class: "btn-csv", onclick: async e => { e.target.disabled = true; await showAwards(awardsBox, new Set([b.id]), (b.name || "buyer").replace(/[^a-z0-9]+/gi, "-")); awardsBox.scrollIntoView({behavior: "smooth"}); e.target.disabled = false; }}, "show"), value: () => ""}],
+      rows, "tender-buyers.csv", {limit: 150}));
+  }
+  setView("Tenders", el("p", {class: "lead"}, "Tender awards published by government buyers on National Treasury's eTenders portal. These are public records as published - not flags or findings. Award values can be multi-year, framework or estimated contract values, so a year's total is not that year's spending."),
+    table("All buyers, by year", [{label: "Year", value: r => r[0]}, {label: "Awards", num: 1, value: r => r[1].awards},
+      {label: "Known value", num: 1, render: r => rand(r[1].known_value), csvValue: r => r[1].known_value == null ? null : r[1].known_value / 100, csv: "known_value_rand"},
+      {label: "No value published", num: 1, value: r => pct(r[1].missing_share, 0)}, {label: "Implausible values", num: 1, value: r => r[1].implausible_value}], nat, "tenders-by-year.csv"),
+    el("p", {class: "small muted"}, ts.about.join(" ")),
+    el("h2", {}, "Buyers"),
+    el("div", {class: "tools", role: "search"}, el("label", {}, "Search buyers", el("input", {type: "search", value: st.q, oninput: e => { st.q = e.target.value; draw(); }})),
+      el("label", {}, "Sort by", el("select", {onchange: e => { st.sort = e.target.value; draw(); }}, el("option", {value: "awards"}, "most awards"), el("option", {value: "value"}, "highest known value"), el("option", {value: "missing"}, "most missing values")))),
+    out, awardsBox);
+  draw();
+}
+
+async function vFlags() {
+  const f = await load("flags.json");
+  const hid = Object.entries(f.hidden_leads.by_detector);
+  setView("Flags", el("div", {class: "card"}, el("p", {}, el("b", {}, "What a flag is. "), f.disclaimer),
+      el("p", {class: "small muted"}, "Rules: ", f.policy.published, "; ", f.policy.four_eyes, ". Unconfirmed leads are ", f.policy.unconfirmed, ".")),
+    el("h2", {}, `Confirmed flags (${f.confirmed.length})`),
+    f.confirmed.length ? f.confirmed.map(x => el("div", {class: "card", style: "margin:.6rem 0"}, el("div", {class: "small muted"}, "Confirmed by review · ", x.detector_id.split("_")[0], " · ", x.severity, " · ", x.period_label || ""),
+      el("h3", {}, x.title), el("p", {}, x.explanation), x.review_reason ? el("p", {class: "small"}, "Reviewers' reason: ", x.review_reason) : null,
+      el("p", {class: "small"}, "Confirmed ", dateSast(x.confirmed_at_sast), " · evidence: ", x.evidence_urls.map((u, i) => [link(u, `source ${i + 1}`), " "]))))
+      : el("div", {class: "card"}, el("p", {}, el("b", {}, "No flags have been confirmed by review yet.")), el("p", {}, `${f.hidden_leads.total} automated leads are waiting for review and are not shown. Many leads turn out to be data errors; publishing them unchecked could wrongly harm people and organisations.`)),
+    el("h2", {}, "Leads under review (hidden)"),
+    table("Automated leads not yet confirmed, by type", [{label: "What the check looks for", value: r => f.detectors[r[0]] || r[0]}, {label: "Leads hidden", num: 1, value: r => r[1].hidden},
+      {label: "Name a supplier (need two reviewers)", num: 1, value: r => r[1].names_a_supplier}], hid, "hidden-leads.csv"));
+}
+
+/* ---------------------------------------------------------------- tools */
+async function vTools(sub, params) {
+  if (sub === "compare") return vCompare(params);
+  const [pr, man] = await Promise.all([load("prices.json"), load("manifest.json")]);
+  const cpi = pr.cpi, fuel = pr.fuel, idx = Object.fromEntries(cpi.rows.map(r => [r[0], r]));
+  const periods = cpi.rows.map(r => r[0]);
+  /* inflation */
+  const infOut = el("div", {class: "result", "aria-live": "polite"});
+  const amt = el("input", {type: "number", min: "0", step: "0.01", value: "1000", id: "inf-amt", inputmode: "decimal"});
+  const per = (id, v) => el("select", {id}, periods.slice().reverse().map(p => el("option", {value: p, selected: p === v}, `${MONTHS[+p.slice(5) - 1]} ${p.slice(0, 4)}`)));
+  const from = per("inf-from", periods.find(p => p.startsWith("2015-06")) || periods[0]), to = per("inf-to", cpi.last_period);
+  function calc() {
+    const a = parseFloat(amt.value), f = idx[from.value], t = idx[to.value];
+    if (!(a >= 0) || !f || !t) { infOut.replaceChildren(unknown("enter an amount and two months")); return; }
+    const res = a * t[1] / f[1];
+    infOut.replaceChildren(el("p", {}, `R${a.toLocaleString("en-ZA", {maximumFractionDigits: 2})} in ${from.selectedOptions[0].text} is worth about `, el("b", {}, "R" + res.toLocaleString("en-ZA", {maximumFractionDigits: 2})), ` in ${to.selectedOptions[0].text} prices.`),
+      el("p", {class: "small muted"}, `CPI ${from.value}: ${num(f[1])} → ${to.value}: ${num(t[1])} (${cpi.base}). Change: ${pct(t[1] / f[1] - 1)}. `, srcLink(pr, t[2], "CPI source")));
+  }
+  [amt, from, to].forEach(x => x.addEventListener("input", calc));
+  /* fuel */
+  const fuelOut = el("div", {class: "result", "aria-live": "polite"});
+  const fdate = el("input", {type: "date", id: "fuel-date", value: new Date().toISOString().slice(0, 10)});
+  const fgrade = el("select", {id: "fuel-grade"}, fuel.grades.map(g => el("option", {value: g.id}, g.label)));
+  const fpaid = el("input", {type: "number", step: "0.01", min: "0", placeholder: "e.g. 25.50", id: "fuel-paid", inputmode: "decimal"});
+  const firstWed = (y, m) => { const d = new Date(Date.UTC(y, m - 1, 1)); return 1 + ((3 - d.getUTCDay() + 7) % 7); };
+  function fcalc() {
+    const v = fdate.value; if (!v) return fuelOut.replaceChildren(unknown("pick a date"));
+    let y = +v.slice(0, 4), mo = +v.slice(5, 7); const day = +v.slice(8, 10); let note = "";
+    if (day < firstWed(y, mo)) { note = `Prices change on the first Wednesday of the month (${firstWed(y, mo)} ${MONTHS[mo - 1]}), so the previous month's price applied on this date.`; mo -= 1; if (!mo) { mo = 12; y -= 1; } }
+    const row = fuel.rows.find(r => r[0] === y && r[1] === mo && r[2] === fgrade.value);
+    if (!row) return fuelOut.replaceChildren(el("p", {}, unknown(`No official price loaded for ${MONTHS[mo - 1]} ${y}.`)), el("p", {class: "small muted"}, `Loaded months: ${fuel.rows.length ? fuel.rows[0][0] + "-" + String(fuel.rows[0][1]).padStart(2, "0") : "none"} to ${fuel.last_period || "none"} (KE-012).`));
+    const off = row[3] / 100, paid = parseFloat(fpaid.value), regulated = fgrade.value.startsWith("petrol");
+    const kids = [el("p", {}, `Official ${fuel.grades.find(g => g.id === fgrade.value).label} price for ${MONTHS[mo - 1]} ${y}: `, el("b", {}, `R${num(off)}/litre`), ". ", srcLink(pr, row[4], "DMPR source"))];
+    if (paid > 0) { const diff = paid - off;
+      kids.push(el("p", {}, Math.abs(diff) < 0.005 ? "What you paid matches the official price." : `What you paid is R${num(Math.abs(diff))}/l (${pct(Math.abs(diff) / off)}) ${diff > 0 ? "above" : "below"} the official price.`)); }
+    kids.push(el("p", {class: "small muted"}, note, " ", regulated ? "Petrol pump prices are regulated: inland refers to Gauteng, coast to the coastal zones; other inland towns add a small transport cost." : "Diesel and paraffin are not regulated at the pump, so retailers may charge more than this official figure."));
+    fuelOut.replaceChildren(...kids);
+  }
+  [fdate, fgrade, fpaid].forEach(x => x.addEventListener("input", fcalc));
+  /* per capita */
+  setView("Tools", el("p", {class: "lead"}, "Quick checks for taxpayers. Each result shows where its numbers come from."),
+    el("section", {class: "card", "aria-labelledby": "t-inf"}, el("h2", {id: "t-inf", style: "margin-top:0"}, "Inflation adjuster"),
+      el("p", {class: "small muted"}, `What is an old rand amount worth in later prices? Uses headline CPI (${cpi.publisher}). Latest month available: ${cpi.last_period || "none"}.`),
+      el("div", {class: "tools"}, el("label", {for: "inf-amt"}, "Amount (R)", amt), el("label", {for: "inf-from"}, "From", from), el("label", {for: "inf-to"}, "To", to)), infOut),
+    el("section", {class: "card", style: "margin-top:.8rem", "aria-labelledby": "t-fuel"}, el("h2", {id: "t-fuel", style: "margin-top:0"}, "Fuel price checker"),
+      el("p", {class: "small muted"}, "Was a fuel price per litre in line with the official price on a given date? Official prices from the Department of Mineral and Petroleum Resources. Useful for checking fuel claims and invoices."),
+      el("div", {class: "tools"}, el("label", {for: "fuel-date"}, "Date", fdate), el("label", {for: "fuel-grade"}, "Fuel", fgrade), el("label", {for: "fuel-paid"}, "Price paid (R/litre, optional)", fpaid)), fuelOut,
+      el("details", {}, el("summary", {}, "All loaded official prices"), table("Official fuel prices (R/litre)", [{label: "Month", value: r => `${r[0]}-${String(r[1]).padStart(2, "0")}`},
+        {label: "Fuel", value: r => (fuel.grades.find(g => g.id === r[2]) || {}).label}, {label: "R/litre", num: 1, value: r => num(r[3] / 100), csvValue: r => (r[3] / 100).toFixed(3), csv: "rand_per_litre"},
+        {label: "Source", render: r => srcLink(pr, r[4]), csvValue: r => srcUrl(pr, r[4]), csv: "source_url"}], fuel.rows, "fuel-prices.csv"))),
+    el("section", {class: "card", style: "margin-top:.8rem", "aria-labelledby": "t-cmp"}, el("h2", {id: "t-cmp", style: "margin-top:0"}, "Compare two municipalities"),
+      el("p", {}, el("a", {href: "#/tools/compare"}, "Open the comparison →"))),
+    el("section", {class: "card", style: "margin-top:.8rem", "aria-labelledby": "t-pc"}, el("h2", {id: "t-pc", style: "margin-top:0"}, "Per resident / per household"),
+      el("p", {}, unknown("Not available yet.")), el("p", {class: "small muted"}, man.population.reason)));
+  calc(); fcalc();
+}
+
+async function vCompare(params) {
+  const mun = await load("municipalities.json");
+  const list = mun.municipalities.slice().sort((a, b) => a.name.localeCompare(b.name));
+  const years = [...new Set(list.flatMap(m => Object.keys(m.years)))].sort().reverse();
+  const pick = (id, label, v) => el("label", {for: id}, label, el("select", {id}, list.map(m => el("option", {value: m.id, selected: m.id === v}, `${m.name} (${m.province})`))));
+  const a = pick("cmp-a", "Municipality A", params.get("a") || list[0].id), b = pick("cmp-b", "Municipality B", params.get("b") || (list[1] || list[0]).id);
+  const ysel = el("label", {for: "cmp-y"}, "Financial year", el("select", {id: "cmp-y"}, years.map(y => el("option", {value: y, selected: y === (params.get("y") || "2024")}, fyLabel(y)))));
+  const out = el("div");
+  const metrics = [["Original budget: spending", d => d.budget && d.budget.exp, d => d.budget && d.budget.src], ["Adjusted budget: spending", d => d.adjusted && d.adjusted.exp, d => d.adjusted && d.adjusted.src],
+    ["Audited spending", d => d.audited && d.audited.exp, d => d.audited && d.audited.src], ["Audited revenue", d => d.audited && d.audited.rev, d => d.audited && d.audited.src],
+    ["Irregular expenditure", d => d.uifw && d.uifw.irregular, d => d.uifw && d.uifw.src], ["Fruitless & wasteful", d => d.uifw && d.uifw.fruitless_wasteful, d => d.uifw && d.uifw.src],
+    ["Unauthorised expenditure", d => d.uifw && d.uifw.unauthorised, d => d.uifw && d.uifw.src]];
+  function draw() {
+    const A = list.find(m => m.id === $("select", a).value), B = list.find(m => m.id === $("select", b).value), y = $("select", ysel).value;
+    const da = A.years[y] || {}, db = B.years[y] || {};
+    const val = (f, d) => { const v = f(d); return v == null ? null : v; };
+    const rows = [...metrics.map(([lb, f, s]) => ({lb, va: val(f, da), vb: val(f, db), sa: s(da), sb: s(db), money: true})),
+      {lb: "Audit opinion", va: da.audit && mun.audit_opinions[da.audit.code], vb: db.audit && mun.audit_opinions[db.audit.code], sa: da.audit && da.audit.src, sb: db.audit && db.audit.src}];
+    out.replaceChildren(table(`${A.name} vs ${B.name}, ${fyLabel(y)}`, [{label: "Measure", value: r => r.lb},
+      {label: A.name, num: 1, render: r => r.va == null ? unknown() : [r.money ? rand(r.va) : r.va, " ", r.sa ? srcLink(mun, r.sa, "↗") : ""], csvValue: r => r.va == null ? null : (r.money ? r.va / 100 : r.va), csv: A.name + (" (rand)")},
+      {label: B.name, num: 1, render: r => r.vb == null ? unknown() : [r.money ? rand(r.vb) : r.vb, " ", r.sb ? srcLink(mun, r.sb, "↗") : ""], csvValue: r => r.vb == null ? null : (r.money ? r.vb / 100 : r.vb), csv: B.name + (" (rand)")},
+      {label: "Sources", csvOnly: true, csvValue: r => [srcUrl(mun, r.sa), srcUrl(mun, r.sb)].filter(Boolean).join(" ")}], rows, `compare-${A.code}-${B.code}-${y}.csv`),
+      el("p", {class: "small muted"}, "Municipalities differ hugely in size, so compare totals with care. Per-resident figures need population data, which is not loaded yet."));
+  }
+  [a, b, ysel].forEach(x => x.addEventListener("change", draw));
+  setView("Compare two municipalities", el("div", {class: "tools"}, a, b, ysel), out);
+  draw();
+}
+
+async function vSources() {
+  const [m, f] = await Promise.all([load("manifest.json"), load("flags.json")]);
+  setView("Sources & method",
+    el("p", {class: "lead"}, "Everything on this site comes from the official sources below. Each figure links to the exact file it was read from."),
+    table("Sources", [{label: "Source", render: s => s.page ? link(s.page, s.name || s.id) : (s.name || s.id), value: s => s.name || s.id}, {label: "Publisher", value: s => s.publisher},
+      {label: "Licence / terms", value: s => s.licence}, {label: "Last new data", render: s => s.last_new_data_sast ? dateSast(s.last_new_data_sast) : unknown("none"), value: s => s.last_new_data_sast},
+      {label: "Status", render: s => s.last_run_status || unknown("not loaded"), value: s => s.last_run_status || "not loaded"}, {label: "Problem", render: s => s.problem || "", value: s => s.problem || ""},
+      {label: "Page", csvOnly: true, csvValue: s => s.page || ""}], m.sources, "sources.csv"),
+    el("h2", {}, "How it works"),
+    el("div", {class: "card"}, el("ol", {},
+      el("li", {}, "Every day an automated pipeline downloads the sources, keeps an unchanged copy of each file with its checksum, and rebuilds the database."),
+      el("li", {}, "Data-quality checks run on every build. If any check fails, nothing is published."),
+      el("li", {}, "Coverage: for every municipality and financial year we record which data types exist (present, partial, missing or not applicable) and why."),
+      el("li", {}, "Automated checks look for patterns worth a closer look. People review each one; a flag naming a supplier needs two different reviewers. Only confirmed flags appear on this site."),
+      el("li", {}, "Money is stored in cents and shown in rand. Unknown values are left blank, never set to zero.")),
+      el("p", {class: "small"}, "The checks: "), el("ul", {class: "small"}, Object.entries(f.detectors).map(([k, v]) => el("li", {}, el("b", {}, k.split("_")[0] + ": "), v)))),
+    el("h2", {}, "Known errors in the source data"),
+    table("Known errors (from our known-error database)", [{label: "ID", value: k => k.id}, {label: "What happens", value: k => k.symptom}], m.known_errors, "known-errors.csv"),
+    el("h2", {}, "Reuse the data"),
+    el("div", {class: "card"}, el("p", {}, "All data files are open JSON (schema ", m.schema_version, "). Start from ", link(BASE + "manifest.json", "manifest.json"), ":"),
+      el("ul", {class: "small"}, m.files.map(x => el("li", {}, link(BASE + x.name, x.name), ` · ${(x.bytes / 1024).toFixed(0)} KB`))),
+      el("p", {class: "small muted"}, m.freshness_slo)),
+    el("h2", {}, "Important"), el("ul", {}, m.disclaimers.map(d => el("li", {}, d))));
+}
+
+/* ---------------------------------------------------------------- router */
+const routes = [
+  [/^#?\/?$/, () => vHome()], [/^#\/coverage$/, (m, p) => vCoverage(p)], [/^#\/municipalities$/, (m, p) => vMunicipalities(p)],
+  [/^#\/m\/(.+)$/, m => vMunicipality(decodeURIComponent(m[1]))], [/^#\/departments$/, () => vDepartments()], [/^#\/d\/(.+)$/, m => vDepartment(decodeURIComponent(m[1]))],
+  [/^#\/tenders$/, (m, p) => vTenders(p)], [/^#\/flags$/, () => vFlags()], [/^#\/tools(?:\/(\w+))?$/, (m, p) => vTools(m[1], p)], [/^#\/sources$/, () => vSources()]];
+async function route() {
+  const [path, qs] = (location.hash || "#/").split("?"), params = new URLSearchParams(qs || "");
+  const navHref = path.startsWith("#/m/") ? "#/municipalities" : path.startsWith("#/d/") ? "#/departments" : path.startsWith("#/tools") ? "#/tools" : (path.length > 2 ? path : "#/");
+  document.querySelectorAll("nav a").forEach(a => { if (a.getAttribute("href") === navHref) a.setAttribute("aria-current", "page"); else a.removeAttribute("aria-current"); });
+  $("#nav").classList.remove("open"); $("#navtoggle").setAttribute("aria-expanded", "false");
+  view().setAttribute("aria-busy", "true");
+  const hit = routes.find(([re]) => re.test(path));
+  try { if (hit) await hit[1](path.match(hit[0]), params); else setView("Page not found", el("a", {href: "#/"}, "Home")); }
+  catch (e) { console.error(e); setView("Something went wrong", errorBox(e)); }
+  $("#main").focus({preventScroll: true}); window.scrollTo(0, 0);
+}
+$("#navtoggle").addEventListener("click", () => { const n = $("#nav"), o = n.classList.toggle("open"); $("#navtoggle").setAttribute("aria-expanded", String(o)); });
+window.addEventListener("hashchange", route);
+load("manifest.json").then(m => { $("#foot").append(" Data published ", dateSast(m.generated_at_sast), "."); }).catch(() => {});
+route();
+</script>
+</body>
+</html>

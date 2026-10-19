@@ -271,7 +271,8 @@ def tenders(con, refs: SourceRefs, withheld_keys: set[str]) -> tuple[dict, dict[
                "about": ["Tender awards published by National Treasury's eTenders portal (OCDS). Year = calendar year of the "
                          "contract signature date, or of the release date when no signature date is published.",
                          "known_value sums only awards with a plausible value; missing_value counts no value or a R0 "
-                         "placeholder; implausible_value counts values below R100 or above R20bn (KE-007).",
+                         "placeholder; implausible_value counts values below R100 or above R20bn (KE-007). Values are as published "
+                         "and can be multi-year, framework or estimated contract values, so totals are not annual spending.",
                          "top_supplier_share and hhi (Herfindahl index, 0-10,000) describe how concentrated the known "
                          "award value is across suppliers; suppliers are not named here.",
                          "Award records (awards-YYYY.json) are public records as published; they are not flags or findings."],
