@@ -7,11 +7,27 @@
 <link rel="icon" href="data:,">
 <meta name="description" content="PublicFunds SA: where South African public money goes, from official open data - with the gaps shown honestly.">
 <title>PublicFunds SA - follow South Africa's public money</title>
+<link rel="canonical" href="https://farwaters.github.io/publicfunds-sa/apps/public-dashboard/">
+<meta name="theme-color" content="#0b6e4f">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="PublicFunds SA">
+<meta property="og:title" content="PublicFunds SA - follow South Africa's public money">
+<meta property="og:description" content="Budgets, spending, audit results and tenders for every municipality and national department, from official open data - with the gaps shown.">
+<meta property="og:url" content="https://farwaters.github.io/publicfunds-sa/apps/public-dashboard/">
+<meta property="og:image" content="https://farwaters.github.io/publicfunds-sa/apps/public-dashboard/og-card.png">
+<meta property="og:image:width" content="1200"><meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="PublicFunds SA: follow South Africa's public money. Indicators, not findings.">
+<meta property="og:locale" content="en_ZA">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="PublicFunds SA - follow South Africa's public money">
+<meta name="twitter:description" content="Budgets, spending, audits and tenders from official open data, with the gaps shown.">
+<meta name="twitter:image" content="https://farwaters.github.io/publicfunds-sa/apps/public-dashboard/og-card.png">
+<link rel="alternate" type="application/feed+json" title="PublicFunds SA: new public data" href="../../public-data/v1/feed.json">
 <style>
 :root{--ink:#14202b;--muted:#566370;--line:#d8dee4;--bg:#f6f8fa;--card:#fff;--brand:#0b6e4f;--brand-ink:#fff;--accent:#c8860d;
---p:#1f8a5b;--pp:#e0b13a;--m:#c94a3a;--na:#c9d1d9;--focus:#1b5fd1;--warn-bg:#fff6dd;--warn-line:#e9cf7c;--radius:10px}
+--p:#1f8a5b;--pp:#e0b13a;--m:#c94a3a;--ok-ink:#16683f;--mid-ink:#7a4d00;--bad-ink:#a3352a;--na:#c9d1d9;--focus:#1b5fd1;--warn-bg:#fff6dd;--warn-line:#e9cf7c;--radius:10px}
 @media (prefers-color-scheme:dark){:root{--ink:#e6edf3;--muted:#9aa7b4;--line:#33404c;--bg:#0f161d;--card:#16202a;--brand:#2fae7f;--brand-ink:#04140d;
---warn-bg:#2b2410;--warn-line:#6b5a22;--na:#3a4652}}
+--warn-bg:#2b2410;--warn-line:#6b5a22;--na:#3a4652;--ok-ink:#5fd39b;--mid-ink:#f0c060;--bad-ink:#ff9d8f}}
 *{box-sizing:border-box}html{-webkit-text-size-adjust:100%}
 body{margin:0;font:16px/1.55 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color:var(--ink);background:var(--bg)}
 a{color:var(--brand)}a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visible,[tabindex]:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
@@ -22,17 +38,17 @@ header{background:var(--brand);color:var(--brand-ink);position:sticky;top:0;z-in
 #navtoggle{margin-left:auto;background:transparent;border:1px solid currentColor;color:inherit;border-radius:8px;padding:.35rem .6rem;font:inherit}
 nav ul{list-style:none;margin:0;padding:0 1rem .6rem;display:none;flex-direction:column;gap:.15rem;max-width:1100px;margin:0 auto}
 nav.open ul{display:flex}nav a{color:inherit;text-decoration:none;display:block;padding:.45rem .6rem;border-radius:8px}
-nav a[aria-current=page],nav a:hover{background:rgba(255,255,255,.18)}
+nav a[aria-current=page],nav a:hover{background:rgba(0,0,0,.25);text-decoration:underline;text-underline-offset:3px}
 @media (min-width:900px){#navtoggle{display:none}nav ul{display:flex;flex-direction:row;flex-wrap:wrap;padding:0 1rem .5rem}}
 .notice{background:var(--warn-bg);border-bottom:1px solid var(--warn-line);font-size:.92rem}.notice p{max-width:1100px;margin:0 auto;padding:.5rem 1rem}@media (max-width:600px){.notice{font-size:.8rem}.notice p{padding:.35rem .8rem}}
-main{max-width:1100px;margin:0 auto;padding:1rem}#main:focus,#main:focus-visible{outline:none}
+main{max-width:1100px;margin:0 auto;padding:1rem;min-height:calc(100vh - 6rem)}#main:focus,#main:focus-visible{outline:none}
 h1{font-size:1.6rem;line-height:1.25;margin:.4rem 0 .6rem}h2{font-size:1.2rem;margin:1.4rem 0 .5rem}h3{font-size:1.02rem;margin:1rem 0 .4rem}
 .lead{color:var(--muted);margin-top:0}
 .grid{display:grid;gap:.8rem;grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr))}
 .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:.9rem 1rem}
 .kpi>b{display:block;font-size:1.7rem;line-height:1.15}.kpi>span{color:var(--muted);font-size:.9rem}
 .pill{display:inline-block;border-radius:999px;padding:.05rem .55rem;font-size:.8rem;border:1px solid var(--line);background:var(--bg);white-space:nowrap}
-.pill.ok{border-color:var(--p);color:var(--p)}.pill.bad{border-color:var(--m);color:var(--m)}.pill.mid{border-color:var(--accent);color:var(--accent)}
+.pill.ok{border-color:var(--p);color:var(--ok-ink)}.pill.bad{border-color:var(--m);color:var(--bad-ink)}.pill.mid{border-color:var(--accent);color:var(--mid-ink)}
 .unknown{color:var(--muted);font-style:italic}
 .muted{color:var(--muted)}.small{font-size:.86rem}
 .tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:var(--radius);background:var(--card)}
@@ -46,14 +62,17 @@ button{cursor:pointer}button.primary{background:var(--brand);color:var(--brand-i
 .btn-csv{font-size:.85rem;min-height:2.2rem}
 .heat{border-collapse:separate;border-spacing:2px;font-size:.8rem}.heat td,.heat th{border:0;padding:.15rem .3rem}
 .heat th[scope=row]{position:sticky;left:0;background:var(--card);z-index:1}.heat td.c{width:2.4rem;min-width:2rem;text-align:center;border-radius:4px;color:#fff;font-weight:700}
-.s-P{background:var(--p)}.s-p{background:var(--pp);color:#222!important}.s-m{background:var(--m)}.s--{background:var(--na);color:#333!important}.s-\?{background:#888}
+.s-P{background:#16683f}.s-p{background:var(--pp);color:#222!important}.s-m{background:#a3352a}.s--{background:var(--na);color:#333!important}.s-\?{background:#888}
 .legend{display:flex;flex-wrap:wrap;gap:.6rem;font-size:.85rem}.legend i{display:inline-block;width:1rem;height:1rem;border-radius:3px;vertical-align:-3px;margin-right:.25rem}
 .chart{width:100%;height:auto;max-height:320px}.chart text{fill:var(--muted);font-size:11px}.chart .axis{stroke:var(--line)}
 .bars rect:hover{opacity:.85}
-.op-unqualified{background:#1f8a5b;color:#fff}.op-unqualified_emphasis_of_matter{background:#5aa36f;color:#fff}.op-qualified{background:#e0b13a;color:#222}
-.op-adverse{background:#c94a3a;color:#fff}.op-disclaimer{background:#8e2b20;color:#fff}.op-outstanding{background:#6b7785;color:#fff}
+.op-unqualified{background:#16683f;color:#fff}.op-unqualified_emphasis_of_matter{background:#2e6b45;color:#fff}.op-qualified{background:#e0b13a;color:#222}
+.op-adverse{background:#a3352a;color:#fff}.op-disclaimer{background:#8e2b20;color:#fff}.op-outstanding{background:#56616d;color:#fff}
 .chip{display:inline-block;border-radius:6px;padding:.1rem .45rem;font-size:.8rem;margin:.1rem}
 .gap li{margin:.25rem 0}
+.bar-meter{display:inline-block;height:.6rem;border-radius:3px;background:var(--p);vertical-align:middle;margin-right:.35rem}.bar-meter.track{background:var(--na)}
+.wide-last td:last-child,.wide-last th:last-child{min-width:14rem}.wide-last td:first-child{white-space:nowrap}
+.entry{border-left:4px solid var(--brand);padding-left:.8rem;margin:.8rem 0}
 .result{font-size:1.05rem}.result b{font-size:1.25rem}
 footer{max-width:1100px;margin:2rem auto 0;padding:1rem;color:var(--muted);font-size:.85rem;border-top:1px solid var(--line)}
 .err{border-color:var(--m);background:var(--warn-bg)}
@@ -70,11 +89,12 @@ details summary{cursor:pointer;font-weight:600}
   <nav id="nav" aria-label="Main"><ul>
     <li><a href="#/">Home</a></li><li><a href="#/coverage">Data coverage</a></li><li><a href="#/municipalities">Municipalities</a></li>
     <li><a href="#/departments">National departments</a></li><li><a href="#/tenders">Tenders</a></li><li><a href="#/flags">Flags</a></li>
-    <li><a href="#/tools">Tools</a></li><li><a href="#/sources">Sources &amp; method</a></li></ul></nav>
+    <li><a href="#/tools">Tools</a></li><li><a href="#/unknowns">Known unknowns</a></li><li><a href="#/changes">What's new</a></li><li><a href="#/sources">Sources &amp; method</a></li></ul></nav>
 </header>
 <div class="notice" role="note"><p><b>Indicators, not findings.</b> This site shows official public data as published, gaps included. Blank or "unknown" means the figure is not available, never zero. Flags are automated indicators that people check; only flags confirmed by review are shown.</p></div>
 <main id="main" tabindex="-1"><div id="view" aria-live="polite" aria-busy="true"><p>Loading…</p></div></main>
-<footer><p id="foot">PublicFunds SA uses official open data from National Treasury, the Auditor-General (via Municipal Money), eTenders, the Department of Mineral and Petroleum Resources and Statistics South Africa (via the OECD). Code and data: <a href="https://github.com/farwaters/publicfunds-sa" rel="noopener">github.com/farwaters/publicfunds-sa</a>.</p></footer>
+<footer><p id="foot">PublicFunds SA uses official open data from National Treasury, the Auditor-General (via Municipal Money), eTenders, the Department of Mineral and Petroleum Resources and Statistics South Africa (via the OECD). Code and data: <a href="https://github.com/farwaters/publicfunds-sa" rel="noopener">github.com/farwaters/publicfunds-sa</a>.</p>
+<p><a id="report" href="https://github.com/farwaters/publicfunds-sa/issues/new?template=data-error.yml" rel="noopener nofollow" target="_blank">Report an error in the data or the site</a> · <a href="#/changes">What's new</a> · <a id="feedlink" href="../../public-data/v1/feed.json">Data feed (JSON Feed)</a></p></footer>
 <script>
 "use strict";
 /* ---------------------------------------------------------------- config */
@@ -150,7 +170,7 @@ function table(caption, allColumns, rows, csvName, opts = {}) {
   const tools = el("div", {class: "tools"},
     csvName ? el("button", {class: "btn-csv", onclick: () => downloadCSV(csvName, allColumns, rows)}, `Download CSV (${rows.length} rows)`) : null,
     rows.length > limit ? el("span", {class: "small muted"}, `Showing ${limit} of ${rows.length}; the CSV has all rows.`) : null);
-  return el("div", {}, el("div", {class: "tablewrap"}, t), tools);
+  return el("div", {}, el("div", {class: "tablewrap", tabindex: "0", role: "region", "aria-label": caption}, t), tools);
 }
 /* small accessible SVG charts (the table next to each chart carries the same numbers) */
 function chart(title, labels, series, opts = {}) {
@@ -236,7 +256,7 @@ async function vHome() {
       m.known_gaps.map(g => el("li", {}, g.text, " ", el("span", {class: "muted small"}, `(${g.id})`))),
       el("li", {}, "Population: ", m.population.reason),
       notLoaded.filter(s => !s.last_run_status).map(s => el("li", {}, `${s.name}: not loaded yet.`))),
-      el("p", {class: "small"}, el("a", {href: "#/sources"}, "All sources, known errors and the method →"))),
+      el("p", {class: "small"}, el("a", {href: "#/unknowns"}, "Known unknowns per province →"), " · ", el("a", {href: "#/sources"}, "All sources, known errors and the method →"))),
     el("h2", {}, "Start exploring"),
     el("div", {class: "grid"},
       el("a", {class: "card", href: "#/municipalities"}, el("b", {}, "Your municipality"), el("br"), el("span", {class: "muted small"}, "Budget vs actual, irregular spending, audit results, tenders")),
@@ -272,7 +292,7 @@ async function vCoverage(params) {
       el("tbody", {}, ents.map(({e, m}) => el("tr", {}, el("th", {scope: "row", style: "font-weight:500"}, el("a", {href: "#/m/" + encodeURIComponent(m.id)}, m.name), " ", el("span", {class: "muted"}, m.province)),
         cov.years.map((_, k) => cell(e, k))))));
     const rows = ents.map(({e, m}) => [m, e]);
-    body.replaceChildren(el("div", {class: "tablewrap"}, t), el("div", {class: "tools"}, el("button", {class: "btn-csv", onclick: () =>
+    body.replaceChildren(el("div", {class: "tablewrap", tabindex: "0", role: "region", "aria-label": "Coverage heatmap"}, t), el("div", {class: "tools"}, el("button", {class: "btn-csv", onclick: () =>
       downloadCSV(`coverage-${st.dt}.csv`, [{label: "municipality", value: r => r[0].name}, {label: "code", value: r => r[0].code}, {label: "province", value: r => r[0].province},
         ...cov.years.map((y, k) => ({label: cov.fy_labels[k], value: r => { const s = r[1].c[st.dt][k], rr = +r[1].r[st.dt][k]; return STATE[s] + (rr ? " (" + cov.reasons[rr - 1] + ")" : ""); }}))], rows)}, `Download CSV (${rows.length} rows)`)));
   }
@@ -576,11 +596,75 @@ async function vSources() {
     el("h2", {}, "Important"), el("ul", {}, m.disclaimers.map(d => el("li", {}, d))));
 }
 
+
+/* ---------------------------------------------------------------- known unknowns (CHG-2026-008) */
+async function vUnknowns() {
+  const [cov, mun] = await Promise.all([load("coverage.json"), load("municipalities.json")]);
+  const byId = Object.fromEntries(mun.municipalities.map(x => [x.id, x]));
+  const h = cov.headline, yIdx = cov.years.map((y, k) => [y, k]).filter(([y]) => y >= h.fye_min && y <= h.fye_max).map(([, k]) => k);
+  const prov = {};
+  for (const e of cov.entities) {
+    const m = byId[e.id]; if (!m) continue;
+    const P = prov[m.province] ||= {code: m.province, munis: new Set(), t: {}, reasons: {}};
+    for (const dt of cov.data_types) {
+      const T = P.t[dt] ||= {P: 0, p: 0, m: 0, n: 0};
+      for (const k of yIdx) {
+        const st = e.c[dt][k]; if (st === "-" || st === "?" || st == null) continue;
+        P.munis.add(e.id); T.n++; T[st]++;
+        const r = +e.r[dt][k]; if (st !== "P" && r) { const why = cov.reasons[r - 1]; P.reasons[why] = (P.reasons[why] || 0) + 1; }
+      }
+    }
+  }
+  const pct = (a, b) => b ? Math.round(1000 * a / b) / 10 : null;
+  const rows = Object.values(prov).map(P => {
+    const tot = Object.values(P.t).reduce((a, T) => ({P: a.P + T.P, p: a.p + T.p, m: a.m + T.m, n: a.n + T.n}), {P: 0, p: 0, m: 0, n: 0});
+    const top = Object.entries(P.reasons).sort((a, b) => b[1] - a[1])[0];
+    return {...P, tot, known: pct(tot.P, tot.n), top};
+  }).sort((a, b) => (a.known ?? 101) - (b.known ?? 101));
+  const meter = v => v == null ? unknown() : el("span", {}, el("span", {class: "bar-meter", style: `width:${Math.max(2, v * 0.6)}px`, "aria-hidden": "true"}), num(v, 1) + "%");
+  setView("Known unknowns, by province",
+    el("p", {class: "lead"}, `What share of the data a taxpayer should be able to see is actually published, for each province's municipalities. Financial years ${fyLabel(h.fye_min)} to ${fyLabel(h.fye_max)} (years whose audits are due). Lowest first: the biggest blind spots are at the top.`),
+    el("div", {class: "wide-last"}, table("Published data per province (all five data types together)", [
+      {label: "Province", render: r => PROVINCES[r.code] || r.code, value: r => PROVINCES[r.code] || r.code},
+      {label: "Municipalities", num: 1, value: r => r.munis.size},
+      {label: "Fully published", num: 1, render: r => meter(r.known), value: r => r.known},
+      {label: "Partly published", num: 1, value: r => r.tot.p},
+      {label: "Missing", num: 1, value: r => r.tot.m},
+      {label: "Most common reason for a gap", render: r => r.top ? `${REASON[r.top[0]] || r.top[0]} (${r.top[1]})` : unknown("none"), value: r => r.top ? r.top[0] : ""}],
+      rows, "known-unknowns-by-province.csv")),
+    el("h2", {}, "By data type"),
+    table("Share of municipality-years fully published, per province and data type", [
+      {label: "Province", value: r => PROVINCES[r.code] || r.code},
+      ...cov.data_types.map(dt => ({label: DT[dt] || dt, num: 1, render: r => meter(r.t[dt] ? pct(r.t[dt].P, r.t[dt].n) : null), value: r => r.t[dt] ? pct(r.t[dt].P, r.t[dt].n) : null}))],
+      rows, "known-unknowns-by-type.csv"),
+    el("div", {class: "card small"}, el("p", {}, "How to read this: a municipality-year counts as ", el("b", {}, "fully published"), " when the official source has that data type for that year, ",
+      el("b", {}, "partly published"), " when parts are missing, and ", el("b", {}, "missing"), " when nothing was found. A gap is not evidence of wrongdoing: often the audit is not due yet, or the source has not published it. Tender coverage is low because eTenders only started publishing award records in 2021 and many awards have no value (KE-007)."),
+      el("p", {}, el("a", {href: "#/coverage"}, "See each municipality on the coverage map →"))));
+}
+
+/* ---------------------------------------------------------------- what's new (CHG-2026-008) */
+async function vChanges() {
+  let ch;
+  try { ch = await load("changes.json"); }
+  catch (e) { setView("What's new", el("p", {class: "lead"}, "The change log starts with the next data refresh. Until then, see when the data was last published on the home page."), el("a", {href: "#/"}, "Home")); return; }
+  const lbl = {municipalities: "Municipalities", departments: "National departments", awards: "Tender award records", buyers: "Buyers", fuel_rows: "Fuel price rows", cpi_months: "CPI months", flags_confirmed: "Confirmed flags", leads_hidden: "Hidden leads"};
+  setView("What's new in the data",
+    el("p", {class: "lead"}, "Each time the published data changes we add an entry here, newest first. Nothing is added when a refresh finds no new data. ",
+      el("a", {href: BASE + "feed.json"}, "Follow it as a JSON Feed"), "."),
+    ch.entries.length ? el("div", {}, ch.entries.map(e => el("section", {class: "entry"},
+      el("h2", {}, dateSast(e.published_sast)),
+      el("ul", {}, e.summary.map(t => el("li", {}, t))),
+      el("p", {class: "small muted"}, `Build ${e.build_id} · data-quality checks: ${e.data_quality.pass} passed, ${e.data_quality.warn} warning(s), ${e.data_quality.fail} failed`,
+        e.files_changed.length ? ` · files changed: ${e.files_changed.join(", ")}` : ""),
+      el("details", {}, el("summary", {}, "Totals in this build"),
+        el("ul", {class: "small"}, Object.entries(e.counts).map(([k, v]) => el("li", {}, `${lbl[k] || k}: ${Number(v).toLocaleString("en-ZA")}`, e.count_changes[k] ? ` (${e.count_changes[k] > 0 ? "+" : ""}${e.count_changes[k].toLocaleString("en-ZA")})` : ""))))))) : el("p", {}, "No entries yet."));
+}
+
 /* ---------------------------------------------------------------- router */
 const routes = [
   [/^#?\/?$/, () => vHome()], [/^#\/coverage$/, (m, p) => vCoverage(p)], [/^#\/municipalities$/, (m, p) => vMunicipalities(p)],
   [/^#\/m\/(.+)$/, m => vMunicipality(decodeURIComponent(m[1]))], [/^#\/departments$/, () => vDepartments()], [/^#\/d\/(.+)$/, m => vDepartment(decodeURIComponent(m[1]))],
-  [/^#\/tenders$/, (m, p) => vTenders(p)], [/^#\/flags$/, () => vFlags()], [/^#\/tools(?:\/(\w+))?$/, (m, p) => vTools(m[1], p)], [/^#\/sources$/, () => vSources()]];
+  [/^#\/tenders$/, (m, p) => vTenders(p)], [/^#\/flags$/, () => vFlags()], [/^#\/tools(?:\/(\w+))?$/, (m, p) => vTools(m[1], p)], [/^#\/sources$/, () => vSources()], [/^#\/unknowns$/, () => vUnknowns()], [/^#\/changes$/, () => vChanges()]];
 async function route() {
   const [path, qs] = (location.hash || "#/").split("?"), params = new URLSearchParams(qs || "");
   const navHref = path.startsWith("#/m/") ? "#/municipalities" : path.startsWith("#/d/") ? "#/departments" : path.startsWith("#/tools") ? "#/tools" : (path.length > 2 ? path : "#/");
@@ -591,6 +675,16 @@ async function route() {
   try { if (hit) await hit[1](path.match(hit[0]), params); else setView("Page not found", el("a", {href: "#/"}, "Home")); }
   catch (e) { console.error(e); setView("Something went wrong", errorBox(e)); }
   $("#main").focus({preventScroll: true}); window.scrollTo(0, 0);
+  setReportLink();
+}
+/* "Report an error": a GitHub issue form, prefilled with the page address only (no personal data). */
+function setReportLink() {
+  const u = new URL("https://github.com/farwaters/publicfunds-sa/issues/new");
+  u.searchParams.set("template", "data-error.yml");
+  u.searchParams.set("title", "[data] " + document.title.replace(/ · PublicFunds SA$/, ""));
+  u.searchParams.set("page", location.href.split("?data=")[0]);
+  $("#report").href = u.href;
+  $("#feedlink").href = BASE + "feed.json";
 }
 $("#navtoggle").addEventListener("click", () => { const n = $("#nav"), o = n.classList.toggle("open"); $("#navtoggle").setAttribute("aria-expanded", String(o)); });
 window.addEventListener("hashchange", route);

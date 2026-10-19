@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Report suspected corruption (official channel)
+    url: https://www.gov.za/faq/justice-and-crime-prevention/how-do-i-report-fraud-or-corruption-state-department-or-state
+    about: Use the National Anti-Corruption Hotline (0800 701 701, run by the Public Service Commission) - not this public issue tracker.
+  - name: How the data works
+    url: https://farwaters.github.io/publicfunds-sa/apps/public-dashboard/#/sources
+    about: Sources, methods, known errors and what we don't know.

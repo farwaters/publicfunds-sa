@@ -23,6 +23,7 @@ uv run --group screenshots python scripts/dashboard_check.py   # screenshots in 
 ```
 The check:
 - serves only `apps/public-dashboard/` and `public-data/`;
+- runs axe-core (WCAG 2.1 A/AA) on every page when `axe-core` is installed (`AXE_JS=/path/axe.min.js`, or `npm i axe-core`); serious or critical violations fail;
 - opens every page;
 - fails on any console error, page error or failed request;
 - exercises the fuel checker, the inflation adjuster, a CSV download and the mobile menu.

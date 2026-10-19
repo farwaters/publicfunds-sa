@@ -455,6 +455,14 @@ def export(paths: Paths, out_dir: Path | None = None) -> dict:
         assert_public_safe(man, banned, "manifest.json")
     finally:
         con.close()
+    out_dir = Path(out_dir)
+    ch = changelog(out_dir, blobs, man, cfg)
+    feed = json_feed(ch, cfg)
+    for name, obj in (("changes.json", ch), ("feed.json", feed)):
+        assert_public_safe(obj, banned, name)
+        blobs[name] = json.dumps(obj, ensure_ascii=False, indent=1, default=str).encode()
+        man["files"].append({"name": name, "bytes": len(blobs[name]), "sha256": hashlib.sha256(blobs[name]).hexdigest()})
+    man["files"].sort(key=lambda f: f["name"])
     blobs["manifest.json"] = json.dumps(man, ensure_ascii=False, indent=1, default=str).encode()
     total = sum(len(b) for b in blobs.values())
     big = [n for n, b in blobs.items() if len(b) > cfg["file_budget_bytes"]]
@@ -471,6 +479,86 @@ def export(paths: Paths, out_dir: Path | None = None) -> dict:
     _atomic_write(out_dir / "manifest.json", blobs["manifest.json"])
     return {"out": str(out_dir), "files": {n: len(b) for n, b in sorted(blobs.items())}, "total_bytes": total,
             "counts": counts}
+
+
+META_FILES = {"manifest.json", "changes.json", "feed.json"}
+CHANGES_KEEP = 100
+COUNT_LABELS = {"municipalities": "municipalities", "departments": "national departments", "awards": "tender award records",
+                "buyers": "buyers with awards", "fuel_rows": "fuel price rows", "cpi_months": "CPI months",
+                "flags_confirmed": "confirmed flags", "leads_hidden": "hidden leads awaiting review"}
+
+
+def _data_hash(shas: dict[str, str]) -> str:
+    h = hashlib.sha256()
+    for n in sorted(shas):
+        h.update(f"{n}:{shas[n]}\n".encode())
+    return h.hexdigest()[:16]
+
+
+def _read_json(path: Path) -> dict | None:
+    try:
+        return json.loads(path.read_text())
+    except (OSError, ValueError):
+        return None
+
+
+def changelog(out_dir: Path, blobs: dict[str, bytes], man: dict, cfg: dict) -> dict:
+    """'What's new' log: one entry per export whose data differs from the previous one (CHG-2026-008).
+    Re-exporting unchanged data leaves the file byte-identical, so the nightly publish makes no commit."""
+    shas = {n: hashlib.sha256(b).hexdigest() for n, b in blobs.items() if n not in META_FILES}
+    dh = _data_hash(shas)
+    prev = _read_json(out_dir / "changes.json") or {}
+    entries = list(prev.get("entries") or [])
+    if entries and entries[0].get("data_hash") == dh:
+        return {**_changes_head(cfg), "entries": entries}
+    pm = _read_json(out_dir / "manifest.json") or {}
+    old_shas = {f["name"]: f["sha256"] for f in pm.get("files", []) if f["name"] not in META_FILES}
+    old_counts, new_counts = pm.get("counts") or {}, man["counts"]
+    deltas = {k: v - old_counts[k] for k, v in new_counts.items()
+              if isinstance(v, int) and isinstance(old_counts.get(k), int) and v != old_counts[k]}
+    cov_old, cov_new = (pm.get("coverage") or {}).get("complete_pct"), man["coverage"].get("complete_pct")
+    lines = []
+    if not pm:
+        lines.append("First public release of this data.")
+    elif not entries:
+        lines.append("Change log started with this build.")
+    for k, d in deltas.items():
+        lines.append(f"{'+' if d > 0 else '-'}{abs(d):,} {COUNT_LABELS.get(k, k)} (now {new_counts[k]:,}).".replace(",", " "))
+    if cov_old is not None and cov_new is not None and cov_old != cov_new:
+        lines.append(f"Coverage of core municipal data {'rose' if cov_new > cov_old else 'fell'} from {cov_old}% to {cov_new}%.")
+    changed = sorted(n for n in shas if n in old_shas and shas[n] != old_shas[n])
+    added, removed = sorted(set(shas) - set(old_shas)), sorted(set(old_shas) - set(shas))
+    if pm and len(lines) <= (0 if entries else 1):
+        if changed or added:
+            lines.append("Figures updated or corrected in: " + ", ".join(changed + added) + ".")
+        elif entries:
+            lines.append("Data files re-published.")
+    entry = {"build_id": man["build"]["id"], "published_sast": man["generated_at_sast"], "data_hash": dh,
+             "summary": lines, "count_changes": deltas, "counts": new_counts,
+             "coverage_pct": cov_new, "coverage_pct_before": cov_old,
+             "files_changed": changed, "files_added": added if pm else [], "files_removed": removed,
+             "data_quality": man["build"]["data_quality"]}
+    return {**_changes_head(cfg), "entries": ([entry] + entries)[:CHANGES_KEEP]}
+
+
+def _changes_head(cfg: dict) -> dict:
+    return {"schema": SCHEMA, "kind": "changes",
+            "about": "One entry per published build whose data changed, newest first. count_changes compare with the "
+                     "previous published build; counts are totals in that build. Re-publishing identical data adds no entry."}
+
+
+def json_feed(ch: dict, cfg: dict) -> dict:
+    """JSON Feed 1.1 (https://jsonfeed.org/version/1.1) of new public data, derived only from changes.json."""
+    site = cfg.get("site_url", "").rstrip("/") + "/"
+    items = []
+    for e in ch["entries"][:30]:
+        items.append({"id": f"{e['build_id']}-{e['data_hash']}", "url": f"{site}#/changes",
+                      "title": f"New public data: build {e['build_id']}",
+                      "content_text": " ".join(e["summary"]), "date_published": e["published_sast"]})
+    return {"version": "https://jsonfeed.org/version/1.1", "title": "PublicFunds SA: new public data",
+            "home_page_url": site, "feed_url": cfg["base_url"] + "feed.json",
+            "description": "A new item each time the published South African public-spending data changes.",
+            "language": "en-ZA", "items": items}
 
 
 def _atomic_write(path: Path, data: bytes) -> None:
