@@ -85,6 +85,24 @@ detectors:
     caveat: "uses published awards, not orders; splitting can only be suspected, not shown"
     publish_requires_review: true
     never_publish: true
+  D2_unit_price_outlier:   {version: 0.0.0, mvp: false, robust_z: 3.5}
+  D7_triangulation:        {version: 0.0.0, mvp: false}
+  D9_related_party:        {version: 0.0.0, mvp: false, publish_requires_review: true, legal_review: required}
+  D10_capacity:            {version: 0.0.0, mvp: false, new_company_months: 12, value_threshold_rand: 10000000}
+  D11_contract_expansion:  {version: 0.0.0, mvp: false, blocked_by: "deviation registers restricted"}
+  D12_consequence_gap:     {version: 0.0.0, mvp: false}
+  D13_fuel_unit_price:      # CHG-2026-009: PPD manual drop (RB-06) vs DMPR fuel price history (curated.fuel_price)
+    version: 0.1.0
+    mvp: true
+    rule: "PPD line amount / quantity (unit = litres) > highest official DMPR price for that fuel type in the period * (1 + threshold)"
+    threshold: 0.20             # diesel/paraffin benchmarks are wholesale list prices; pump prices sit a little above
+    high_ratio: 2.0             # >= 2x the official price
+    min_benchmark_months: 6     # a financial-year line needs >= 6 months of official prices in that year
+    severity: {med: "ratio > 1 + threshold", high: "ratio >= high_ratio"}
+    publish_requires_review: true
+    never_publish: true         # see config/publication.yaml flags.never_publish
+  D14_noncompetitive_share: {version: 0.0.0, mvp: false, peer_percentile: 0.90}
+  D15_municipal_distress:  {version: 0.0.0, mvp: false, creditors_over_90_days_share: 0.5, cash_coverage_months_below: 1}
 # Competitive-bidding thresholds (VAT/tax included). An award ABOVE the value needs a competitive bid; up to and
 # including it, written price quotations are allowed. Only applied to awards dated on or after `from`.
 procurement_thresholds:
@@ -99,12 +117,3 @@ procurement_thresholds:
           # https://ocpo.treasury.gov.za/Legislation/Instruction%20Notes/Amendment%20to%20PFMA%20SCM%20Instruction%20No.%2002%20of%202021-2022%20-%20Procurement%20Thresholds%20and%20processes.pdf
     from: 2021-08-01
     rand: {department: 1000000}
-  D2_unit_price_outlier:   {version: 0.0.0, mvp: false, robust_z: 3.5}
-  D7_triangulation:        {version: 0.0.0, mvp: false}
-  D9_related_party:        {version: 0.0.0, mvp: false, publish_requires_review: true, legal_review: required}
-  D10_capacity:            {version: 0.0.0, mvp: false, new_company_months: 12, value_threshold_rand: 10000000}
-  D11_contract_expansion:  {version: 0.0.0, mvp: false, blocked_by: "deviation registers restricted"}
-  D12_consequence_gap:     {version: 0.0.0, mvp: false}
-  D13_fuel_unit_price:     {version: 0.0.0, mvp: false, blocked_by: "PPD/LOGIS manual drop", threshold: 0.20}
-  D14_noncompetitive_share: {version: 0.0.0, mvp: false, peer_percentile: 0.90}
-  D15_municipal_distress:  {version: 0.0.0, mvp: false, creditors_over_90_days_share: 0.5, cash_coverage_months_below: 1}

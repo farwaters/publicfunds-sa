@@ -24,16 +24,40 @@ Follow `itil/templates/release-checklist.md`. The routine prepares; the owner ap
 Emergency change: revoke/rotate at the provider, purge it from the repo history if committed (needs owner confirmation: destructive git operation), check access logs, incident record.
 
 ## RB-06 Procurement Payments Dashboard manual drop (PPD / BAS + LOGIS)
-The PPD is a Power BI report on https://data.etenders.gov.za/. As of 19 Oct 2026 there's no documented scriptable download, so we
-don't automate the Power BI session (D-07).
-1. Open the Procurement Payments Dashboard in a normal browser and choose the period. Export the transaction list visual as CSV
-   ("Export data" → CSV). The user guide (Feb 2026) names the file `Procurement_Spend_Transaction_List.csv`.
-2. Rename it to `Procurement_Spend_Transaction_List_<YYYY-MM>.csv` and save it in `data/drop/ppd/` on the box.
-3. Run `uv run thusa run --only ppd_payments`. The loader copies the file into `data/raw/ppd_payments/<date>/` with a sha256.
-   It maps columns by alias (department, supplier, amount, date, system). Unrecognised columns are ignored, and
-   blank amounts stay unknown.
-4. Check `ops.ingest_run` for status `ok` and `curated.payment` for row counts. If the columns weren't recognised, open a
-   CSI item with the header row (don't paste supplier data into tickets).
+The PPD is a Power BI report on https://data.etenders.gov.za/. There's no documented scriptable download, so we don't
+automate the Power BI session (D-07). A person exports the file in a normal browser. The steps follow National
+Treasury's *Procurement Payments Dashboard: User Guide* (Feb 2026, sections 6–7). Updated in CHG-2026-009.
+
+**Cadence:** quarterly, after National Treasury's update. Also do it once now, to load history.
+
+1. **Open the dashboard.** On a computer (the guide says it isn't optimised for phones), open
+   https://data.etenders.gov.za/ in Edge or Chrome and open the **Procurement Payments Dashboard**.
+   - Don't download the `.pbix` file (about 1 GB).
+2. **BAS payments:**
+   - Go to the **Supplier Transactions** view.
+   - Click the link **"Procurement_Spend_Transaction_List.csv"** and save the file.
+   - Rename it `PPD_BAS_<YYYY-MM-DD>.csv`, using the export date.
+3. **LOGIS quantities (needed for the fuel price check, D13):**
+   - Go to the LOGIS **Transaction View**.
+   - Filter **Item / commodity** to fuel (diesel, petrol, paraffin), with all years and all departments.
+   - Hover over the table, click the **three dots** in its top-right corner → **Export** → **CSV**, and save.
+   - Rename it `PPD_LOGIS_fuel_<YYYY-MM-DD>.csv`.
+   - Power BI may cap the number of exported rows. If the file looks cut short, export one financial year at a
+     time: `PPD_LOGIS_fuel_<FY>_<date>.csv`.
+4. **Get the files to the box.** Send them to the bot in chat, saying they're PPD exports. The bot saves them in
+   `/workspace/publicfunds/data/drop/ppd/`. Don't rename columns or edit cells; the loader keeps the file byte-for-byte,
+   with its sha256.
+5. **Load:** `uv run thusa ingest --only ppd_payments && uv run thusa build`, or wait for the nightly run.
+6. **Check:** `data/raw/runs.jsonl` has the last `ppd_payments` entry.
+   - `ok` or `unchanged`: loaded. `curated.payment` shows the rows (blank amounts and quantities stay NULL, meaning
+     unknown).
+   - `schema_mismatch` or `partial`: a file lacks a **department**, **supplier** or **amount** column. The error lists
+     only the header names. Add the missing header spellings to `PPD_ALIASES` in `thusa/parsers.py` (a Normal change),
+     or open a CSI item quoting the header row. Never paste supplier rows into tickets.
+   - Notes list the columns that weren't used. D13 needs **quantity** with **unit = litres**, plus a UNSPSC code or a
+     fuel word in the item description. Lines without these are not assessed.
+7. **Review:** D13 flags name a supplier, so they wait in the review queue (four-eyes) and are **never published**
+   (`config/publication.yaml` `never_publish`).
 
 ## RB-07 Daily pipeline run (`thusa run`)
 `uv run thusa run [--refresh] [--as-of YYYY-MM-DD]` does ingest (all sources) → build → DQ → report.

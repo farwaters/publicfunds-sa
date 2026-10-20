@@ -215,7 +215,9 @@ def stage_nt_budget(con, store: RawStore, sdir: Path) -> dict:
 
 
 PPD_COLS = {"department": "VARCHAR", "supplier_name": "VARCHAR", "supplier_key": "VARCHAR", "amount_cents": "BIGINT",
-            "payment_date": "DATE", "system": "VARCHAR", "source_locator": "VARCHAR", "raw_file_id": "VARCHAR"}
+            "payment_date": "DATE", "system": "VARCHAR", "financial_year": "VARCHAR", "quantity": "DOUBLE",
+            "unit": "VARCHAR", "item_description": "VARCHAR", "commodity_code": "VARCHAR",
+            "commodity_title": "VARCHAR", "province": "VARCHAR", "source_locator": "VARCHAR", "raw_file_id": "VARCHAR"}
 
 
 def stage_ppd(con, store: RawStore, sdir: Path) -> dict:
@@ -240,7 +242,8 @@ def stage_prices(con, store: RawStore, sdir: Path) -> dict:
     hold the same month; the most recently fetched document wins (deduplicated in the curated model)."""
     def fuel():
         for f in _files(store, "dmpr_fuel"):
-            for r in parsers.fuel_history_rows(store.path_of(f).read_bytes(), f.name):
+            parse = parsers.fuel_history_pdf_rows if f.name.endswith(".pdf") else parsers.fuel_history_rows
+            for r in parse(store.path_of(f).read_bytes(), f.name):
                 r["raw_file_id"], r["fetched_at_utc"] = f.sha256, f.fetched_at_utc
                 r["source_locator"] = f"{f.name}:{r['source_locator']}"
                 yield r
