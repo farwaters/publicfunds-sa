@@ -1,4 +1,4 @@
-"""MVP red-flag detectors (D1, D3, D4, D5, D8, D13). Each returns flag dicts; build() writes marts.flag.
+"""MVP red-flag detectors (D1, D3, D4, D5, D8, D13; award patterns D6, D16, D17). Each returns flag dicts; build() writes marts.flag.
 
 Flags are automated indicators, not findings. Every flag starts unreviewed; any flag that names a supplier or
 person is 'pending human review' and must never be published as confirmed (ADR-0005).
@@ -342,6 +342,119 @@ def d13_fuel_unit_price(con, cfg: dict) -> list[dict]:
     return out
 
 
+# ------------------------------------------------------------------------------- D6 / D16 / D17 (CHG-2026-010)
+_REGIME = {"metro": "mfma", "local": "mfma", "district": "mfma", "department": "pfma"}
+
+
+def _thresholds() -> dict:
+    from thusa.settings import load_yaml
+    return load_yaml("detectors.yaml")["procurement_thresholds"]
+
+
+def _pair_awards(con) -> dict:
+    """Single-supplier awards with a known, plausible value and a date, grouped by (buyer, supplier)."""
+    rows = con.execute("""
+        SELECT a.buyer_id, a.buyer_name, a.buyer_gov_body_id, g.body_type, a.supplier_key, a.supplier_name,
+               a.ocid, a.award_id, a.value_cents, a.award_date, a.award_date_basis
+        FROM curated.award a LEFT JOIN curated.gov_body g ON g.gov_body_id = a.buyer_gov_body_id
+        WHERE a.n_suppliers = 1 AND a.value_cents IS NOT NULL AND a.value_note IS NULL AND a.award_date IS NOT NULL
+          AND a.supplier_key IS NOT NULL AND a.buyer_id IS NOT NULL
+        ORDER BY a.buyer_id, a.supplier_key, a.award_date, a.ocid, a.award_id""").fetchall()
+    cols = [d[0] for d in con.description]
+    pairs: dict = {}
+    for r in map(lambda x: dict(zip(cols, x)), rows):
+        pairs.setdefault((r["buyer_id"], r["supplier_key"]), []).append(r)
+    return pairs
+
+
+def _threshold_cents(r, th) -> int | None:
+    """Competitive-bidding threshold for this award's buyer and date; None if the regime is unknown or not yet in force."""
+    regime = _REGIME.get(r["body_type"] or "")
+    if not regime:
+        return None
+    t = th[regime]
+    rand = t["rand"].get(r["body_type"])
+    return None if rand is None or r["award_date"] < t["from"] else rand * 100
+
+
+def _windows(items, days):
+    """Densest run of items starting at each item, within `days` of it: yields (start index, items)."""
+    for i, a in enumerate(items):
+        yield i, [b for b in items[i:] if (b["award_date"] - a["award_date"]).days <= days]
+
+
+def _award_ev(items, extra=None):
+    ev = [{"label": "eTenders OCDS award", "ocid": a["ocid"], "award_id": a["award_id"],
+           "value": _rand(a["value_cents"]), "date": str(a["award_date"]), "date_basis": a["award_date_basis"],
+           "url": OCDS_BULK} for a in items]
+    return ev + (extra or [])
+
+
+def _pair_flag(det, cfg, items, severity, score, title, explanation, ev):
+    a0 = items[0]
+    gb = a0["buyer_gov_body_id"] or f"BUYER:{a0['buyer_id']}"
+    period = f"{items[0]['award_date']}..{items[-1]['award_date']}"
+    return _flag(det, cfg, "buyer_supplier", f"{gb}|{a0['supplier_key']}", a0["supplier_name"], gb, period, severity,
+                 score, title, explanation + " Hidden lead: pending human review, never published.", ev, True)
+
+
+def d16_repeat_awards(con, cfg: dict) -> list[dict]:
+    out = []
+    for items in _pair_awards(con).values():
+        best = max((w for _, w in _windows(items, cfg["window_days"])), key=len, default=[])
+        if len(best) < cfg["min_awards"]:
+            continue
+        a0, total = best[0], sum(a["value_cents"] for a in best)
+        out.append(_pair_flag(
+            "D16_repeat_awards", cfg, best, "low", len(best),
+            f"{a0['buyer_name']}: {len(best)} awards to {a0['supplier_name']} within {cfg['window_days']} days",
+            f"{len(best)} single-supplier awards with a known value ({_rand(total)} in total) from this buyer to this "
+            f"supplier between {best[0]['award_date']} and {best[-1]['award_date']}. Repeat awards can be legitimate "
+            "(framework or panel contracts, sole providers).", _award_ev(best)))
+    return out
+
+
+def d17_just_below_threshold(con, cfg: dict, thresholds: dict | None = None) -> list[dict]:
+    th, out = thresholds or _thresholds(), []
+    for items in _pair_awards(con).values():
+        near = [a for a in items if (t := _threshold_cents(a, th)) and t * (1 - cfg["band"]) <= a["value_cents"] <= t]
+        best = max((w for _, w in _windows(near, cfg["window_days"])), key=len, default=[])
+        if len(best) < cfg["min_count"]:
+            continue
+        a0, t = best[0], _threshold_cents(best[0], th)
+        regime = _REGIME[a0["body_type"]]
+        out.append(_pair_flag(
+            "D17_just_below_threshold", cfg, best, "med" if len(best) >= 3 else "low", len(best),
+            f"{a0['buyer_name']}: {len(best)} awards to {a0['supplier_name']} just under the {_rand(t)} bidding limit",
+            f"{len(best)} awards between {_rand(t * (1 - cfg['band']))} and {_rand(t)} within {cfg['window_days']} "
+            f"days. Above {_rand(t)} a {a0['body_type']} buyer must use competitive bidding ({regime.upper()} "
+            "thresholds, config/detectors.yaml). Values near a limit are common and can be legitimate.",
+            _award_ev(best)))
+    return out
+
+
+def d6_threshold_splitting(con, cfg: dict, thresholds: dict | None = None) -> list[dict]:
+    th, out = thresholds or _thresholds(), []
+    for items in _pair_awards(con).values():
+        under = [a for a in items if (t := _threshold_cents(a, th)) and a["value_cents"] <= t]
+        for _, w in _windows(under, cfg["window_days"]):
+            t = _threshold_cents(w[0], th)
+            total = sum(a["value_cents"] for a in w)
+            if len(w) >= 2 and total > t:
+                a0 = w[0]
+                out.append(_pair_flag(
+                    "D6_threshold_splitting", cfg, w, "med", round(total / t, 3),
+                    f"{a0['buyer_name']}: {len(w)} awards to {a0['supplier_name']} in {cfg['window_days']} days "
+                    f"total {_rand(total)}, above the {_rand(t)} bidding limit",
+                    f"Each award is at or below {_rand(t)}, the {_REGIME[a0['body_type']].upper()} competitive-bidding "
+                    f"threshold for a {a0['body_type']} buyer, but together they exceed it. The rules forbid "
+                    "deliberately splitting a requirement to avoid bidding; published awards cannot show whether "
+                    "these were one requirement. Award dates may be publication dates (date_basis).",
+                    _award_ev(w)))
+                break
+    return out
+
+
 DETECTORS = {
     "D1_overspend_vs_budget": d1_overspend,
     "D3_restricted_supplier_awarded": d3_restricted_awarded,
@@ -349,6 +462,9 @@ DETECTORS = {
     "D5_award_value_gaps": d5_value_gaps,
     "D8_irregular_expenditure_trend": d8_irregular_trend,
     "D13_fuel_unit_price": d13_fuel_unit_price,
+    "D16_repeat_awards": d16_repeat_awards,
+    "D17_just_below_threshold": d17_just_below_threshold,
+    "D6_threshold_splitting": d6_threshold_splitting,
 }
 
 FLAG_COLS = ["flag_id", "detector_id", "detector_version", "subject_type", "subject_id", "subject_name",

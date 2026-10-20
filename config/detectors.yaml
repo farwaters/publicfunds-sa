@@ -54,8 +54,38 @@ detectors:
     high_growth_yoy: 1.0
     high_min_amount_rand: 100000000
     severity: {med: true, high: "growth >= high_growth_yoy and amount >= high_min_amount_rand"}
+  # CHG-2026-010: supplier-naming award-pattern detectors. Hidden leads only: four-eyes review, never published
+  # (config/publication.yaml never_publish). Award dates are mostly the OCDS release date (a proxy), so time windows
+  # are approximate. Buyers not linked to a government body (no known regime) are not assessed by D6/D17.
+  D16_repeat_awards:
+    version: 0.1.0
+    mvp: true
+    rule: "same buyer and supplier, single-supplier awards with a known value, >= min_awards within window_days"
+    min_awards: 5
+    window_days: 365
+    severity: {low: true}
+    publish_requires_review: true
+    never_publish: true
+  D17_just_below_threshold:
+    version: 0.1.0
+    mvp: true
+    rule: "same buyer and supplier, >= min_count awards with value in [threshold * (1 - band), threshold] within window_days"
+    band: 0.10
+    min_count: 2
+    window_days: 365
+    severity: {low: true, med: "count >= 3"}
+    publish_requires_review: true
+    never_publish: true
+  D6_threshold_splitting:
+    version: 0.1.0
+    mvp: true
+    rule: "same buyer and supplier, >= 2 awards each <= threshold starting within window_days, summing to > threshold"
+    window_days: 30
+    severity: {med: true}
+    caveat: "uses published awards, not orders; splitting can only be suspected, not shown"
+    publish_requires_review: true
+    never_publish: true
   D2_unit_price_outlier:   {version: 0.0.0, mvp: false, robust_z: 3.5}
-  D6_threshold_splitting:  {version: 0.0.0, mvp: false, blocked_by: "order-level data not public"}
   D7_triangulation:        {version: 0.0.0, mvp: false}
   D9_related_party:        {version: 0.0.0, mvp: false, publish_requires_review: true, legal_review: required}
   D10_capacity:            {version: 0.0.0, mvp: false, new_company_months: 12, value_threshold_rand: 10000000}
@@ -73,3 +103,17 @@ detectors:
     never_publish: true         # see config/publication.yaml flags.never_publish
   D14_noncompetitive_share: {version: 0.0.0, mvp: false, peer_percentile: 0.90}
   D15_municipal_distress:  {version: 0.0.0, mvp: false, creditors_over_90_days_share: 0.5, cash_coverage_months_below: 1}
+# Competitive-bidding thresholds (VAT/tax included). An award ABOVE the value needs a competitive bid; up to and
+# including it, written price quotations are allowed. Only applied to awards dated on or after `from`.
+procurement_thresholds:
+  mfma:   # Municipal SCM Regulations reg 12(1)(c)-(d) and reg 19(b) (no deliberate splitting), as amended by
+          # GN 4198, Government Gazette 49863, 14 Dec 2023, in effect on publication (reg 8 of the amendment):
+          # https://mfma.treasury.gov.za/RegulationsandGazettes/Municipal%20SCM%20Amendment%20Regulations.pdf
+    from: 2023-12-14
+    rand: {metro: 750000, local: 300000, district: 200000}
+  pfma:   # PFMA SCM Instruction No. 02 of 2021/22 para 3.2-3.3 and 4.1 (no deliberate splitting), effective
+          # 1 Aug 2021 per its amendment:
+          # https://ocpo.treasury.gov.za/Legislation/Instruction%20Notes/PFM%20SCM%20Instruction%20No.%2002%20of%202021-22%20Procurement%20thresholds%20and%20processes.pdf
+          # https://ocpo.treasury.gov.za/Legislation/Instruction%20Notes/Amendment%20to%20PFMA%20SCM%20Instruction%20No.%2002%20of%202021-2022%20-%20Procurement%20Thresholds%20and%20processes.pdf
+    from: 2021-08-01
+    rand: {department: 1000000}

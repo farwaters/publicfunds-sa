@@ -285,7 +285,7 @@ The model rolls up to entity coverage scores, a national coverage map and "R val
 | D3 | Barred-and-awarded / barred-and-paid | ★ | RSR + OCDS + PPD | award/payment date within restriction window; match confidence ≥ 0.9 | Restriction by one organ may not bind another; name-match risk |
 | D4 | Supplier concentration | ★ | PPD, OCDS | buyer × commodity HHI > 2,500 or top supplier share > 50% over 3 yrs | Some markets are legitimately concentrated |
 | D5 | Non-competitive share | ★ | OCDS method; LOGIS contract type "Non-Contract" | share > peer P90 | Under-reporting of limited/direct methods |
-| D6 | Threshold splitting | phase 3 | order-level data (not yet public) | clusters just below thresholds | Blocked by aggregation; shown as a "can't test" coverage item |
+| D6 | Threshold splitting | v0.1.0 (CHG-2026-010) | eTenders OCDS awards (order-level data not yet public) | same buyer+supplier awards within 30 days, each ≤ the MFMA/PFMA bidding threshold, together above it | Award-level only, so splitting can be suspected, not shown; never published |
 | D7 | Budget–payment–audit triangulation | phase 2 | VK, PPD, AGSA | high payments growth + IE completeness qualification + MIs | Composite; explain each component |
 | D8 | Municipal distress & coverage | ★ (as coverage + score) | MM cubes, s71 lists, AGSA | rules on cash coverage, creditor age > 90d, UIFW trend, non-submission | Data unverified by NT |
 | D9 | Related-party (PEP/official) | phase 3 | OpenSanctions, PMG RMI, MM officials, supplier directors (blocked) | exact/near match on person names + corroborating attribute | High false-positive risk; human review mandatory before publish |
