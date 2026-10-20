@@ -1,0 +1,17 @@
+{
+ "version": "https://jsonfeed.org/version/1.1",
+ "title": "PublicFunds SA: new public data",
+ "home_page_url": "https://farwaters.github.io/publicfunds-sa/apps/public-dashboard/",
+ "feed_url": "https://raw.githubusercontent.com/farwaters/publicfunds-sa/main/public-data/v1/feed.json",
+ "description": "A new item each time the published South African public-spending data changes.",
+ "language": "en-ZA",
+ "items": [
+  {
+   "id": "B20261020T011050Z-d79f4fc6f7950fc2",
+   "url": "https://farwaters.github.io/publicfunds-sa/apps/public-dashboard/#/changes",
+   "title": "New public data: build B20261020T011050Z",
+   "content_text": "Change log started with this build. Figures updated or corrected in: departments.json, municipalities.json.",
+   "date_published": "2026-10-20T03:11:28+02:00"
+  }
+ ]
+}

@@ -1,0 +1,40 @@
+{
+ "schema": "publicfunds.public-data/v1",
+ "kind": "changes",
+ "about": "One entry per published build whose data changed, newest first. count_changes compare with the previous published build; counts are totals in that build. Re-publishing identical data adds no entry.",
+ "entries": [
+  {
+   "build_id": "B20261020T011050Z",
+   "published_sast": "2026-10-20T03:11:28+02:00",
+   "data_hash": "d79f4fc6f7950fc2",
+   "summary": [
+    "Change log started with this build.",
+    "Figures updated or corrected in: departments.json, municipalities.json."
+   ],
+   "count_changes": {},
+   "counts": {
+    "municipalities": 292,
+    "departments": 49,
+    "awards": 9551,
+    "buyers": 488,
+    "fuel_rows": 70,
+    "cpi_months": 205,
+    "flags_confirmed": 0,
+    "leads_hidden": 335
+   },
+   "coverage_pct": 75.7,
+   "coverage_pct_before": 75.7,
+   "files_changed": [
+    "departments.json",
+    "municipalities.json"
+   ],
+   "files_added": [],
+   "files_removed": [],
+   "data_quality": {
+    "pass": 56,
+    "warn": 1,
+    "fail": 0
+   }
+  }
+ ]
+}
