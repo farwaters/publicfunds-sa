@@ -114,6 +114,6 @@ def test_ppd_manual_drop(tmp_path):
     s = RawStore(tmp_path / "raw")
     assert ppd.run(s, tmp_path / "drop").status == "awaiting_manual_drop"
     (tmp_path / "drop").mkdir()
-    (tmp_path / "drop" / "x.csv").write_text("Department,Amount\nA,1\n")
+    (tmp_path / "drop" / "x.csv").write_text("Department,Supplier,Amount\nA,B,1\n")
     r = ppd.run(s, tmp_path / "drop")
     assert r.status == "ok" and json.loads(json.dumps(r.summary()))["files"] == 1

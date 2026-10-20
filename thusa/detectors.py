@@ -1,4 +1,4 @@
-"""MVP red-flag detectors (D1, D3, D4, D5, D8). Each returns flag dicts; build() writes marts.flag.
+"""MVP red-flag detectors (D1, D3, D4, D5, D8, D13; award patterns D6, D16, D17). Each returns flag dicts; build() writes marts.flag.
 
 Flags are automated indicators, not findings. Every flag starts unreviewed; any flag that names a supplier or
 person is 'pending human review' and must never be published as confirmed (ADR-0005).
@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 
 import duckdb
 
@@ -264,12 +265,206 @@ def d8_irregular_trend(con, cfg: dict) -> list[dict]:
     return out
 
 
+# ------------------------------------------------------------------------------------------------ D13
+PPD_PORTAL = "https://data.etenders.gov.za/"
+FUEL_TYPES = {  # UNSPSC commodity codes (class 15101500 Petroleum and distillates) and description words
+    "diesel": ({"15101505", "15101513"}, r"\bdiesel\b", ("diesel_005_inland", "diesel_005_coast")),
+    "petrol": ({"15101506"}, r"\b(petrol|gasoline|unleaded)\b", ("petrol_93_inland", "petrol_95_coast", "petrol_95_inland")),
+    "paraffin": ({"15101502"}, r"\b(paraffin|kerosene)\b", ("paraffin_coast", "paraffin_inland")),
+}
+_LITRE = re.compile(r"(?i)^(l|lt|ltr|ltrs|litre|litres|liter|liters)$")
+
+
+def _fuel_type(code, *texts):
+    for ft, (codes, rx, _g) in FUEL_TYPES.items():
+        if (code or "").strip()[:8] in codes or any(t and re.search(rx, t, re.I) for t in texts):
+            return ft
+    return None
+
+
+def _fy_months(label):
+    """'2024/25' or '2024/2025' -> the 12 (year, month) pairs April 2024 - March 2025; anything else -> None."""
+    m = re.fullmatch(r"\s*(\d{4})\s*/\s*(\d{2}|\d{4})\s*", label or "")
+    if not m or int(m.group(2)[-2:]) != (int(m.group(1)) + 1) % 100:
+        return None
+    y = int(m.group(1))
+    return [(y, mo) for mo in range(4, 13)] + [(y + 1, mo) for mo in range(1, 4)]
+
+
+def d13_fuel_unit_price(con, cfg: dict) -> list[dict]:
+    """Implied price per litre on a PPD fuel line (amount / quantity, litres only) above the highest official DMPR
+    price for that fuel type in the period by more than `threshold`. Lines without litres, a period or enough
+    benchmark months are not assessed (unknown, not 'fine'). Names a supplier: review queue only, never published
+    (publication.yaml never_publish)."""
+    bench: dict = {}
+    for y, mo, grade, c, url, loc in con.execute("SELECT year, month, grade, cents_per_litre, source_url, source_locator "
+                                                  "FROM curated.fuel_price").fetchall():
+        bench.setdefault((y, mo), {})[grade] = (c, url, loc)
+    rows = con.execute("""SELECT department, supplier_name, supplier_key, amount_cents, quantity, unit, payment_date,
+                                 financial_year, item_description, commodity_code, commodity_title, source_file,
+                                 source_sha256, source_locator
+                          FROM curated.payment WHERE amount_cents IS NOT NULL AND quantity > 0""").fetchall()
+    cols = [d[0] for d in con.description]
+    out = []
+    for r in map(lambda x: dict(zip(cols, x)), rows):
+        ft = _fuel_type(r["commodity_code"], r["item_description"], r["commodity_title"])
+        if not ft or not _LITRE.match((r["unit"] or "").strip()):
+            continue
+        if r["payment_date"]:
+            months, period = [(r["payment_date"].year, r["payment_date"].month)], r["payment_date"].strftime("%Y-%m")
+        else:
+            months, period = _fy_months(r["financial_year"]), r["financial_year"]
+        if not months:
+            continue
+        grades = FUEL_TYPES[ft][2]
+        pts = [(bench[m][g], m) for m in months if m in bench for g in grades if g in bench[m]]
+        if len({m for _, m in pts}) < min(len(months), cfg["min_benchmark_months"]):
+            continue
+        (top, top_url, top_loc), top_m = max(pts, key=lambda p: p[0][0])
+        implied = r["amount_cents"] / r["quantity"]
+        ratio = implied / top
+        if ratio <= 1 + cfg["threshold"]:
+            continue
+        sev = "high" if ratio >= cfg["high_ratio"] else "med"
+        sid = "PPD:" + _id(r["department"], r["supplier_key"], ft, period)
+        out.append(_flag(
+            "D13_fuel_unit_price", cfg, "payment_line", sid, r["supplier_name"], None, period, sev, round(ratio, 2),
+            f"{r['department']}: {ft} at about R{implied / 100:,.2f}/litre vs official up to R{top / 100:,.2f}/litre ({period})",
+            f"A Procurement Payments Dashboard line shows {_rand(r['amount_cents'])} paid to {r['supplier_name']} for "
+            f"{r['quantity']:,.0f} litres of {ft}, about R{implied / 100:,.2f} per litre. The highest official DMPR price "
+            f"for {ft} in {period} was R{top / 100:,.2f} per litre ({top_m[0]}-{top_m[1]:02d}). Diesel and paraffin "
+            "figures are wholesale list prices (pump prices are a little higher), and PPD lines are yearly totals per "
+            "department, supplier and item; LOGIS quantities can be averages over an item group (PPD user guide, "
+            "section 7). A data or unit error is possible. Pending human review; not published.",
+            [{"label": "Procurement Payments Dashboard export", "url": PPD_PORTAL, "file": r["source_file"],
+              "locator": r["source_locator"], "sha256": r["source_sha256"]},
+             {"label": "DMPR Fuel Price History", "url": top_url, "locator": top_loc}], True))
+    return out
+
+
+# ------------------------------------------------------------------------------- D6 / D16 / D17 (CHG-2026-010)
+_REGIME = {"metro": "mfma", "local": "mfma", "district": "mfma", "department": "pfma"}
+
+
+def _thresholds() -> dict:
+    from thusa.settings import load_yaml
+    return load_yaml("detectors.yaml")["procurement_thresholds"]
+
+
+def _pair_awards(con) -> dict:
+    """Single-supplier awards with a known, plausible value and a date, grouped by (buyer, supplier)."""
+    rows = con.execute("""
+        SELECT a.buyer_id, a.buyer_name, a.buyer_gov_body_id, g.body_type, a.supplier_key, a.supplier_name,
+               a.ocid, a.award_id, a.value_cents, a.award_date, a.award_date_basis
+        FROM curated.award a LEFT JOIN curated.gov_body g ON g.gov_body_id = a.buyer_gov_body_id
+        WHERE a.n_suppliers = 1 AND a.value_cents IS NOT NULL AND a.value_note IS NULL AND a.award_date IS NOT NULL
+          AND a.supplier_key IS NOT NULL AND a.buyer_id IS NOT NULL
+        ORDER BY a.buyer_id, a.supplier_key, a.award_date, a.ocid, a.award_id""").fetchall()
+    cols = [d[0] for d in con.description]
+    pairs: dict = {}
+    for r in map(lambda x: dict(zip(cols, x)), rows):
+        pairs.setdefault((r["buyer_id"], r["supplier_key"]), []).append(r)
+    return pairs
+
+
+def _threshold_cents(r, th) -> int | None:
+    """Competitive-bidding threshold for this award's buyer and date; None if the regime is unknown or not yet in force."""
+    regime = _REGIME.get(r["body_type"] or "")
+    if not regime:
+        return None
+    t = th[regime]
+    rand = t["rand"].get(r["body_type"])
+    return None if rand is None or r["award_date"] < t["from"] else rand * 100
+
+
+def _windows(items, days):
+    """Densest run of items starting at each item, within `days` of it: yields (start index, items)."""
+    for i, a in enumerate(items):
+        yield i, [b for b in items[i:] if (b["award_date"] - a["award_date"]).days <= days]
+
+
+def _award_ev(items, extra=None):
+    ev = [{"label": "eTenders OCDS award", "ocid": a["ocid"], "award_id": a["award_id"],
+           "value": _rand(a["value_cents"]), "date": str(a["award_date"]), "date_basis": a["award_date_basis"],
+           "url": OCDS_BULK} for a in items]
+    return ev + (extra or [])
+
+
+def _pair_flag(det, cfg, items, severity, score, title, explanation, ev):
+    a0 = items[0]
+    gb = a0["buyer_gov_body_id"] or f"BUYER:{a0['buyer_id']}"
+    period = f"{items[0]['award_date']}..{items[-1]['award_date']}"
+    return _flag(det, cfg, "buyer_supplier", f"{gb}|{a0['supplier_key']}", a0["supplier_name"], gb, period, severity,
+                 score, title, explanation + " Hidden lead: pending human review, never published.", ev, True)
+
+
+def d16_repeat_awards(con, cfg: dict) -> list[dict]:
+    out = []
+    for items in _pair_awards(con).values():
+        best = max((w for _, w in _windows(items, cfg["window_days"])), key=len, default=[])
+        if len(best) < cfg["min_awards"]:
+            continue
+        a0, total = best[0], sum(a["value_cents"] for a in best)
+        out.append(_pair_flag(
+            "D16_repeat_awards", cfg, best, "low", len(best),
+            f"{a0['buyer_name']}: {len(best)} awards to {a0['supplier_name']} within {cfg['window_days']} days",
+            f"{len(best)} single-supplier awards with a known value ({_rand(total)} in total) from this buyer to this "
+            f"supplier between {best[0]['award_date']} and {best[-1]['award_date']}. Repeat awards can be legitimate "
+            "(framework or panel contracts, sole providers).", _award_ev(best)))
+    return out
+
+
+def d17_just_below_threshold(con, cfg: dict, thresholds: dict | None = None) -> list[dict]:
+    th, out = thresholds or _thresholds(), []
+    for items in _pair_awards(con).values():
+        near = [a for a in items if (t := _threshold_cents(a, th)) and t * (1 - cfg["band"]) <= a["value_cents"] <= t]
+        best = max((w for _, w in _windows(near, cfg["window_days"])), key=len, default=[])
+        if len(best) < cfg["min_count"]:
+            continue
+        a0, t = best[0], _threshold_cents(best[0], th)
+        regime = _REGIME[a0["body_type"]]
+        out.append(_pair_flag(
+            "D17_just_below_threshold", cfg, best, "med" if len(best) >= 3 else "low", len(best),
+            f"{a0['buyer_name']}: {len(best)} awards to {a0['supplier_name']} just under the {_rand(t)} bidding limit",
+            f"{len(best)} awards between {_rand(t * (1 - cfg['band']))} and {_rand(t)} within {cfg['window_days']} "
+            f"days. Above {_rand(t)} a {a0['body_type']} buyer must use competitive bidding ({regime.upper()} "
+            "thresholds, config/detectors.yaml). Values near a limit are common and can be legitimate.",
+            _award_ev(best)))
+    return out
+
+
+def d6_threshold_splitting(con, cfg: dict, thresholds: dict | None = None) -> list[dict]:
+    th, out = thresholds or _thresholds(), []
+    for items in _pair_awards(con).values():
+        under = [a for a in items if (t := _threshold_cents(a, th)) and a["value_cents"] <= t]
+        for _, w in _windows(under, cfg["window_days"]):
+            t = _threshold_cents(w[0], th)
+            total = sum(a["value_cents"] for a in w)
+            if len(w) >= 2 and total > t:
+                a0 = w[0]
+                out.append(_pair_flag(
+                    "D6_threshold_splitting", cfg, w, "med", round(total / t, 3),
+                    f"{a0['buyer_name']}: {len(w)} awards to {a0['supplier_name']} in {cfg['window_days']} days "
+                    f"total {_rand(total)}, above the {_rand(t)} bidding limit",
+                    f"Each award is at or below {_rand(t)}, the {_REGIME[a0['body_type']].upper()} competitive-bidding "
+                    f"threshold for a {a0['body_type']} buyer, but together they exceed it. The rules forbid "
+                    "deliberately splitting a requirement to avoid bidding; published awards cannot show whether "
+                    "these were one requirement. Award dates may be publication dates (date_basis).",
+                    _award_ev(w)))
+                break
+    return out
+
+
 DETECTORS = {
     "D1_overspend_vs_budget": d1_overspend,
     "D3_restricted_supplier_awarded": d3_restricted_awarded,
     "D4_supplier_concentration": d4_concentration,
     "D5_award_value_gaps": d5_value_gaps,
     "D8_irregular_expenditure_trend": d8_irregular_trend,
+    "D13_fuel_unit_price": d13_fuel_unit_price,
+    "D16_repeat_awards": d16_repeat_awards,
+    "D17_just_below_threshold": d17_just_below_threshold,
+    "D6_threshold_splitting": d6_threshold_splitting,
 }
 
 FLAG_COLS = ["flag_id", "detector_id", "detector_version", "subject_type", "subject_id", "subject_name",
