@@ -65,6 +65,15 @@ sources:
     cadence: annual
     freshness_slo_days: 30
     mvp: true
+  - id: agsa_annexures
+    name: AGSA general-report annexures 1 and 3 (Excel), MFMA and PFMA 2023-24
+    owner_org: Auditor-General of South Africa
+    url: https://mfma-2024.agsa.co.za/
+    connector: xlsx (thusa/connectors/agsa.py; URLs from each reports site's "Annexures to the report" links)
+    cadence: annual
+    freshness_slo_days: 400
+    mvp: false
+    notes: "Fetched once per file. Amounts are R million despite the 'Amount R' header (KE-013). 2024-25: MFMA annexures are PDF only, PFMA Excel link not found; material irregularities are not in the annexures (KE-013, CHG-2026-011)"
   - id: nt_budget
     name: Vulekamali / ENE / EPRE / s32 monthly statements
     owner_org: National Treasury

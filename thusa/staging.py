@@ -256,3 +256,28 @@ def stage_prices(con, store: RawStore, sdir: Path) -> dict:
                 yield r
     return {"staging.fuel_price": write_table(con, sdir, "staging.fuel_price", fuel(), FUEL_COLS),
             "staging.cpi": write_table(con, sdir, "staging.cpi", cpi(), CPI_COLS)}
+
+
+# ------------------------------------------------------------------------------------- AGSA annexures (CHG-2026-011)
+AGSA_BASE = {"regime": "VARCHAR", "auditee": "VARCHAR", "auditee_key": "VARCHAR", "auditee_category": "VARCHAR",
+             "auditee_type": "VARCHAR", "province": "VARCHAR", "audit_group": "VARCHAR", "section": "VARCHAR",
+             "row_number": "INTEGER", "fy_label": "VARCHAR", "fye": "INTEGER"}
+AGSA_OPINION_COLS = {**AGSA_BASE, "audit_opinion": "VARCHAR", "source_locator": "VARCHAR", "raw_file_id": "VARCHAR"}
+AGSA_UIFW_COLS = {**AGSA_BASE, "uifw_type": "VARCHAR", "amount_r_million": "DOUBLE", "amount_cents": "BIGINT",
+                  "source_locator": "VARCHAR", "raw_file_id": "VARCHAR"}
+
+
+def stage_agsa(con, store: RawStore, sdir: Path) -> dict:
+    """AGSA Annexure 1 and 3 (Excel). Rows keep the file, sheet row and sha256; blanks stay unknown."""
+    def rows(parse, annexures):
+        for f in _files(store, "agsa_annexures"):
+            if not any(f.name.endswith(f"annexure-{a}.xlsx") for a in annexures):
+                continue
+            for r in parse(store.path_of(f).read_bytes(), f.name):
+                r["raw_file_id"] = f.sha256
+                r["auditee_key"] = muni_key(r["auditee"]) if r["regime"] == "MFMA" else None
+                yield r
+    return {"staging.agsa_opinion": write_table(con, sdir, "staging.agsa_opinion",
+                                                rows(parsers.agsa_opinion_rows, ("1", "3")), AGSA_OPINION_COLS),
+            "staging.agsa_uifw": write_table(con, sdir, "staging.agsa_uifw",
+                                             rows(parsers.agsa_uifw_rows, ("1",)), AGSA_UIFW_COLS)}
