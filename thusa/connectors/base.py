@@ -8,7 +8,7 @@ from thusa.raw import RawFile
 @dataclass
 class IngestResult:
     source_id: str
-    status: str = "ok"  # ok | unchanged | partial | failed | blocked | awaiting_manual_drop
+    status: str = "ok"  # ok | unchanged | partial | failed | blocked | awaiting_manual_drop | schema_mismatch
     files: list[RawFile] = field(default_factory=list)
     requests: int = 0
     errors: list[str] = field(default_factory=list)

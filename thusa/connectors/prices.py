@@ -40,8 +40,30 @@ def _slug(title: str) -> str:
     return re.sub(r"[^a-z0-9]+", "-", re.sub(r"(?i)\(zip\)", "", title).lower()).strip("-")
 
 
+# Earlier years: DMPR's own yearly "Fuel Price History" PDFs (same table as the current-year DOCX), linked from the
+# DMPR site; URLs checked 20 Oct 2026 (2025 ends at November; 2015-2018 are not at this path). CHG-2026-009, KE-012.
+_HIST = "https://www.dmpr.gov.za/Portals/0/Resources/Fuel%20Prices%20Adjustments/Fuel%20Prices%20Per%20Zone/{y}/{m}%20{y}/Fuel-Price-History.pdf"
+FUEL_HISTORY_PDFS = {y: _HIST.format(y=y, m="December") for y in range(2019, 2025)} | {2025: _HIST.format(y=2025, m="November")}
+
+
+def run_fuel_history(store: RawStore, fetcher: Fetcher, res: IngestResult) -> None:
+    """Fetch each past year's history PDF once (they no longer change); a failed year is noted, not fatal."""
+    for year, url in sorted(FUEL_HISTORY_PDFS.items()):
+        name = f"fuel-price-history-{year}.pdf"
+        if store.latest(FUEL_ID, name):
+            continue
+        try:
+            resp = fetcher.get(url)
+            if not resp.content.startswith(b"%PDF"):
+                raise FetchError(f"expected a PDF, got {resp.headers.get('content-type')}")
+            res.files.append(store.save(FUEL_ID, name, resp.content, str(resp.url), resp.status_code))
+        except (SourceBlocked, FetchError) as exc:
+            res.notes.append(f"fuel price history {year}: {exc}")
+
+
 def run_fuel(store: RawStore, fetcher: Fetcher, max_docs: int = 1) -> IngestResult:
     res = IngestResult(FUEL_ID)
+    run_fuel_history(store, fetcher, res)
     try:
         docs = fuel_documents(fetcher.get(FUEL_PAGE).text)
         if not docs:

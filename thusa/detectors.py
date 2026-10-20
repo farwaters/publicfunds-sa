@@ -1,4 +1,4 @@
-"""MVP red-flag detectors (D1, D3, D4, D5, D8). Each returns flag dicts; build() writes marts.flag.
+"""MVP red-flag detectors (D1, D3, D4, D5, D8, D13). Each returns flag dicts; build() writes marts.flag.
 
 Flags are automated indicators, not findings. Every flag starts unreviewed; any flag that names a supplier or
 person is 'pending human review' and must never be published as confirmed (ADR-0005).
@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 
 import duckdb
 
@@ -264,12 +265,90 @@ def d8_irregular_trend(con, cfg: dict) -> list[dict]:
     return out
 
 
+# ------------------------------------------------------------------------------------------------ D13
+PPD_PORTAL = "https://data.etenders.gov.za/"
+FUEL_TYPES = {  # UNSPSC commodity codes (class 15101500 Petroleum and distillates) and description words
+    "diesel": ({"15101505", "15101513"}, r"\bdiesel\b", ("diesel_005_inland", "diesel_005_coast")),
+    "petrol": ({"15101506"}, r"\b(petrol|gasoline|unleaded)\b", ("petrol_93_inland", "petrol_95_coast", "petrol_95_inland")),
+    "paraffin": ({"15101502"}, r"\b(paraffin|kerosene)\b", ("paraffin_coast", "paraffin_inland")),
+}
+_LITRE = re.compile(r"(?i)^(l|lt|ltr|ltrs|litre|litres|liter|liters)$")
+
+
+def _fuel_type(code, *texts):
+    for ft, (codes, rx, _g) in FUEL_TYPES.items():
+        if (code or "").strip()[:8] in codes or any(t and re.search(rx, t, re.I) for t in texts):
+            return ft
+    return None
+
+
+def _fy_months(label):
+    """'2024/25' or '2024/2025' -> the 12 (year, month) pairs April 2024 - March 2025; anything else -> None."""
+    m = re.fullmatch(r"\s*(\d{4})\s*/\s*(\d{2}|\d{4})\s*", label or "")
+    if not m or int(m.group(2)[-2:]) != (int(m.group(1)) + 1) % 100:
+        return None
+    y = int(m.group(1))
+    return [(y, mo) for mo in range(4, 13)] + [(y + 1, mo) for mo in range(1, 4)]
+
+
+def d13_fuel_unit_price(con, cfg: dict) -> list[dict]:
+    """Implied price per litre on a PPD fuel line (amount / quantity, litres only) above the highest official DMPR
+    price for that fuel type in the period by more than `threshold`. Lines without litres, a period or enough
+    benchmark months are not assessed (unknown, not 'fine'). Names a supplier: review queue only, never published
+    (publication.yaml never_publish)."""
+    bench: dict = {}
+    for y, mo, grade, c, url, loc in con.execute("SELECT year, month, grade, cents_per_litre, source_url, source_locator "
+                                                  "FROM curated.fuel_price").fetchall():
+        bench.setdefault((y, mo), {})[grade] = (c, url, loc)
+    rows = con.execute("""SELECT department, supplier_name, supplier_key, amount_cents, quantity, unit, payment_date,
+                                 financial_year, item_description, commodity_code, commodity_title, source_file,
+                                 source_sha256, source_locator
+                          FROM curated.payment WHERE amount_cents IS NOT NULL AND quantity > 0""").fetchall()
+    cols = [d[0] for d in con.description]
+    out = []
+    for r in map(lambda x: dict(zip(cols, x)), rows):
+        ft = _fuel_type(r["commodity_code"], r["item_description"], r["commodity_title"])
+        if not ft or not _LITRE.match((r["unit"] or "").strip()):
+            continue
+        if r["payment_date"]:
+            months, period = [(r["payment_date"].year, r["payment_date"].month)], r["payment_date"].strftime("%Y-%m")
+        else:
+            months, period = _fy_months(r["financial_year"]), r["financial_year"]
+        if not months:
+            continue
+        grades = FUEL_TYPES[ft][2]
+        pts = [(bench[m][g], m) for m in months if m in bench for g in grades if g in bench[m]]
+        if len({m for _, m in pts}) < min(len(months), cfg["min_benchmark_months"]):
+            continue
+        (top, top_url, top_loc), top_m = max(pts, key=lambda p: p[0][0])
+        implied = r["amount_cents"] / r["quantity"]
+        ratio = implied / top
+        if ratio <= 1 + cfg["threshold"]:
+            continue
+        sev = "high" if ratio >= cfg["high_ratio"] else "med"
+        sid = "PPD:" + _id(r["department"], r["supplier_key"], ft, period)
+        out.append(_flag(
+            "D13_fuel_unit_price", cfg, "payment_line", sid, r["supplier_name"], None, period, sev, round(ratio, 2),
+            f"{r['department']}: {ft} at about R{implied / 100:,.2f}/litre vs official up to R{top / 100:,.2f}/litre ({period})",
+            f"A Procurement Payments Dashboard line shows {_rand(r['amount_cents'])} paid to {r['supplier_name']} for "
+            f"{r['quantity']:,.0f} litres of {ft}, about R{implied / 100:,.2f} per litre. The highest official DMPR price "
+            f"for {ft} in {period} was R{top / 100:,.2f} per litre ({top_m[0]}-{top_m[1]:02d}). Diesel and paraffin "
+            "figures are wholesale list prices (pump prices are a little higher), and PPD lines are yearly totals per "
+            "department, supplier and item; LOGIS quantities can be averages over an item group (PPD user guide, "
+            "section 7). A data or unit error is possible. Pending human review; not published.",
+            [{"label": "Procurement Payments Dashboard export", "url": PPD_PORTAL, "file": r["source_file"],
+              "locator": r["source_locator"], "sha256": r["source_sha256"]},
+             {"label": "DMPR Fuel Price History", "url": top_url, "locator": top_loc}], True))
+    return out
+
+
 DETECTORS = {
     "D1_overspend_vs_budget": d1_overspend,
     "D3_restricted_supplier_awarded": d3_restricted_awarded,
     "D4_supplier_concentration": d4_concentration,
     "D5_award_value_gaps": d5_value_gaps,
     "D8_irregular_expenditure_trend": d8_irregular_trend,
+    "D13_fuel_unit_price": d13_fuel_unit_price,
 }
 
 FLAG_COLS = ["flag_id", "detector_id", "detector_version", "subject_type", "subject_id", "subject_name",
