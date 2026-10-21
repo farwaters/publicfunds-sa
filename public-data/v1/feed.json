@@ -7,6 +7,13 @@
  "language": "en-ZA",
  "items": [
   {
+   "id": "B20261021T010815Z-9f9d2a9002f94ee7",
+   "url": "https://farwaters.github.io/publicfunds-sa/apps/public-dashboard/#/changes",
+   "title": "New public data: build B20261021T010815Z",
+   "content_text": "+539 fuel price rows (now 609). +14 hidden leads awaiting review (now 349).",
+   "date_published": "2026-10-21T03:08:54+02:00"
+  },
+  {
    "id": "B20261020T011050Z-d79f4fc6f7950fc2",
    "url": "https://farwaters.github.io/publicfunds-sa/apps/public-dashboard/#/changes",
    "title": "New public data: build B20261020T011050Z",
