@@ -281,8 +281,10 @@ def fuel_history_pdf_rows(blob: bytes, name: str = "") -> list[dict]:
     """Rows of a yearly DMPR 'Fuel Price History' PDF (same 7-column table as the DOCX). Each month row must
     yield exactly 7 numbers; rows that don't (PDF text splits some figures) are skipped and stay unknown -
     figures are never guessed or re-joined beyond a thousands gap like '2 112.00'. A decimal comma typed by the
-    publisher ('1882,00', '1525,958': 3-4 digits, a comma, then 2-3 decimals, so never a thousands separator)
-    is read as the decimal point it stands for (CHG-2026-019)."""
+    publisher ('1882,00', '1525,958': 3-4 digits, a comma, then 2-3 decimals) is read as the decimal point it
+    stands for (CHG-2026-019). The token rule can also match a thousands-style group such as '152,525' (and a
+    value like '123,456' would be read as 123.456); what keeps this harmless in these PDFs is the exactly-7-prices
+    gate: a stray extra comma token makes 8 numbers and the row is skipped."""
     import pdfplumber
     out = []
     with pdfplumber.open(io.BytesIO(blob)) as pdf:

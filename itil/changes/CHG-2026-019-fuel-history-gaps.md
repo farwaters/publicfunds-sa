@@ -18,12 +18,15 @@ CSI-037 Census 2022 population (24, open republication and licence still to veri
 
 ## Source feasibility (2026-10-23, SAST)
 - DMPR yearly `Fuel-Price-History.pdf` for 2015-2018 at the CHG-2026-009 path (December and November folders): HTTP 404. Not loaded; stays unknown.
-- The 9 unknown months in KE-012: 5 are rows where DMPR typed a decimal comma (`1882,00`, `2122,87`, `1525,958`, `2429,79`,
-  `2325,00`), which the parser rejected. 2022-09 is split across lines in the PDF text; 2025-12 is not in the November 2025 PDF.
+- The 9 unknown months in KE-012: 5 are rows where DMPR typed a decimal comma, which the parser rejected (checked against
+  `pdftotext -layout` of the raw PDFs): 2021-11 `1882,00`; 2023-01 `2122,87` and `1525,958`; 2023-05 `1439,058`;
+  2023-10 `2429,79`; 2023-12 `2325,00`. 2022-09 is split across lines in the PDF text; 2025-12 is not in the November 2025 PDF.
 
 ## What
 - `fuel_history_pdf_rows` accepts a token of 3-4 digits, a comma and 2-3 decimals and reads the comma as the decimal point.
-  A thousands separator can't match (1-3 leading digits), and a row must still give exactly 7 numbers, else it is skipped.
+  This rule is not proof against thousands separators: a 3-digit group like `152,525` does match (and `123,456` would be read
+  as 123.456). What keeps it harmless in these PDFs is that a row must still give exactly 7 numbers, else it is skipped, so an
+  extra comma token (8 numbers) leaves the month unknown rather than taking wrong values.
 - KE-012 text updated: 2 months stay unknown (2022-09, 2025-12).
 - Public data is not edited in this PR; it changes at the first nightly refresh after a merge.
 
@@ -34,7 +37,8 @@ Example, 2023-01 read: 2110.00 / 2075.00 / 2140.00 / 2122.87 / 2057.67 / 1446.75
 
 ## Tests
 - New `test_fuel_history_pdf_rows_read_publisher_decimal_comma` (decimal comma read; thousands-style `2,122` row still skipped).
-- Full suite: 160 passed, 60 skipped (warehouse tests, no warehouse built in the worktree; same before the change). Dashboard not touched, so `dashboard_check.py` not needed.
+- New `test_fuel_history_pdf_rows_skip_row_with_extra_comma_token` (a `152,525` token makes 8 numbers: row skipped, month stays unknown).
+- Full suite: 161 passed, 60 skipped (warehouse tests, no warehouse built in the worktree; same before the change). Dashboard not touched, so `dashboard_check.py` not needed.
 
 ## popia-review verdict: PASS
 Scan of the diff: no ID, passport, phone, email, address, account numbers, plates, locations, credentials or keys. No persons

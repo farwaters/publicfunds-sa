@@ -83,6 +83,14 @@ def test_fuel_history_pdf_rows_read_publisher_decimal_comma():
     assert {r["month"] for r in rows} == {1}
 
 
+def test_fuel_history_pdf_rows_skip_row_with_extra_comma_token():
+    """A thousands-style '152,525' matches the decimal-comma token rule; the exactly-7-prices gate keeps it harmless:
+    the row yields 8 numbers and is skipped, so the month stays unknown rather than taking wrong values."""
+    rows = parsers.fuel_history_pdf_rows(_history_pdf(2023, [
+        ("Jan", ["2110.00", "2075.00", "2140.00", "2122.87", "2057.67", "1446.758", "1525.958"]),
+        ("Feb", ["2110.00", "2075.00", "152,525", "2140.00", "2122.87", "2057.67", "1446.758", "1525.958"])]), "h.pdf")
+    assert {r["month"] for r in rows} == {1}
+
 def _history_pdf_without_heading():
     import matplotlib.pyplot as plt
     fig = plt.figure()
