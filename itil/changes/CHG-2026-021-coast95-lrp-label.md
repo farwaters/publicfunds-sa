@@ -28,6 +28,7 @@
 ## Data identical before/after
 All raw DMPR files parsed with the parser functions; fingerprint = sha256 of sorted (year, month, grade,
 cents_per_litre, source_locator), first 16 hex: before `2d41afb650c22d16`, 644 rows; after `2d41afb650c22d16`, 644 rows.
+Serialisation: `sha256(json.dumps(sorted([(year, month, grade, cents_per_litre, source_locator)])))`, first 16 hex `2d41afb650c22d16` (Scout reproduced it; `repr()` instead of `json.dumps` gives a different value).
 
 ## Tests
 - `pytest`: 161 passed, 60 skipped.
