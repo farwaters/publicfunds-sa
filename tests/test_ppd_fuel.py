@@ -175,3 +175,91 @@ def test_d13_is_never_published_even_when_confirmed(paths, svc, monkeypatch):
     assert d1["flag_id"] not in {f["flag_id"] for f in confirmed}
     assert "D13_fuel_unit_price" in load_yaml("publication.yaml")["flags"]["never_publish"]
     assert D13["never_publish"] is True and D13["publish_requires_review"] is True
+
+
+def _split_row_pdf() -> bytes:
+    """Like DMPR's 2022 PDF: the 'Sep' row's figures sit on three text lines (above, beside and below the label)."""
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+    fig = plt.figure(figsize=(8.27, 5))
+    fig.text(0.05, 0.95, "Fuel Price History: 2022.", fontsize=10)
+    aug = ["2499.00", "2477.00", "2542.00", "2452.44", "2387.24", "1763.088", "1842.288"]
+    fig.text(0.05, 0.80, "Aug", fontsize=9)
+    for j, v in enumerate(aug):
+        fig.text(0.15 + j * 0.11, 0.80, v, fontsize=9)
+    fig.text(0.05, 0.72, "Sep", fontsize=9)
+    sep = ["2295,00", "2273.00", "2338.00", "2396.10", None, "1681,088", "1760,288"]
+    for j, v in enumerate(sep):
+        if v:
+            fig.text(0.15 + j * 0.11, 0.735, v, fontsize=9)
+    fig.text(0.15 + 4 * 0.11, 0.708, "2330.90", fontsize=9)
+    fig.text(0.05, 0.62, "Oct", fontsize=9)
+    fig.text(0.15, 0.62, "2 000.00", fontsize=9)          # incomplete row: must stay unknown
+    buf = io.BytesIO()
+    fig.savefig(buf, format="pdf")
+    plt.close(fig)
+    return buf.getvalue()
+
+
+def test_fuel_history_pdf_rows_join_split_row_by_word_columns():
+    """CHG-2026-022: a row split over text lines is joined only by word coordinates, one figure per column."""
+    rows = parsers.fuel_history_pdf_rows(_split_row_pdf(), "fuel-price-history-2022.pdf")
+    assert {r["month"] for r in rows} == {8, 9}
+    sep = [r["cents_per_litre"] for r in rows if r["month"] == 9]
+    assert sep == [2295.0, 2273.0, 2338.0, 2396.1, 2330.9, 1681.088, 1760.288]
+
+
+def test_split_row_join_refuses_ambiguous_columns():
+    """Two words in one column (or a missing column) leave the month unknown rather than guessing."""
+    import pdfplumber
+    with pdfplumber.open(io.BytesIO(_split_row_pdf())) as pdf:
+        words = pdf.pages[0].extract_words(x_tolerance=1.5, y_tolerance=2)
+    sep = next(w for w in words if w["text"] == "Sep")
+    assert len(parsers._split_row_by_columns(sep, words)) == 7
+    extra = dict(next(w for w in words if w["text"] == "2330.90"), text="2331.90")
+    extra["top"] += 1; extra["bottom"] += 1
+    assert parsers._split_row_by_columns(sep, words + [extra]) == []
+    assert parsers._split_row_by_columns(sep, [w for w in words if w["text"] != "2330.90"]) == []
+
+
+def _pdf(words) -> bytes:
+    """A PDF with (x, y, text) words, laid out in figure fractions like _history_pdf."""
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+    fig = plt.figure(figsize=(8.27, 5))
+    fig.text(0.05, 0.95, "Fuel Price History: 2025.", fontsize=10)
+    for x, y, t in words:
+        fig.text(x, y, t, fontsize=9)
+    buf = io.BytesIO()
+    fig.savefig(buf, format="pdf")
+    plt.close(fig)
+    return buf.getvalue()
+
+
+_NOV = ["2097.00", "2029.00", "2112.00", "1913.35", "1830.05", "1197.118", "1298.618"]
+_YTD = ["2150.00", "2080.00", "2160.00", "1940.00", "1860.00", "1230.000", "1330.000"]
+
+
+def _row(y, label, vals):
+    return [(0.05, y, label)] + [(0.15 + j * 0.11, y, v) for j, v in enumerate(vals) if v]
+
+
+def test_split_row_join_bounded_by_non_month_label():
+    """An empty last month (Dec) must not take the figures of a nearby 'Ytd'/'Avg' row."""
+    rows = parsers.fuel_history_pdf_rows(_pdf(_row(0.80, "Nov", _NOV) + _row(0.72, "Dec", [])
+                                              + _row(0.695, "Ytd", _YTD) + [(0.05, 0.67, "Avg")]), "h.pdf")
+    assert {r["month"] for r in rows} == {11}
+
+
+def test_split_row_join_rejects_non_price_word_in_band():
+    words = _row(0.80, "Nov", _NOV) + [(0.15 + j * 0.11, 0.735, v) for j, v in enumerate(_NOV[:4] + _NOV[5:])] \
+        + [(0.15 + 4 * 0.11, 0.708, "n/a"), (0.05, 0.72, "Dec"), (0.05, 0.60, "Ytd")]
+    assert {r["month"] for r in parsers.fuel_history_pdf_rows(_pdf(words), "h.pdf")} == {11}
+
+
+def test_split_row_join_needs_a_clean_row_on_the_page():
+    words = [(0.15 + j * 0.11, 0.735, v) for j, v in enumerate(_NOV[:4] + _NOV[5:])] \
+        + [(0.15 + 4 * 0.11, 0.708, _NOV[4]), (0.05, 0.72, "Dec"), (0.05, 0.60, "Ytd")]
+    assert parsers.fuel_history_pdf_rows(_pdf(words), "h.pdf") == []
