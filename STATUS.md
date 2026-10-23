@@ -15,3 +15,4 @@
 - 2026-10-23 SAST: Known unknowns v2 (CHG-2026-017, PR #15, merge 5af857d) is live on PROD; gate locked again.
 - 2026-10-23 16:20 SAST: CHG-2026-018 (IMF CPI to 2026-07) merged as PR #16 (owner GO "GO on live site"); the new series and its note publish at the next nightly refresh. Gate locked.
 - 2026-10-23 17:02 SAST: CHG-2026-019 (fuel price decimal-comma fix) merged as PR #17 (merge 52940de, owner GO "GO" at 17:01 SAST); recovered months publish at the next nightly refresh. Gate locked.
+- 2026-10-23 17:45 SAST: CHG-2026-020 (fuel LRP 93 label) merged as PR #18 (merge ecdac4d, owner GO "GO" at 17:44 SAST); the corrected label publishes at the next nightly refresh. Gate locked.

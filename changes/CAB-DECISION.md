@@ -44,3 +44,8 @@
 - Owner's GO: "GO", given at 17:01 SAST on 23 Oct 2026.
 - Checks (TEAM-PROTOCOL): Scout gave shadow PASS and drift PASS; Validator gave expert PASS and charter PASS; popia-review PASS.
 - Rollback: `git revert -m 1 52940de` (merge commit of PR #17). The gate locks again after the merge.
+
+## 2026-10-23 17:44 SAST: PR #18 (CHG-2026-020, fuel LRP 93 label) to PROD
+- Owner's GO: "GO", given at 17:44 SAST on 23 Oct 2026.
+- Checks (TEAM-PROTOCOL): Validator gave expert PASS (re-check at 969890d) and charter PASS; Scout gave shadow PASS and drift PASS; popia-review PASS.
+- Rollback: `git revert -m 1 ecdac4d` (merge commit of PR #18). The gate locks again after the merge.
