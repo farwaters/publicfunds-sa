@@ -54,3 +54,13 @@
 - Owner's GO: "GO", given at 17:51 SAST on 23 Oct 2026.
 - Checks (TEAM-PROTOCOL): Validator gave expert PASS and charter PASS; Scout gave shadow PASS and drift PASS; popia-review PASS.
 - Rollback: `git revert -m 1 d54e362` (merge commit of PR #19). The gate locks again after the merge.
+
+## 2026-10-23 19:03 SAST: PR #20 (CHG-2026-022, Sept 2022 fuel row) to PROD
+- Owner's GO: "GO on both", given at 19:03 SAST on 23 Oct 2026 (asked in Cavus's chat: "Merge both PublicFunds PRs to the live site?"; verified).
+- Checks (TEAM-PROTOCOL): Validator gave expert PASS and charter PASS; Scout gave shadow PASS and drift PASS; popia-review PASS.
+- Rollback: `git revert -m 1 65bc8dd` (merge commit of PR #20). The gate locks again after the merge.
+
+## 2026-10-23 19:03 SAST: PR #21 (CHG-2026-023, Inland 95 ULP label) to PROD
+- Owner's GO: "GO on both", given at 19:03 SAST on 23 Oct 2026 (asked in Cavus's chat: "Merge both PublicFunds PRs to the live site?"; verified).
+- Checks (TEAM-PROTOCOL): Validator gave expert PASS and charter PASS; Scout gave shadow PASS and drift PASS; popia-review PASS.
+- Rollback: `git revert -m 1 74456bc` (merge commit of PR #21). The gate locks again after the merge.

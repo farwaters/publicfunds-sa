@@ -17,3 +17,5 @@
 - 2026-10-23 17:02 SAST: CHG-2026-019 (fuel price decimal-comma fix) merged as PR #17 (merge 52940de, owner GO "GO" at 17:01 SAST); recovered months publish at the next nightly refresh. Gate locked.
 - 2026-10-23 17:45 SAST: CHG-2026-020 (fuel LRP 93 label) merged as PR #18 (merge ecdac4d, owner GO "GO" at 17:44 SAST); the corrected label publishes at the next nightly refresh. Gate locked.
 - 2026-10-23 17:52 SAST: CHG-2026-021 (fuel Coast 95 LRP label) merged as PR #19 (merge d54e362, owner GO "GO" at 17:51 SAST); the corrected label publishes at the next nightly refresh. Gate locked.
+- 2026-10-23 19:06 SAST: CHG-2026-022 (fuel Sept 2022 split row) merged as PR #20 (merge 65bc8dd, owner GO "GO on both" at 19:03 SAST); 2022-09 publishes at the next nightly refresh. Gate locked.
+- 2026-10-23 19:06 SAST: CHG-2026-023 (fuel Inland 95 ULP label) merged as PR #21 (merge 74456bc, owner GO "GO on both" at 19:03 SAST); the corrected label publishes at the next nightly refresh. Gate locked.
