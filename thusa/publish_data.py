@@ -1,7 +1,7 @@
 """Public data export for the public dashboard (ADR-0010, CHG-2026-006).
 
 `pf publish-data` writes compact, versioned, browser-friendly JSON to public-data/v1/. The folder is committed to git
-and served from raw.githubusercontent.com, so the Grok Build dashboard (and anyone else) can read it.
+and served from the public site (same origin as the dashboard), so the Grok Build dashboard (and anyone else) can read it.
 
 Rules (tests/test_publish_data.py enforces them):
 - Money is integer cents; unknown is null (never 0). Every figure points to a source file entry ("src") with its URL.

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # PublicFunds Bot (Thusa) one-command install for a fresh Grok Bot box. Idempotent: safe to re-run.
 #
-#   curl -fsSL https://raw.githubusercontent.com/farwaters/publicfunds-sa/main/scripts/bootstrap.sh | bash
+#   curl -fsSL https://publicfunds.grokforum.site/scripts/bootstrap.sh | bash
 #   # or, from a checkout:  scripts/bootstrap.sh
 #
 # Steps:

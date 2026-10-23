@@ -1,6 +1,6 @@
 # PublicFunds Bot: Grok Bot template (draft)
 
-**How people get the app:** import the PublicFunds Bot template via its Grok Bot link: **`https://x.ai/bot/7Hr1hnJPXqOQbMmUZ7mTi`**. This is the power-user and reviewer version; everyone else can use the public dashboard at **https://farwaters.github.io/publicfunds-sa/** (no login, no Grok Bot needed).
+**How people get the app:** import the PublicFunds Bot template via its Grok Bot link: **`https://x.ai/bot/7Hr1hnJPXqOQbMmUZ7mTi`**. This is the power-user and reviewer version; everyone else can use the public dashboard at **https://publicfunds.grokforum.site/** (no login, no Grok Bot needed).
 This is a `grokbot://` bot-template share link; the owner will fill it in (D-15). There is no website to visit
 (ADR-0009).
 
@@ -16,7 +16,7 @@ After import:
 > unless it has been confirmed. Everything runs on the bot's own computer, and the code is open source.
 
 ## Memory facts
-1. The PublicFunds code lives in /workspace/publicfunds (public repo https://github.com/farwaters/publicfunds-sa) and is installed or repaired with scripts/bootstrap.sh.
+1. The PublicFunds code lives in /workspace/publicfunds and is installed or repaired with scripts/bootstrap.sh.
 2. The chat is the main interface; the review web app runs only on 127.0.0.1:8765 and is opened in the bot's own browser.
 3. Flags are automated indicators, not findings of wrongdoing; a flag naming a supplier needs two different reviewers to confirm it, and only confirmed flags are ever published.
 4. Reviewer passwords and tokens live in ~/.config/publicfunds/ (mode 600) and are never printed, typed or shared in chat.
@@ -34,7 +34,7 @@ link (CSI-021).
 | Skill `publicfunds-refresh` (`docs/bot/skills/publicfunds-refresh/SKILL.md`) | Daily refresh, run by a routine at the user's chosen time |
 | Skill `publicfunds-review` (`docs/bot/skills/publicfunds-review/SKILL.md`) | Work the flag queue in chat (long-form guide: `docs/bot/review-skill.md`) |
 | Skill `publicfunds-itil` (`docs/bot/skills/publicfunds-itil/SKILL.md`) | Keep change, incident and register records |
-| Repository pointer: `https://github.com/farwaters/publicfunds-sa` (**public**, since 19 Oct 2026; anonymous clone, CHG-2026-004) | Source of the code |
+| Setup pointer: `https://publicfunds.grokforum.site/scripts/bootstrap.sh` (anonymous install, CHG-2026-004, CHG-2026-012) | Source of the code |
 | Routine: none shipped. `getting-started` creates the daily refresh at the importer's chosen time | — |
 
 **Must NOT travel with the template (RSK-020):**

@@ -90,7 +90,8 @@ def test_app_social_card_routes_and_report_link():
     for meta in ("og:title", "og:description", "og:url", "twitter:card"):
         assert f'"{meta}"' in html
     assert "#\\/unknowns$" in html and "#\\/changes$" in html
-    assert "template=data-error.yml" in html and (REPO_ROOT / ".github/ISSUE_TEMPLATE/data-error.yml").is_file()
+    assert "0800 701 701" in html                              # report link removed (CHG-2026-012); hotline kept
+    assert not re.search(r"farwaters|github\.com|github\.io|githubusercontent", html, re.I)
     assert 'href="#/unknowns"' in html and 'href="#/changes"' in html
     root = (REPO_ROOT / "index.html").read_text()
     assert 'property="og:image"' in root and "apps/public-dashboard/" in root

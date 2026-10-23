@@ -13,7 +13,7 @@
    "fail": 0
   }
  },
- "base_url": "https://raw.githubusercontent.com/farwaters/publicfunds-sa/main/public-data/v1/",
+ "base_url": "https://publicfunds.grokforum.site/public-data/v1/",
  "files": [
   {
    "name": "awards-2017.json",
@@ -82,8 +82,8 @@
   },
   {
    "name": "feed.json",
-   "bytes": 1834,
-   "sha256": "0b2695d451ff8e4af4dfa7cc9524e6645f1f045333fe74ce9f2e061f6410e5ac"
+   "bytes": 1765,
+   "sha256": "67f5901595dbfa677be4968f7fce4ce75491669b01b1617845d85fc2ccdb5006"
   },
   {
    "name": "flags.json",

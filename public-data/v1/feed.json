@@ -1,35 +1,35 @@
 {
  "version": "https://jsonfeed.org/version/1.1",
  "title": "PublicFunds SA: new public data",
- "home_page_url": "https://farwaters.github.io/publicfunds-sa/apps/public-dashboard/",
- "feed_url": "https://raw.githubusercontent.com/farwaters/publicfunds-sa/main/public-data/v1/feed.json",
+ "home_page_url": "https://publicfunds.grokforum.site/apps/public-dashboard/",
+ "feed_url": "https://publicfunds.grokforum.site/public-data/v1/feed.json",
  "description": "A new item each time the published South African public-spending data changes.",
  "language": "en-ZA",
  "items": [
   {
    "id": "B20261023T010827Z-699040563cca24c3",
-   "url": "https://farwaters.github.io/publicfunds-sa/apps/public-dashboard/#/changes",
+   "url": "https://publicfunds.grokforum.site/apps/public-dashboard/#/changes",
    "title": "New public data: build B20261023T010827Z",
    "content_text": "Figures updated or corrected in: departments.json, municipalities.json.",
    "date_published": "2026-10-23T03:09:34+02:00"
   },
   {
    "id": "B20261022T010746Z-c5350cba9fc146af",
-   "url": "https://farwaters.github.io/publicfunds-sa/apps/public-dashboard/#/changes",
+   "url": "https://publicfunds.grokforum.site/apps/public-dashboard/#/changes",
    "title": "New public data: build B20261022T010746Z",
    "content_text": "Figures updated or corrected in: departments.json, municipalities.json.",
    "date_published": "2026-10-22T03:08:47+02:00"
   },
   {
    "id": "B20261021T010815Z-9f9d2a9002f94ee7",
-   "url": "https://farwaters.github.io/publicfunds-sa/apps/public-dashboard/#/changes",
+   "url": "https://publicfunds.grokforum.site/apps/public-dashboard/#/changes",
    "title": "New public data: build B20261021T010815Z",
    "content_text": "+539 fuel price rows (now 609). +14 hidden leads awaiting review (now 349).",
    "date_published": "2026-10-21T03:08:54+02:00"
   },
   {
    "id": "B20261020T011050Z-d79f4fc6f7950fc2",
-   "url": "https://farwaters.github.io/publicfunds-sa/apps/public-dashboard/#/changes",
+   "url": "https://publicfunds.grokforum.site/apps/public-dashboard/#/changes",
    "title": "New public data: build B20261020T011050Z",
    "content_text": "Change log started with this build. Figures updated or corrected in: departments.json, municipalities.json.",
    "date_published": "2026-10-20T03:11:28+02:00"
