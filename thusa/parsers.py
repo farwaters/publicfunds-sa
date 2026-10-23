@@ -284,13 +284,17 @@ _PDF_VALUE = re.compile(r"\d{3,4}\.\d{2,3}|\d{3,4},\d{2,3}")
 def _split_row_by_columns(mw: dict, words: list[dict]) -> list[str]:
     """CHG-2026-022: a month row whose figures the PDF prints on several text lines (2022 'Sep'). Joined only by
     word coordinates: every whole-number word whose vertical centre lies in the month's own band (half the gap
-    to the nearest other month label) must fall inside exactly one of the 7 value columns, taken from the x-ranges
+    to the nearest other word in the label column: a month or a row label such as 'Ytd' or 'Avg') must fall inside exactly one of the 7 value columns, taken from the x-ranges
     of rows on the same page that read cleanly, with exactly one word per column. Anything else returns [] and
     the month stays unknown."""
     def cy(w):
         return (w["top"] + w["bottom"]) / 2
     labels = [w for w in words if _PDF_MONTH.match(w["text"]) and abs(w["x0"] - mw["x0"]) < 5]
-    gaps = [abs(cy(w) - cy(mw)) for w in labels if w is not mw]
+    # Any other word in the label column (month or not, e.g. 'Ytd', 'Avg') bounds the band, so the first and last
+    # months cannot reach into a heading or a summary row.
+    fences = [w for w in words if w is not mw and abs(w["x0"] - mw["x0"]) < 15 and w["x1"] <= mw["x1"] + 15
+              and not re.fullmatch(r"[\d.,]+", w["text"])]
+    gaps = [abs(cy(w) - cy(mw)) for w in fences]
     if not gaps:
         return []
     half = min(gaps) / 2

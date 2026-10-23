@@ -31,10 +31,19 @@
 typed with a decimal comma, read as in CHG-2026-019), identical to `pdftotext -layout` of the raw PDF and of DMPR's September 2022 PDF.
 Fingerprint, sha256 of json.dumps(sorted([(year, month, grade, cents_per_litre, source_locator)])) over all loaded yearly PDFs, first 16 hex:
 before `6c45fe5e9117e0ce` (574 rows) -> after `80bc13d78db54047` (581 rows). Diff: 0 rows removed or changed, 7 added (2022-09 only).
+How computed: every `data/raw/dmpr_fuel/*/*.pdf` in the local raw store, sorted by path, parsed with
+`fuel_history_pdf_rows(blob, os.path.basename(path))`; tuples sorted; `hashlib.sha256(json.dumps(tuples).encode()).hexdigest()[:16]`
+(default `json.dumps` separators). The fingerprint is path-dependent: `source_locator` embeds the file name passed to the parser
+(`fuel-price-history-2022.pdf#page1-Sep`), so a different name or a full path gives a different hash for the same figures.
+Compare fingerprints only when computed the same way.
+
+Review fixes (same PR): the band is also bounded by any non-month word in the label column ('Ytd', 'Avg'), so an empty first or
+last month cannot take a summary row; new tests for that guard (fails without it), a non-price word in the band, and a page with
+no clean rows (returns nothing). Fingerprint unchanged after the fixes: `80bc13d78db54047`, 581 rows.
 
 ## Tests
 - New `test_fuel_history_pdf_rows_join_split_row_by_word_columns` and `test_split_row_join_refuses_ambiguous_columns`.
-- Full suite: 163 passed, 60 skipped (warehouse tests, no warehouse in the worktree; 161 + 60 before).
+- Full suite: 166 passed, 60 skipped after the review fixes (163 at first push) (warehouse tests, no warehouse in the worktree; 161 + 60 before).
 
 ## popia-review verdict: PASS
 Diff scanned: no ID, passport, phone, email, address, account numbers, plates, locations, credentials or keys. No persons or suppliers:

@@ -221,3 +221,45 @@ def test_split_row_join_refuses_ambiguous_columns():
     extra["top"] += 1; extra["bottom"] += 1
     assert parsers._split_row_by_columns(sep, words + [extra]) == []
     assert parsers._split_row_by_columns(sep, [w for w in words if w["text"] != "2330.90"]) == []
+
+
+def _pdf(words) -> bytes:
+    """A PDF with (x, y, text) words, laid out in figure fractions like _history_pdf."""
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+    fig = plt.figure(figsize=(8.27, 5))
+    fig.text(0.05, 0.95, "Fuel Price History: 2025.", fontsize=10)
+    for x, y, t in words:
+        fig.text(x, y, t, fontsize=9)
+    buf = io.BytesIO()
+    fig.savefig(buf, format="pdf")
+    plt.close(fig)
+    return buf.getvalue()
+
+
+_NOV = ["2097.00", "2029.00", "2112.00", "1913.35", "1830.05", "1197.118", "1298.618"]
+_YTD = ["2150.00", "2080.00", "2160.00", "1940.00", "1860.00", "1230.000", "1330.000"]
+
+
+def _row(y, label, vals):
+    return [(0.05, y, label)] + [(0.15 + j * 0.11, y, v) for j, v in enumerate(vals) if v]
+
+
+def test_split_row_join_bounded_by_non_month_label():
+    """An empty last month (Dec) must not take the figures of a nearby 'Ytd'/'Avg' row."""
+    rows = parsers.fuel_history_pdf_rows(_pdf(_row(0.80, "Nov", _NOV) + _row(0.72, "Dec", [])
+                                              + _row(0.695, "Ytd", _YTD) + [(0.05, 0.67, "Avg")]), "h.pdf")
+    assert {r["month"] for r in rows} == {11}
+
+
+def test_split_row_join_rejects_non_price_word_in_band():
+    words = _row(0.80, "Nov", _NOV) + [(0.15 + j * 0.11, 0.735, v) for j, v in enumerate(_NOV[:4] + _NOV[5:])] \
+        + [(0.15 + 4 * 0.11, 0.708, "n/a"), (0.05, 0.72, "Dec"), (0.05, 0.60, "Ytd")]
+    assert {r["month"] for r in parsers.fuel_history_pdf_rows(_pdf(words), "h.pdf")} == {11}
+
+
+def test_split_row_join_needs_a_clean_row_on_the_page():
+    words = [(0.15 + j * 0.11, 0.735, v) for j, v in enumerate(_NOV[:4] + _NOV[5:])] \
+        + [(0.15 + 4 * 0.11, 0.708, _NOV[4]), (0.05, 0.72, "Dec"), (0.05, 0.60, "Ytd")]
+    assert parsers.fuel_history_pdf_rows(_pdf(words), "h.pdf") == []
