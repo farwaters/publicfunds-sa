@@ -11,6 +11,8 @@
         authenticates with PF_REVIEW_TOKEN or --token-file (default ~/.config/publicfunds/review_token)
   pf review verify                         check the audit hash chain
   pf review export [--format csv|json] [--all] [--out PATH]
+  pf case export FLAG_ID [--out DIR] [--pdf]   case referral pack (Markdown) for one hidden lead, for independent
+                                           checking; no personal information; default DIR data/cases/ (gitignored)
   pf serve [--host 127.0.0.1] [--port 8765]
   pf publish                               rebuild the public static snapshot (dist/public/)
   pf publish-data [--out DIR]              write the public JSON data for the dashboard (public-data/v1/);
@@ -187,6 +189,18 @@ def cmd_review(a) -> int:
     return 0
 
 
+def cmd_case(a) -> int:
+    from thusa.review.casepack import UnsafePack, export
+    out_dir = Path(a.out) if a.out else get_paths().root / "data" / "cases"
+    try:
+        out(export(_svc(), a.flag_id, out_dir, a.pdf))
+    except LookupError as e:
+        raise CliError(str(e), 2)
+    except UnsafePack as e:
+        raise CliError(str(e), 3)
+    return 0
+
+
 def cmd_serve(a) -> int:
     import uvicorn
 
@@ -257,6 +271,13 @@ def main(argv: list[str] | None = None) -> int:
     e.add_argument("--all", action="store_true", help="include flags with no decision yet")
     e.add_argument("--out")
 
+    c = sub.add_parser("case", help="case referral pack for one hidden lead")
+    cs = c.add_subparsers(dest="action", required=True)
+    ce = cs.add_parser("export")
+    ce.add_argument("flag_id")
+    ce.add_argument("--out", help="output directory (default: <repo>/data/cases, gitignored)")
+    ce.add_argument("--pdf", action="store_true", help="also write a PDF (needs pandoc)")
+
     s = sub.add_parser("serve", help="run the web app")
     s.add_argument("--host", default="127.0.0.1")
     s.add_argument("--port", type=int, default=8765)
@@ -270,7 +291,7 @@ def main(argv: list[str] | None = None) -> int:
 
     a = ap.parse_args(argv)
     try:
-        return {"reviewer": cmd_reviewer, "review": cmd_review, "serve": cmd_serve, "publish": cmd_publish,
+        return {"reviewer": cmd_reviewer, "review": cmd_review, "case": cmd_case, "serve": cmd_serve, "publish": cmd_publish,
                 "publish-data": cmd_publish_data}[a.cmd](a)
     except CliError as e:
         print(json.dumps({"error": str(e), "exit_code": e.code}), file=sys.stderr)
