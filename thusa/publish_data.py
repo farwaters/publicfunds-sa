@@ -346,6 +346,9 @@ def prices(con, refs: SourceRefs) -> dict:
                      "(prices change on the first Wednesday of the month)",
                      "grades": [{"id": g, "label": lbl} for g, lbl in FUEL_GRADES],
                      "about": ["Petrol prices are regulated pump prices (inland = Gauteng, coast = coastal zones).",
+                               "DMPR's history table heads the 93 inland column 'Leaded Replacement Petrol'. The "
+                               "October 2026 DMPR price breakdown gives one inland price for '93 ULP & LRP', equal to "
+                               "this column; whether the two grades shared a price in every earlier month is unknown.",
                                "Diesel and illuminating paraffin are not regulated at the pump, so retail prices can "
                                "differ from these official figures.",
                                "Only months published in the loaded DMPR history table are included (KE-012)."],
