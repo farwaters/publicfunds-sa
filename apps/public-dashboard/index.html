@@ -620,6 +620,22 @@ async function vUnknowns() {
     const top = Object.entries(P.reasons).sort((a, b) => b[1] - a[1])[0];
     return {...P, tot, known: pct(tot.P, tot.n), top};
   }).sort((a, b) => (a.known ?? 101) - (b.known ?? 101));
+  /* CSI-028: trend per financial year and per-municipality ranking, from coverage.json only (same counting rules as above) */
+  const trend = yIdx.map(k => {
+    const t = {}, all = {P: 0, n: 0};
+    for (const dt of cov.data_types) {
+      let P = 0, n = 0;
+      for (const e of cov.entities) { if (!byId[e.id]) continue; const st = e.c[dt][k]; if (st === "-" || st === "?" || st == null) continue; n++; if (st === "P") P++; }
+      t[dt] = pct(P, n); all.P += P; all.n += n;
+    }
+    return {fy: cov.fy_labels[k], t, all: pct(all.P, all.n)};
+  });
+  const ranking = cov.entities.filter(e => byId[e.id]).map(e => {
+    const c = {P: 0, p: 0, m: 0, n: 0};
+    for (const dt of cov.data_types) for (const k of yIdx) { const st = e.c[dt][k]; if (st === "-" || st === "?" || st == null) continue; c.n++; c[st]++; }
+    const m = byId[e.id];
+    return {id: e.id, name: m.name, code: m.code, province: m.province, ...c, known: pct(c.P, c.n)};
+  }).filter(r => r.n).sort((a, b) => a.known - b.known || b.m - a.m || a.name.localeCompare(b.name));
   const meter = v => v == null ? unknown() : el("span", {}, el("span", {class: "bar-meter", style: `width:${Math.max(2, v * 0.6)}px`, "aria-hidden": "true"}), num(v, 1) + "%");
   setView("Known unknowns, by province",
     el("p", {class: "lead"}, `What share of the data a taxpayer should be able to see is actually published, for each province's municipalities. Financial years ${fyLabel(h.fye_min)} to ${fyLabel(h.fye_max)} (years whose audits are due). Lowest first: the biggest blind spots are at the top.`),
@@ -636,6 +652,22 @@ async function vUnknowns() {
       {label: "Province", value: r => PROVINCES[r.code] || r.code},
       ...cov.data_types.map(dt => ({label: DT[dt] || dt, num: 1, render: r => meter(r.t[dt] ? pct(r.t[dt].P, r.t[dt].n) : null), value: r => r.t[dt] ? pct(r.t[dt].P, r.t[dt].n) : null}))],
       rows, "known-unknowns-by-type.csv"),
+    el("h2", {}, "Trend over time (CSI-028)"),
+    table("Share of municipality data items fully published, per financial year and data type", [
+      {label: "Financial year", value: r => r.fy},
+      {label: "All types", num: 1, render: r => meter(r.all), value: r => r.all},
+      ...cov.data_types.map(dt => ({label: DT[dt] || dt, num: 1, render: r => meter(r.t[dt]), value: r => r.t[dt]}))],
+      trend, "known-unknowns-by-year.csv"),
+    el("h2", {}, "Municipalities with the most missing data (CSI-028)"),
+    table("Municipalities ranked by share of data items fully published, lowest first", [
+      {label: "Municipality", render: r => el("a", {href: `#/m/${r.id}`}, r.name), value: r => r.name},
+      {label: "Code", csvOnly: 1, value: r => r.code},
+      {label: "Province", value: r => PROVINCES[r.province] || r.province},
+      {label: "Fully published", num: 1, render: r => meter(r.known), value: r => r.known},
+      {label: "Partly published", num: 1, value: r => r.p},
+      {label: "Missing", num: 1, value: r => r.m},
+      {label: "Data items", num: 1, value: r => r.n}],
+      ranking, "known-unknowns-by-municipality.csv", {limit: 25}),
     el("div", {class: "card small"}, el("p", {}, "How to read this: a municipality-year counts as ", el("b", {}, "fully published"), " when the official source has that data type for that year, ",
       el("b", {}, "partly published"), " when parts are missing, and ", el("b", {}, "missing"), " when nothing was found. A gap is not evidence of wrongdoing: often the audit is not due yet, or the source has not published it. Tender coverage is low because eTenders only started publishing award records in 2021 and many awards have no value (KE-007)."),
       el("p", {}, el("a", {href: "#/coverage"}, "See each municipality on the coverage map →"))));
