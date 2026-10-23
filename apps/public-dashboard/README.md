@@ -5,7 +5,7 @@ This is the public, no-login website. It is published with **Grok Build** at a g
 
 - `index.html` is one self-contained static page (plain JavaScript, no build step and no dependencies).
   - It reads the public data export `public-data/v1/` (`pf publish-data`).
-  - By default the data comes from `https://raw.githubusercontent.com/farwaters/publicfunds-sa/main/public-data/v1/`.
+  - By default the data comes from the same origin (`../../public-data/v1/`, i.e. `https://publicfunds.grokforum.site/public-data/v1/`).
     These URLs only work for files that are merged to `main`.
   - To use another data location, add `?data=<base url>` or set `window.PUBLICFUNDS_DATA_BASE`.
 - `GROK_BUILD_PROMPT.md` is the prompt you paste into grok.com Build mode to publish the app.

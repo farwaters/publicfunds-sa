@@ -9,16 +9,15 @@ It must work for anyone with a browser: no login, no Grok account, no app instal
 
 ## Start from the existing code
 - A complete working version already exists as one self-contained file:
-  https://raw.githubusercontent.com/farwaters/publicfunds-sa/main/apps/public-dashboard/index.html
-  (repo: https://github.com/farwaters/publicfunds-sa, folder `apps/public-dashboard/`).
+  https://publicfunds.grokforum.site/apps/public-dashboard/index.html
 - Use it as the starting point and keep its behaviour, texts and rules.
 - You may restyle it, or split it into components, but don't drop features or safeguards.
 - If you cannot fetch the URL, ask me to paste the file.
 
 ## Data (read-only, fetched in the browser)
-- Base URL: `https://raw.githubusercontent.com/farwaters/publicfunds-sa/main/public-data/v1/`
+- Base URL: `https://publicfunds.grokforum.site/public-data/v1/`
   - Make the base URL configurable. The existing code reads `?data=<url>` or `window.PUBLICFUNDS_DATA_BASE`.
-  - The files are static JSON, served with CORS by GitHub, and updated after each successful daily data refresh.
+  - The files are static JSON, served with CORS (`Access-Control-Allow-Origin: *`), and updated after each successful daily data refresh.
 - No backend and no database are needed. Don't copy the data into the app; always fetch it live, so the site stays
   current.
 - Schema `publicfunds.public-data/v1`. Start from `manifest.json`.

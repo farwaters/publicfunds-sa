@@ -7,21 +7,21 @@
 <link rel="icon" href="data:,">
 <meta name="description" content="PublicFunds SA: where South African public money goes, from official open data - with the gaps shown honestly.">
 <title>PublicFunds SA - follow South Africa's public money</title>
-<link rel="canonical" href="https://farwaters.github.io/publicfunds-sa/apps/public-dashboard/">
+<link rel="canonical" href="https://publicfunds.grokforum.site/apps/public-dashboard/">
 <meta name="theme-color" content="#0b6e4f">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="PublicFunds SA">
 <meta property="og:title" content="PublicFunds SA - follow South Africa's public money">
 <meta property="og:description" content="Budgets, spending, audit results and tenders for every municipality and national department, from official open data - with the gaps shown.">
-<meta property="og:url" content="https://farwaters.github.io/publicfunds-sa/apps/public-dashboard/">
-<meta property="og:image" content="https://farwaters.github.io/publicfunds-sa/apps/public-dashboard/og-card.png">
+<meta property="og:url" content="https://publicfunds.grokforum.site/apps/public-dashboard/">
+<meta property="og:image" content="https://publicfunds.grokforum.site/apps/public-dashboard/og-card.png">
 <meta property="og:image:width" content="1200"><meta property="og:image:height" content="630">
 <meta property="og:image:alt" content="PublicFunds SA: follow South Africa's public money. Indicators, not findings.">
 <meta property="og:locale" content="en_ZA">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="PublicFunds SA - follow South Africa's public money">
 <meta name="twitter:description" content="Budgets, spending, audits and tenders from official open data, with the gaps shown.">
-<meta name="twitter:image" content="https://farwaters.github.io/publicfunds-sa/apps/public-dashboard/og-card.png">
+<meta name="twitter:image" content="https://publicfunds.grokforum.site/apps/public-dashboard/og-card.png">
 <link rel="alternate" type="application/feed+json" title="PublicFunds SA: new public data" href="../../public-data/v1/feed.json">
 <style>
 :root{--ink:#14202b;--muted:#566370;--line:#d8dee4;--bg:#f6f8fa;--card:#fff;--brand:#0b6e4f;--brand-ink:#fff;--accent:#c8860d;
@@ -93,21 +93,19 @@ details summary{cursor:pointer;font-weight:600}
 </header>
 <div class="notice" role="note"><p><b>Indicators, not findings.</b> This site shows official public data as published, gaps included. Blank or "unknown" means the figure is not available, never zero. Flags are automated indicators that people check; only flags confirmed by review are shown.</p></div>
 <main id="main" tabindex="-1"><div id="view" aria-live="polite" aria-busy="true"><p>Loading…</p></div></main>
-<footer><p id="foot">PublicFunds SA uses official open data from National Treasury, the Auditor-General (via Municipal Money), eTenders, the Department of Mineral and Petroleum Resources and Statistics South Africa (via the OECD). Code and data: <a href="https://github.com/farwaters/publicfunds-sa" rel="noopener">github.com/farwaters/publicfunds-sa</a>.</p>
-<p><a id="report" href="https://github.com/farwaters/publicfunds-sa/issues/new?template=data-error.yml" rel="noopener nofollow" target="_blank">Report an error in the data or the site</a> · <a href="#/changes">What's new</a> · <a id="feedlink" href="../../public-data/v1/feed.json">Data feed (JSON Feed)</a></p></footer>
+<footer><p id="foot">PublicFunds SA uses official open data from National Treasury, the Auditor-General (via Municipal Money), eTenders, the Department of Mineral and Petroleum Resources and Statistics South Africa (via the OECD). Open data: <a href="../../public-data/v1/manifest.json">public-data/v1</a>.</p>
+<p>To report suspected corruption, call the National Anti-Corruption Hotline: 0800 701 701. · <a href="#/changes">What's new</a> · <a id="feedlink" href="../../public-data/v1/feed.json">Data feed (JSON Feed)</a></p></footer>
 <script>
 "use strict";
 /* ---------------------------------------------------------------- config */
-const DEFAULT_BASE = "https://raw.githubusercontent.com/farwaters/publicfunds-sa/main/public-data/v1/";
 /* Data location: ?data=<url> or window.PUBLICFUNDS_DATA_BASE override; otherwise the copy deployed alongside the app
-   (GitHub Pages: ./public-data/v1/, same origin), falling back to the raw GitHub URL. */
+   (same origin, relative path ../../public-data/v1/). */
 const CANDIDATES = (() => {
   const q = new URLSearchParams(location.search).get("data") || window.PUBLICFUNDS_DATA_BASE;
   const norm = v => { try { const u = new URL(v, location.href); if (!/^https?:$/.test(u.protocol)) return null; return u.href.replace(/\/?$/, "/"); } catch (e) { return null; } };
   if (q && norm(q)) return [norm(q)];
-  // Same origin: the app is served from the repo layout (GitHub Pages from main), so the data sits two levels up.
-  const same = /^https?:$/.test(location.protocol) ? [norm(location.pathname.includes("/apps/public-dashboard/") ? "../../public-data/v1/" : "./public-data/v1/")] : [];
-  return [...same, DEFAULT_BASE];
+  // Same origin: the app is served from the repo layout, so the data sits two levels up.
+  return [new URL(location.pathname.includes("/apps/public-dashboard/") ? "../../public-data/v1/" : "./public-data/v1/", location.href).href];
 })();
 let BASE = CANDIDATES[0];
 const PROVINCES = {EC:"Eastern Cape",FS:"Free State",GT:"Gauteng",KZN:"KwaZulu-Natal",LP:"Limpopo",MP:"Mpumalanga",NC:"Northern Cape",NW:"North West",WC:"Western Cape"};
@@ -677,13 +675,8 @@ async function route() {
   $("#main").focus({preventScroll: true}); window.scrollTo(0, 0);
   setReportLink();
 }
-/* "Report an error": a GitHub issue form, prefilled with the page address only (no personal data). */
+/* Footer links ("Report an error" link removed for now, CHG-2026-012). */
 function setReportLink() {
-  const u = new URL("https://github.com/farwaters/publicfunds-sa/issues/new");
-  u.searchParams.set("template", "data-error.yml");
-  u.searchParams.set("title", "[data] " + document.title.replace(/ · PublicFunds SA$/, ""));
-  u.searchParams.set("page", location.href.split("?data=")[0]);
-  $("#report").href = u.href;
   $("#feedlink").href = BASE + "feed.json";
 }
 $("#navtoggle").addEventListener("click", () => { const n = $("#nav"), o = n.classList.toggle("open"); $("#navtoggle").setAttribute("aria-expanded", String(o)); });

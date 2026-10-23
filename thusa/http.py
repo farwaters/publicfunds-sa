@@ -11,7 +11,7 @@ from typing import Callable
 
 import httpx
 
-USER_AGENT = "Thusa/0.1 public-interest research (github.com/farwaters/publicfunds-sa)"
+USER_AGENT = "Thusa/0.1 public-interest research (publicfunds.grokforum.site)"
 RETRY_STATUS = {429, 500, 502, 503, 504}
 BLOCK_STATUS = {401, 403, 451}
 

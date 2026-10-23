@@ -15,7 +15,7 @@ body:
     attributes:
       label: Page address
       description: The dashboard link where you saw it (filled in automatically when you use the site's "Report an error" link).
-      placeholder: https://farwaters.github.io/publicfunds-sa/apps/public-dashboard/#/m/MUN:BUF
+      placeholder: https://publicfunds.grokforum.site/apps/public-dashboard/#/m/MUN:BUF
     validations:
       required: true
   - type: dropdown

@@ -1,8 +1,8 @@
 # Public data export (pf publish-data -> public-data/v1/, CHG-2026-006, ADR-0010).
 # Plain-language text shown on the public dashboard. Changing what is exported is a Normal-high change.
 schema_version: "1.0.0"
-base_url: "https://raw.githubusercontent.com/farwaters/publicfunds-sa/main/public-data/v1/"
-site_url: "https://farwaters.github.io/publicfunds-sa/apps/public-dashboard/"   # public dashboard (GitHub Pages, ADR-0011)
+base_url: "https://publicfunds.grokforum.site/public-data/v1/"
+site_url: "https://publicfunds.grokforum.site/apps/public-dashboard/"   # public dashboard (custom domain, CHG-2026-012)
 size_budget_bytes: 5000000        # all files together (tests enforce it)
 file_budget_bytes: 2000000        # any single file
 detectors:
