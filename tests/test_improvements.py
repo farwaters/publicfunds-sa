@@ -95,3 +95,19 @@ def test_app_social_card_routes_and_report_link():
     assert 'href="#/unknowns"' in html and 'href="#/changes"' in html
     root = (REPO_ROOT / "index.html").read_text()
     assert 'property="og:image"' in root and "apps/public-dashboard/" in root
+
+
+def test_glossary_page_route_nav_and_cited_thresholds():
+    """CHG-2026-013: plain-language glossary; limits must match config/detectors.yaml."""
+    import yaml
+    html = APP.read_text()
+    assert "#\\/glossary$" in html and 'href="#/glossary"' in html
+    th = yaml.safe_load((REPO_ROOT / "config" / "detectors.yaml").read_text())["procurement_thresholds"]
+    shown = {"metro": "R750 000", "local": "R300 000", "district": "R200 000"}
+    for k, v in th["mfma"]["rand"].items():
+        assert shown[k] == "R" + f"{v:,}".replace(",", " ") and shown[k] in html
+    assert "R" + f"{th['pfma']['rand']['department']:,}".replace(",", " ") in html
+    for u in ("Municipal%20SCM%20Amendment%20Regulations.pdf", "PFM%20SCM%20Instruction%20No.%2002%20of%202021-22"):
+        assert u in html
+    for d in ("D1", "D3", "D4", "D5", "D8", "D13", "D6", "D16", "D17"):
+        assert f'det("{d}"' in html

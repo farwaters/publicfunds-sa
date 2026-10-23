@@ -22,7 +22,7 @@ ROOT = Path(__file__).resolve().parents[1]
 PAGES = [("home", "#/"), ("coverage", "#/coverage"), ("municipalities", "#/municipalities"),
          ("municipality", "#/m/MUN:BUF"), ("departments", "#/departments"), ("department", None),
          ("tenders", "#/tenders"), ("flags", "#/flags"), ("tools", "#/tools"), ("compare", "#/tools/compare?a=MUN:BUF&b=MUN:NMA&y=2024"),
-         ("sources", "#/sources"), ("unknowns", "#/unknowns"), ("changes", "#/changes")]
+         ("sources", "#/sources"), ("unknowns", "#/unknowns"), ("changes", "#/changes"), ("glossary", "#/glossary")]
 # Optional accessibility scan with axe-core (npm i axe-core); serious/critical WCAG 2.x A/AA violations fail the check.
 AXE_JS = next((Path(x) for x in (os.environ.get("AXE_JS", ""), "/workspace/tools/web/node_modules/axe-core/axe.min.js",
                                  str(ROOT / "node_modules/axe-core/axe.min.js")) if x and Path(x).is_file()), None)
