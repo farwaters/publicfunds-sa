@@ -15,17 +15,23 @@ reviewer-found correctness defect. A wrong label on public official data mislead
 verifiable fix against raw files already on disk, so it goes first; CSI-036/037 stay next.
 
 ## Evidence (raw files in data/raw/dmpr_fuel/, read 2026-10-23)
-- Every yearly `Fuel-Price-History.pdf` 2019-2025 heads the Petrol block with two sub-groups: "Leaded Replacement Petrol"
-  over the first column (Inland 93) and "Unleaded" over Coast 95 / Inland 95.
-- The October 2026 ZIP's "History of Fuel Prices" DOCX has the same heading.
-- The October 2026 "Breakdown of Prices" DOCX gives one price for "93 ULP & LRP" inland: 2988.00 c/l, equal to the
-  history table's October 2026 column-1 value. So for that month the LRP column is also the ULP 93 inland price.
+- Re-verified 2026-10-23 after validator finding: the October 2026 "History of Fuel Prices" DOCX table XML gives
+  "Leaded Replacement Petrol" `gridSpan=2` over columns 1 and 2 (Inland 93, Coast 95) and "Unleaded" span 1 over column 3
+  (Inland 95) only. The 2019-2025 yearly PDFs (text layout) show the same heading order and are consistent with that
+  span. (The first version of this RFC wrongly said LRP covered column 1 only and Unleaded both 95 columns.)
+- The October 2026 "Breakdown of Prices" DOCX prices ULP and LRP together for every petrol line: "93 ULP & LRP" Inland
+  2988.00 and Coastal 2901.00, "95 ULP & LRP" Inland 3025.00 and Coastal 2938.00 c/l. Column 1 (2988.00) and column 2
+  (2938.00) of the history table match the Inland 93 and Coast 95 lines.
 - Not shown by any loaded document: that LRP and ULP 93 shared a price in every earlier month. Stated as unknown.
 
 ## Change
-- Label `petrol_93_inland`: "Petrol 93, inland" -> "Petrol 93 inland (Leaded Replacement Petrol column)". Grade id unchanged
+- Label `petrol_93_inland`: "Petrol 93, inland" -> "Leaded Replacement Petrol (LRP) 93, inland". Grade id unchanged
   (no schema change, no data change).
 - One plain-language line added to `prices.fuel.about` with the evidence above and the unknown.
+- Scope is column 1 only. Column 2 (`petrol_95_coast`, label "Petrol 95, coast") also sits under the LRP heading per the
+  evidence above; relabelling it is a separate follow-up change, **not done here**.
+- The dashboard does not render `fuel.about` (apps/public-dashboard/index.html renders only `dep.about` and `ts.about`),
+  so the new note exists only in prices.json for now. Rendering it is a possible follow-up; nothing is rendered in this PR.
 - `public-data/` is not edited by hand; the nightly export picks up the new text after a merge.
 
 ## Tests
