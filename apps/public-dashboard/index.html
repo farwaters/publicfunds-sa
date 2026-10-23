@@ -89,7 +89,7 @@ details summary{cursor:pointer;font-weight:600}
   <nav id="nav" aria-label="Main"><ul>
     <li><a href="#/">Home</a></li><li><a href="#/coverage">Data coverage</a></li><li><a href="#/municipalities">Municipalities</a></li>
     <li><a href="#/departments">National departments</a></li><li><a href="#/tenders">Tenders</a></li><li><a href="#/flags">Flags</a></li>
-    <li><a href="#/tools">Tools</a></li><li><a href="#/unknowns">Known unknowns</a></li><li><a href="#/changes">What's new</a></li><li><a href="#/sources">Sources &amp; method</a></li></ul></nav>
+    <li><a href="#/tools">Tools</a></li><li><a href="#/unknowns">Known unknowns</a></li><li><a href="#/changes">What's new</a></li><li><a href="#/sources">Sources &amp; method</a></li><li><a href="#/glossary">Glossary</a></li></ul></nav>
 </header>
 <div class="notice" role="note"><p><b>Indicators, not findings.</b> This site shows official public data as published, gaps included. Blank or "unknown" means the figure is not available, never zero. Flags are automated indicators that people check; only flags confirmed by review are shown.</p></div>
 <main id="main" tabindex="-1"><div id="view" aria-live="polite" aria-busy="true"><p>Loading…</p></div></main>
@@ -366,7 +366,7 @@ async function vMunicipality(id) {
       {label: "Source", render: r => { const s = (r.d.audited || r.d.adjusted || r.d.budget); return s ? srcLink(mun, s.src) : unknown("none"); }, csvValue: r => { const s = (r.d.audited || r.d.adjusted || r.d.budget); return s ? srcUrl(mun, s.src) : ""; }, csv: "source_url"}],
       rows.filter(r => r.d.budget || r.d.adjusted || r.d.audited), `${m.code}-budget-vs-actual.csv`),
     el("h2", {}, "Irregular, fruitless & wasteful and unauthorised expenditure"),
-    el("p", {class: "small muted"}, "As reported in the notes to the audited financial statements. Irregular does not necessarily mean money was stolen: it means rules (often procurement rules) were not followed."),
+    el("p", {class: "small muted"}, "As reported in the notes to the audited financial statements. Irregular does not necessarily mean money was stolen: it means rules (often procurement rules) were not followed. ", el("a", {href: "#/glossary"}, "What these terms mean"), "."),
     chart(`Irregular, fruitless and wasteful, and unauthorised expenditure, ${m.name}`, uifwRows.map(r => fyLabel(r.y)), [
       {name: "Irregular", color: "#c8860d", values: uifwRows.map(r => r.d.uifw.irregular ?? null)},
       {name: "Fruitless & wasteful", color: "#c94a3a", values: uifwRows.map(r => r.d.uifw.fruitless_wasteful ?? null)},
@@ -471,7 +471,7 @@ async function vTenders(params) {
 async function vFlags() {
   const f = await load("flags.json");
   const hid = Object.entries(f.hidden_leads.by_detector);
-  setView("Flags", el("div", {class: "card"}, el("p", {}, el("b", {}, "What a flag is. "), f.disclaimer),
+  setView("Flags", el("div", {class: "card"}, el("p", {}, el("b", {}, "What a flag is. "), f.disclaimer, " ", el("a", {href: "#/glossary"}, "What each check means"), "."),
       el("p", {class: "small muted"}, "Rules: ", f.policy.published, "; ", f.policy.four_eyes, ". Unconfirmed leads are ", f.policy.unconfirmed, ".")),
     el("h2", {}, `Confirmed flags (${f.confirmed.length})`),
     f.confirmed.length ? f.confirmed.map(x => el("div", {class: "card", style: "margin:.6rem 0"}, el("div", {class: "small muted"}, "Confirmed by review · ", x.detector_id.split("_")[0], " · ", x.severity, " · ", x.period_label || ""),
@@ -658,11 +658,78 @@ async function vChanges() {
         el("ul", {class: "small"}, Object.entries(e.counts).map(([k, v]) => el("li", {}, `${lbl[k] || k}: ${Number(v).toLocaleString("en-ZA")}`, e.count_changes[k] ? ` (${e.count_changes[k] > 0 ? "+" : ""}${e.count_changes[k].toLocaleString("en-ZA")})` : ""))))))) : el("p", {}, "No entries yet."));
 }
 
+/* ---------------------------------------------------------------- glossary / plain-language explainers (CHG-2026-013) */
+function vGlossary() {
+  const term = (id, name, ...body) => el("section", {class: "card", id: "g-" + id, style: "margin:.6rem 0"}, el("h3", {}, name), ...body);
+  const src = (...l) => el("p", {class: "small muted"}, "Source: ", l.map((x, i) => [i ? " · " : "", x]));
+  const PFMA = "https://www.treasury.gov.za/legislation/pfma/act.pdf", MFMA = "https://www.agsa.co.za/Portals/0/Legislation/Municipal_Finance_Management_Act_MFMA.pdf";
+  const MSCM = "https://mfma.treasury.gov.za/RegulationsandGazettes/Municipal%20SCM%20Amendment%20Regulations.pdf";
+  const PSCM = "https://ocpo.treasury.gov.za/Legislation/Instruction%20Notes/PFM%20SCM%20Instruction%20No.%2002%20of%202021-22%20Procurement%20thresholds%20and%20processes.pdf";
+  const det = (code, name, text) => el("li", {}, el("b", {}, code + " " + name + ": "), text);
+  setView("Glossary: what the words mean",
+    el("p", {class: "lead"}, "Plain-language explanations of the terms used on this site, with links to the official sources they come from."),
+    el("h2", {}, "Irregular, unauthorised, and fruitless and wasteful expenditure"),
+    el("p", {}, "Together these are often called ", el("b", {}, "UIFW"), ". Public bodies must report them in the notes to their financial statements. None of them on its own means money was stolen."),
+    term("unauthorised", "Unauthorised expenditure",
+      el("p", {}, "Spending more than the budget the legislature or council approved, or spending money on something other than what it was approved for. For a national or provincial department (PFMA) this means overspending a vote or a main division within a vote, or spending not in line with the purpose of the vote. For a municipality (MFMA) it means spending that is not in line with the approved budget, including overspending the total budget or a vote.")),
+    term("irregular", "Irregular expenditure",
+      el("p", {}, "Spending that broke a rule in the law, for example the supply chain (procurement) rules, but is not unauthorised expenditure. It means a required process was not followed. It does not by itself mean that the goods were not delivered or that money was lost. Under the MFMA, a municipality's irregular expenditure can be condoned (formally excused) in some cases.")),
+    term("fruitless", "Fruitless and wasteful expenditure",
+      el("p", {}, "Spending that was made in vain and would have been avoided had reasonable care been exercised.")),
+    src(link(PFMA, "PFMA, section 1 (definitions)"), link(MFMA, "MFMA, section 1 (definitions), copy published by the Auditor-General")),
+    el("h2", {}, "The laws"),
+    term("pfma", "PFMA: Public Finance Management Act, 1999 (Act 1 of 1999)",
+      el("p", {}, "The law on how national and provincial departments and public entities (including state-owned companies) manage money: budgets, spending, reporting and who is responsible.")),
+    term("mfma", "MFMA: Municipal Finance Management Act, 2003 (Act 56 of 2003)",
+      el("p", {}, "The same kind of law for municipalities and municipal entities. A municipal financial year ends on 30 June.")),
+    src(link(PFMA, "PFMA"), link(MFMA, "MFMA"), link("https://mfma.treasury.gov.za/", "National Treasury MFMA site")),
+    el("h2", {}, "Audit outcomes (Auditor-General of South Africa, AGSA)"),
+    el("p", {}, "Every year the AGSA audits each department, entity and municipality and gives one of these outcomes, from best to worst:"),
+    el("ul", {},
+      el("li", {}, el("b", {}, "Clean audit (unqualified, no findings): "), "the financial statements have no material misstatements, the performance report is reliable, and there was no material breach of key laws."),
+      el("li", {}, el("b", {}, "Unqualified with findings: "), "the financial statements are fine, but there were material findings on performance reporting, on compliance with the law, or both. The AGSA says this is not a good outcome."),
+      el("li", {}, el("b", {}, "Qualified: "), "specific amounts in the financial statements are materially misstated, or there was not enough evidence to check them."),
+      el("li", {}, el("b", {}, "Adverse: "), "the misstatements are widespread, not limited to specific amounts."),
+      el("li", {}, el("b", {}, "Disclaimer: "), "the auditee could not give enough evidence for the AGSA to form an opinion at all."),
+      el("li", {}, el("b", {}, "Outstanding: "), "the financial statements were submitted too late to audit, or not at all.")),
+    src(link("https://www.agsa.co.za/what-we-do", "AGSA: what we do (glossary of audit opinions)"), link("https://pfma-2021-2022.agsa.co.za/audit-101/", "AGSA: Audit 101"), link("https://www.agsa.co.za/reports", "AGSA reports")),
+    el("h2", {}, "Buying: tenders and limits"),
+    term("limits", "Competitive-bidding limits",
+      el("p", {}, "Above a set value, a public body must invite competitive bids (an open tender). Up to that value it may buy using written price quotations. Breaking one purchase into smaller ones to stay under the limit is not allowed."),
+      el("ul", {},
+        el("li", {}, el("b", {}, "Municipalities (MFMA): "), "R750 000 for metros, R300 000 for local municipalities and R200 000 for district municipalities (VAT included), under the Municipal Supply Chain Management Regulations as amended by Government Gazette 49863 of 14 December 2023."),
+        el("li", {}, el("b", {}, "National and provincial departments (PFMA): "), "R1 000 000 (including all applicable taxes), under National Treasury's PFMA SCM Instruction No. 02 of 2021/22.")),
+      src(link(MSCM, "Municipal SCM Amendment Regulations (Gazette 49863)"), link(PSCM, "PFMA SCM Instruction No. 02 of 2021/22"))),
+    term("etenders", "eTenders",
+      el("p", {}, "National Treasury's eTenders portal, where government bodies publish tenders and awards. Its open data (in the Open Contracting Data Standard) is the source of the tender awards on this site. Award records start in 2021, and many have no value or a R0 placeholder; we show those as unknown."),
+      src(link("https://data.etenders.gov.za/", "eTenders open data portal"))),
+    term("restricted", "Restricted suppliers",
+      el("p", {}, "National Treasury publishes a list of suppliers and people that are restricted from doing business with the state (the Restricted Supplier and Tender Defaulter report), with the period each restriction applies. We use the list only to check awards; names from it are never published on this site."),
+      src(link("https://ocpo.treasury.gov.za/RestrictedSupplier/RestrictedSuppliersReport.pdf", "National Treasury: Restricted Supplier and Tender Defaulter report"))),
+    el("h2", {}, "What each automated check means"),
+    el("p", {}, "These checks look for patterns in official data that deserve a closer look. A pattern is not proof of wrongdoing: it can be a data error or have a good reason."),
+    el("ul", {},
+      det("D1", "Overspending", "audited spending was well above the approved budget: more than 20% above it for a municipality's operating spending (not counting non-cash items such as depreciation), or any overspending of a national department's final appropriation. Budgets under R10 million are ignored."),
+      det("D3", "Restricted supplier", "a tender was awarded to a name on National Treasury's restricted-supplier list while the restriction applied."),
+      det("D4", "One supplier dominates", "over three years, one supplier won more than half of a buyer's tender value, and the buyer's awards were highly concentrated (Herfindahl-Hirschman index above 2 500). Only buyers with at least 10 awards worth R10 million or more in total are checked."),
+      det("D5", "Missing award values", "at least half of a buyer's published awards have no value, R0, or an obviously wrong amount under R100."),
+      det("D8", "Rising irregular expenditure", "reported irregular expenditure went up two years in a row and grew by at least 50% on the year before, to at least R10 million."),
+      det("D13", "Fuel price too high", "a fuel payment works out at more than 20% above the highest official fuel price published by the Department of Mineral and Petroleum Resources (DMPR) for that fuel type and period."),
+      det("D6", "Possible tender splitting", "one buyer gave one supplier two or more awards within 30 days, each under the competitive-bidding limit but together above it. Splitting can only be suspected from published awards, not shown."),
+      det("D16", "Repeat awards", "one buyer gave the same supplier five or more awards with a known value (each to that supplier alone) within a year."),
+      det("D17", "Just under the limit", "one buyer gave one supplier two or more awards within a year, each within 10% below the competitive-bidding limit.")),
+    el("h2", {}, "Why you only see reviewed and confirmed flags"),
+    el("p", {}, "Automated checks find many leads that turn out to be data errors. Publishing them unchecked could wrongly harm people and organisations. So a flag appears on this site only after people have reviewed it and confirmed that the data pattern is real, and only while the evidence has not changed since. A flag that names a supplier or person needs two different reviewers. The checks D13, D6, D16 and D17 are used only for internal review and are never published. A confirmed flag means the pattern is real, not that anyone acted unlawfully."),
+    el("h2", {}, "A blank means unknown"),
+    el("p", {}, "When a figure is missing from the source, we show it as ", unknown(), " or leave it blank. We never fill in a zero. A gap is not evidence of wrongdoing: often the audit is not due yet or the source has not published it. ", el("a", {href: "#/unknowns"}, "See the known unknowns"), "."),
+    el("p", {}, el("a", {href: "#/sources"}, "All sources and the method →")));
+}
+
 /* ---------------------------------------------------------------- router */
 const routes = [
   [/^#?\/?$/, () => vHome()], [/^#\/coverage$/, (m, p) => vCoverage(p)], [/^#\/municipalities$/, (m, p) => vMunicipalities(p)],
   [/^#\/m\/(.+)$/, m => vMunicipality(decodeURIComponent(m[1]))], [/^#\/departments$/, () => vDepartments()], [/^#\/d\/(.+)$/, m => vDepartment(decodeURIComponent(m[1]))],
-  [/^#\/tenders$/, (m, p) => vTenders(p)], [/^#\/flags$/, () => vFlags()], [/^#\/tools(?:\/(\w+))?$/, (m, p) => vTools(m[1], p)], [/^#\/sources$/, () => vSources()], [/^#\/unknowns$/, () => vUnknowns()], [/^#\/changes$/, () => vChanges()]];
+  [/^#\/tenders$/, (m, p) => vTenders(p)], [/^#\/flags$/, () => vFlags()], [/^#\/tools(?:\/(\w+))?$/, (m, p) => vTools(m[1], p)], [/^#\/sources$/, () => vSources()], [/^#\/unknowns$/, () => vUnknowns()], [/^#\/changes$/, () => vChanges()], [/^#\/glossary$/, () => vGlossary()]];
 async function route() {
   const [path, qs] = (location.hash || "#/").split("?"), params = new URLSearchParams(qs || "");
   const navHref = path.startsWith("#/m/") ? "#/municipalities" : path.startsWith("#/d/") ? "#/departments" : path.startsWith("#/tools") ? "#/tools" : (path.length > 2 ? path : "#/");
