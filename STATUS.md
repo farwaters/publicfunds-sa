@@ -13,3 +13,4 @@
 - Merges to main are on hold until the owner decides.
 - 2026-10-23 15:30 SAST: the owner ratified PR #13 after the fact ("fix it", in Cavus's chat). It stays merged and is not reverted. All merges to main stay on hold until a quoted GO; the only standing exception is the nightly data refresh.
 - 2026-10-23 SAST: Known unknowns v2 (CHG-2026-017, PR #15, merge 5af857d) is live on PROD; gate locked again.
+- 2026-10-23 16:20 SAST: CHG-2026-018 (IMF CPI to 2026-07) merged as PR #16 (owner GO "GO on live site"); the new series and its note publish at the next nightly refresh. Gate locked.
