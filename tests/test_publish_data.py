@@ -166,7 +166,7 @@ def test_quality_gate_and_size_budget(paths, svc, tmp_path, monkeypatch):
 def test_fuel_and_cpi_parsers():
     rows = parsers.fuel_history_rows(fuel_docx(), "t.docx")
     assert len(rows) == 14 and {r["month"] for r in rows} == {1, 2}      # blank March skipped, never zeroed
-    assert rows[0] == {"year": 2026, "month": 1, "grade": "petrol_93_inland", "grade_label": "Petrol 93, inland",
+    assert rows[0] == {"year": 2026, "month": 1, "grade": "petrol_93_inland", "grade_label": "Petrol 93 inland (Leaded Replacement Petrol column)",
                        "cents_per_litre": 2064.0, "source_locator": "t.docx#table-row5"}
     with pytest.raises(ValueError, match="layout"):
         parsers.fuel_history_rows(fuel_docx(first_grade="Inland91"), "bad.docx")
