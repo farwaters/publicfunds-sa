@@ -34,7 +34,7 @@ Example, 2023-01 read: 2110.00 / 2075.00 / 2140.00 / 2122.87 / 2057.67 / 1446.75
 
 ## Tests
 - New `test_fuel_history_pdf_rows_read_publisher_decimal_comma` (decimal comma read; thousands-style `2,122` row still skipped).
-- Full suite: 161 passed, 60 skipped (warehouse tests, no warehouse built in the worktree; same before the change). Dashboard not touched, so `dashboard_check.py` not needed.
+- Full suite: 160 passed, 60 skipped (warehouse tests, no warehouse built in the worktree; same before the change). Dashboard not touched, so `dashboard_check.py` not needed.
 
 ## popia-review verdict: PASS
 Scan of the diff: no ID, passport, phone, email, address, account numbers, plates, locations, credentials or keys. No persons
