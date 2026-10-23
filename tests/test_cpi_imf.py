@@ -5,7 +5,7 @@ import duckdb
 
 from tests.conftest import SMALL
 from tests.synth import build_raw
-from thusa import parsers
+from thusa import dq, parsers
 from thusa.build import build
 from thusa.settings import get_paths
 
@@ -38,3 +38,18 @@ def test_curated_cpi_prefers_imf_single_base_with_lineage(tmp_path):
                        "fetched_at_utc FROM curated.cpi ORDER BY year, month").fetchall()
     assert [(r[0], r[1], r[2]) for r in rows] == [(2024, 12, 100.0), (2025, 1, 100.3)]   # no OECD 2015-base rows mixed in
     assert all(r[3] == "Dec 2024" and r[4] == "imf_cpi" and r[5] and len(r[6]) == 64 and r[7] for r in rows)
+
+
+def test_dq_warns_when_imf_cpi_stale_or_oecd_fallback(tmp_path):
+    store = build_raw(tmp_path)
+    store.save("imf_cpi", "imf_cpi_zaf_monthly.xml", IMF_XML, "https://example.org/imf.xml")
+    p = get_paths(tmp_path)
+    s = build(p, as_of=date(2026, 10, 19), fye_min=2023, fye_max=2026, min_rows=SMALL, secret=b"t")
+    assert not s["dq"]["fail"]   # stale CPI is a warn, never a fail
+    con = duckdb.connect(str(p.warehouse))
+    assert con.execute("SELECT status FROM ops.dq_result WHERE test_name = 'cpi_fresh_imf_info'").fetchone()[0] == "warn"
+    sql = dict((n, q) for n, _, q in dq.checks({}))["cpi_fresh_imf_info"]
+    con.execute("SET VARIABLE as_of = DATE '2025-03-01'")
+    assert con.execute(sql).fetchone()[0] == 0   # latest IMF month 2025-01 within 120 days
+    con.execute("UPDATE curated.cpi SET source_id = 'oecd_cpi'")
+    assert con.execute(sql).fetchone()[0] == 1   # OECD fallback
