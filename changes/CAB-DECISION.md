@@ -1,0 +1,9 @@
+# CAB decisions
+
+## 2026-10-23 14:17 SAST: nightly refresh publish (standing change)
+
+- Environment: PROD (https://publicfunds.grokforum.site/)
+- Change: the routine "PublicFunds nightly refresh and publish" (03:00 SAST), existing data refresh only.
+- Decision: GO, as a standing pre-approved change. Owner's words, relayed by Cavus: "Keep it as a standing approved change".
+- Scope: data refresh and publish only, when the quality gate passes. Any code or product change to the live site still needs its own RFC and GO.
+- Rollback: git history on main (revert the publish commit).
