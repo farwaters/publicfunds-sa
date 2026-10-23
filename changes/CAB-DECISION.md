@@ -7,3 +7,10 @@
 - Decision: GO, as a standing pre-approved change. Owner's words, relayed by Cavus: "Keep it as a standing approved change".
 - Scope: data refresh and publish only, when the quality gate passes. Any code or product change to the live site still needs its own RFC and GO.
 - Rollback: git history on main (revert the publish commit).
+
+## 2026-10-23 14:23 SAST: PR #9 (CHG-2026-013 glossary) to PROD and PR #10 to main
+
+- Decision: GO. Owner's words: "GO on both".
+- Scope: PR #9 / CHG-2026-013 glossary merged to main (PROD, https://publicfunds.grokforum.site/); PR #10 (STATUS.md, this CAB decision log) merged to main.
+- Rollback: git revert of each merge commit.
+- Gate: locks again after the merge; further code or product changes need their own RFC and GO.
