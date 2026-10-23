@@ -15,10 +15,14 @@
 - 2019-2025 yearly PDFs (pdfplumber word positions, page 1): "Unleaded" spans x 228-268 (2019, 2020) / 235-275
   (2021-2025) and sits over the 3rd column "Inland" (234-262 / 241-269); the next "Inland" (285+ / 292+) is under
   Diesel. Same layout in all seven years.
+- October 2026 "Breakdown of Prices" DOCX: "95 ULP & LRP" Inland Region 3025.00 c/l, equal to the October value
+  in column 3 (Inland 95) of the History table (3025.00).
+- Unknown: whether ULP 95 and LRP 95 shared an inland price in every earlier month (no loaded document shows it).
 
 ## Change
 - Label `petrol_95_inland`: "Petrol 95, inland" -> "Unleaded Petrol (ULP) 95, inland". Grade id unchanged.
-- One line in `prices.fuel.about` naming the heading, following the CHG-2026-020/021 pattern.
+- One line in `prices.fuel.about` naming the heading, the October 2026 breakdown price (3025.00 c/l) and the
+  unknown, following the CHG-2026-020/021 pattern (wording per validator review of PR #21).
 - Test asserts the new label. `public-data/` not edited by hand.
 - Out of scope (stays open in CSI-052): the coastal 93 price in the Breakdown that the History table has no column for;
   `fuel.about` is still not rendered on the dashboard (CSI-051).
