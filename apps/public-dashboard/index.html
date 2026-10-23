@@ -79,6 +79,7 @@ footer{max-width:1100px;margin:2rem auto 0;padding:1rem;color:var(--muted);font-
 details summary{cursor:pointer;font-weight:600}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 @media print{header,nav,.tools,.btn-csv,footer{display:none}}
+.reportcard{max-width:760px;border-top:6px solid var(--brand)}
 </style>
 </head>
 <body>
@@ -394,7 +395,7 @@ async function vMunicipality(id) {
       : el("p", {class: "muted"}, "No eTenders awards are matched to this municipality yet (municipal tender publication on eTenders is incomplete; see Data coverage)."),
     el("h2", {}, "Data coverage for this municipality"),
     covE ? table("Coverage", [{label: "Data type", value: r => DT[r]}, ...cov.years.map((y, k) => ({label: cov.fy_labels[k], render: r => el("span", {class: "chip s-" + covE.c[r][k], style: "color:#fff"}, SYM[covE.c[r][k]] + " " + STATE[covE.c[r][k]]), value: r => STATE[covE.c[r][k]]}))], cov.data_types, `${m.code}-coverage.csv`) : unknown(),
-    el("p", {}, el("a", {href: "#/tools/compare?a=" + encodeURIComponent(m.id)}, "Compare with another municipality →")));
+    el("p", {}, el("a", {href: "#/m/" + encodeURIComponent(m.id) + "/card"}, "Report card (share-friendly summary) →"), " · ", el("a", {href: "#/tools/compare?a=" + encodeURIComponent(m.id)}, "Compare with another municipality →")));
 }
 
 async function showAwards(box, buyerIds, name) {
@@ -725,10 +726,54 @@ function vGlossary() {
     el("p", {}, el("a", {href: "#/sources"}, "All sources and the method →")));
 }
 
+/* ---------------------------------------------------------------- report card (CHG-2026-015) */
+/* Only published fields: municipalities.json (audit, uifw), coverage.json (entities), flags.json (confirmed only; hidden_leads never read). */
+const CARD_NEVER_PUBLISH = ["D13_fuel_unit_price", "D6_threshold_splitting", "D16_repeat_awards", "D17_just_below_threshold"];  // = config/publication.yaml never_publish
+function cardFlags(f, id) { return (f.confirmed || []).filter(x => x.gov_body_id === id && !CARD_NEVER_PUBLISH.includes(x.detector_id)); }
+function cardCompleteness(covE) {
+  const n = {P: 0, p: 0, m: 0}, gaps = [];
+  if (covE) for (const t of Object.keys(covE.c)) [...covE.c[t]].forEach((s, k) => { if (s in n) { n[s]++; if (s !== "P") gaps.push([t, k, s]); } });
+  return {n, gaps, total: n.P + n.p + n.m};
+}
+async function vCard(id) {
+  const [mun, cov, f] = await Promise.all([load("municipalities.json"), load("coverage.json"), load("flags.json")]);
+  const m = mun.municipalities.find(x => x.id === id);
+  if (!m) return setView("Municipality not found", el("p", {}, "No municipality with id ", id, ". ", el("a", {href: "#/municipalities"}, "Back to the list")));
+  const audits = muniYearRows(m).filter(r => r.d.audit), la = audits[audits.length - 1];
+  const uifws = muniYearRows(m).filter(r => r.d.uifw), lu = uifws[uifws.length - 1];
+  const covE = cov.entities.find(e => e.id === id), comp = cardCompleteness(covE);
+  const flags = cardFlags(f, id);
+  const g = text => el("a", {href: "#/glossary"}, text);
+  const row = (label, value, note) => el("div", {class: "card kpi"}, el("b", {}, value), el("span", {}, label), note ? el("p", {class: "small muted", style: "margin:.3rem 0 0"}, note) : null);
+  const amt = c => c == null ? unknown("blank: not published (unknown, not zero)") : rand(c);
+  const card = el("section", {class: "card reportcard", "aria-labelledby": "rc-h"},
+    el("h2", {id: "rc-h", style: "margin-top:0"}, `Report card: ${m.long_name || m.name}`),
+    el("p", {class: "small muted"}, "Official published figures side by side. There is no overall grade or score: we do not combine these into one number."),
+    el("div", {class: "grid"},
+      row(["Latest audit opinion", la ? ` (${fyLabel(la.y)})` : ""], la ? opinionChip(la.d.audit.code, mun.audit_opinions) : unknown("not published"),
+        [la ? ["As published by National Treasury from the Auditor-General's report · ", srcLink(mun, la.d.audit.src), " · "] : "", g("what audit opinions mean"),
+         ". The Auditor-General's own annexure figures are not yet published on this site."]),
+      row([g("Irregular expenditure"), lu ? ` (${fyLabel(lu.y)})` : ""], lu ? amt(lu.d.uifw.irregular) : unknown("not published"),
+        lu ? ["Fruitless & wasteful: ", amt(lu.d.uifw.fruitless_wasteful), " · Unauthorised: ", amt(lu.d.uifw.unauthorised), " · ", srcLink(mun, lu.d.uifw.src),
+          ". Irregular means a rule was not followed, not that money was stolen."] : null),
+      row("data items published (known unknowns)", covE ? `${comp.n.P} of ${comp.total}` : unknown(),
+        covE ? [`${comp.n.p} partial, ${comp.n.m} missing, financial years ${cov.fy_labels[0]} to ${cov.fy_labels[cov.fy_labels.length - 1]}. `, el("a", {href: "#/unknowns"}, "Known unknowns")] : null),
+      row(["confirmed, published ", g("flags")], String(flags.length),
+        "Only flags people reviewed and confirmed. Automated leads that are not confirmed are never shown or counted here. A confirmed flag is not a finding of wrongdoing.")),
+    el("p", {class: "small"}, el("b", {}, "A blank means unknown, never zero. "), "If a figure says unknown or not published, the source has not published it (or we have not loaded it). It is not evidence of a good or bad result."),
+    el("p", {class: "small muted"}, "PublicFunds SA · publicfunds.grokforum.site"));
+  const copy = el("button", {class: "btn-csv", onclick: async e => { try { await navigator.clipboard.writeText(location.href); e.target.textContent = "Link copied"; } catch (x) { e.target.textContent = "Copy the address bar to share"; } }}, "Copy link to this card");
+  setView(`${m.name}: report card`,
+    el("p", {class: "lead"}, `${TYPES[m.type] || m.type} · ${prov(m.province)} · code ${m.code}. `, el("a", {href: "#/m/" + encodeURIComponent(m.id)}, "Full municipality page →")),
+    card, el("div", {class: "tools"}, copy),
+    comp.gaps.length ? el("details", {}, el("summary", {}, `Which data is missing or partial (${comp.gaps.length})`),
+      el("ul", {class: "gap"}, comp.gaps.map(([t, k, s]) => { const r = +covE.r[t][k]; return el("li", {}, `${DT[t]}, ${cov.fy_labels[k]}: ${STATE[s]}`, r ? ` (${REASON[cov.reasons[r - 1]] || cov.reasons[r - 1]})` : ""); }))) : null);
+}
+
 /* ---------------------------------------------------------------- router */
 const routes = [
   [/^#?\/?$/, () => vHome()], [/^#\/coverage$/, (m, p) => vCoverage(p)], [/^#\/municipalities$/, (m, p) => vMunicipalities(p)],
-  [/^#\/m\/(.+)$/, m => vMunicipality(decodeURIComponent(m[1]))], [/^#\/departments$/, () => vDepartments()], [/^#\/d\/(.+)$/, m => vDepartment(decodeURIComponent(m[1]))],
+  [/^#\/m\/(.+)\/card$/, m => vCard(decodeURIComponent(m[1]))], [/^#\/m\/(.+)$/, m => vMunicipality(decodeURIComponent(m[1]))], [/^#\/departments$/, () => vDepartments()], [/^#\/d\/(.+)$/, m => vDepartment(decodeURIComponent(m[1]))],
   [/^#\/tenders$/, (m, p) => vTenders(p)], [/^#\/flags$/, () => vFlags()], [/^#\/tools(?:\/(\w+))?$/, (m, p) => vTools(m[1], p)], [/^#\/sources$/, () => vSources()], [/^#\/unknowns$/, () => vUnknowns()], [/^#\/changes$/, () => vChanges()], [/^#\/glossary$/, () => vGlossary()]];
 async function route() {
   const [path, qs] = (location.hash || "#/").split("?"), params = new URLSearchParams(qs || "");
