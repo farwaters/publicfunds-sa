@@ -168,6 +168,7 @@ def test_fuel_and_cpi_parsers():
     assert len(rows) == 14 and {r["month"] for r in rows} == {1, 2}      # blank March skipped, never zeroed
     assert rows[0] == {"year": 2026, "month": 1, "grade": "petrol_93_inland", "grade_label": "Leaded Replacement Petrol (LRP) 93, inland",
                        "cents_per_litre": 2064.0, "source_locator": "t.docx#table-row5"}
+    assert rows[1]["grade"] == "petrol_95_coast" and rows[1]["grade_label"] == "Leaded Replacement Petrol (LRP) 95, coast"
     with pytest.raises(ValueError, match="layout"):
         parsers.fuel_history_rows(fuel_docx(first_grade="Inland91"), "bad.docx")
     cpi = parsers.oecd_cpi_rows(oecd_cpi_csv())

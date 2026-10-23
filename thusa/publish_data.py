@@ -349,6 +349,9 @@ def prices(con, refs: SourceRefs) -> dict:
                                "DMPR's history table heads the 93 inland column 'Leaded Replacement Petrol'. The "
                                "October 2026 DMPR price breakdown gives one inland price for '93 ULP & LRP', equal to "
                                "this column; whether the two grades shared a price in every earlier month is unknown.",
+                               "The same 'Leaded Replacement Petrol' heading also covers the 95 coast column. The "
+                               "October 2026 breakdown gives one coastal price for '95 ULP & LRP', equal to this "
+                               "column; whether the two grades shared a price in every earlier month is unknown.",
                                "Diesel and illuminating paraffin are not regulated at the pump, so retail prices can "
                                "differ from these official figures.",
                                "Only months published in the loaded DMPR history table are included (KE-012)."],

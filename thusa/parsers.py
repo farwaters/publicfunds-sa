@@ -216,7 +216,8 @@ def ppd_rows(data: bytes) -> Iterator[dict]:
 
 
 # ------------------------------------------------------------------------------------- price benchmarks
-FUEL_GRADES = [("petrol_93_inland", "Leaded Replacement Petrol (LRP) 93, inland"), ("petrol_95_coast", "Petrol 95, coast"),
+FUEL_GRADES = [("petrol_93_inland", "Leaded Replacement Petrol (LRP) 93, inland"), ("petrol_95_coast",
+                                                                         "Leaded Replacement Petrol (LRP) 95, coast"),
                ("petrol_95_inland", "Petrol 95, inland"), ("diesel_005_inland", "Diesel 0.05% sulphur, inland"),
                ("diesel_005_coast", "Diesel 0.05% sulphur, coast"), ("paraffin_coast", "Illuminating paraffin, coast"),
                ("paraffin_inland", "Illuminating paraffin, inland")]
