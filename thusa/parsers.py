@@ -313,6 +313,26 @@ def oecd_cpi_rows(data: bytes) -> list[dict]:
     return rows
 
 
+def imf_cpi_rows(data: bytes) -> list[dict]:
+    """IMF.STA:CPI SDMX-ML (structure-specific): South Africa, all-items index, monthly. Values as published."""
+    import xml.etree.ElementTree as ET
+    rows = []
+    for s in ET.fromstring(data).iter():
+        if not s.tag.endswith("Series") or s.get("COUNTRY") != "ZAF" or s.get("COICOP_1999") != "_T" \
+                or s.get("TYPE_OF_TRANSFORMATION") != "IX" or s.get("FREQUENCY") != "M":
+            continue
+        for o in s:
+            if not o.tag.endswith("Obs") or not o.get("OBS_VALUE"):
+                continue
+            y, m = o.get("TIME_PERIOD").split("-M")
+            ref = o.get("REFERENCE_PERIOD") or s.get("COMMON_REFERENCE_PERIOD")
+            base = f"{['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][int(ref[5:]) - 1]} {ref[:4]}" \
+                if ref and "M" in ref else ref
+            rows.append({"year": int(y), "month": int(m), "index_value": float(o.get("OBS_VALUE")),
+                         "base_period": base, "source_locator": f"Obs TIME_PERIOD={o.get('TIME_PERIOD')}"})
+    return rows
+
+
 # --------------------------------------------------------------------------------------------- AGSA annexures
 _XNS = {"m": "http://schemas.openxmlformats.org/spreadsheetml/2006/main"}
 _RNS = "{http://schemas.openxmlformats.org/officeDocument/2006/relationships}id"

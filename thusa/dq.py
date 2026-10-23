@@ -76,6 +76,11 @@ def checks(min_rows: dict | None = None) -> list[tuple[str, str, str]]:
         ("fuel_price_plausible", "error",
          "SELECT count(*) FROM curated.fuel_price WHERE cents_per_litre <= 0 OR cents_per_litre > 10000"),
         ("cpi_plausible", "error", "SELECT count(*) FROM curated.cpi WHERE index_value <= 0 OR index_value > 1000"),
+        # CHG-2026-018: CPI freshness (warn only): latest month older than the 120-day target, or OECD fallback in use.
+        ("cpi_fresh_imf_info", "warn",
+         "SELECT CASE WHEN count(*) FILTER (WHERE source_id = 'oecd_cpi') > 0 OR max(make_date(year, month, 1) "
+         "+ INTERVAL 1 MONTH - INTERVAL 1 DAY) < coalesce(getvariable('as_of'), current_date) - 120 "
+         "THEN 1 ELSE 0 END FROM curated.cpi"),
         ("award_buyer_match_rate_info", "warn",
          "SELECT count(*) FILTER (WHERE buyer_gov_body_id IS NULL AND buyer_name ILIKE '%municipal%') FROM curated.award"),
     ]

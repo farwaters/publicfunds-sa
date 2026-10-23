@@ -34,3 +34,8 @@
 - Rollback: `git revert -m 1 <merge commit>` of the PR #15 merge (git history is the rollback; no .bkp files).
 - Review: independent reviewer runs the four checks (expert, shadow, charter, drift) and popia-review before merge; any failure stops the merge.
 - The gate locks again after this merge.
+
+## 2026-10-23 16:09 SAST: PR #16 (CHG-2026-018, IMF CPI) to PROD
+- Owner's GO: "GO on live site", given in the PublicFunds chat at 16:09 SAST in reply to "Is it a go for PR #16 on the live site?".
+- Checks (TEAM-PROTOCOL): Validator gave expert PASS and charter PASS; Scout gave shadow PASS (third review, at 7e95067) and drift PASS.
+- Rollback: git revert -m 1 of the merge commit. The gate locks again after the merge.

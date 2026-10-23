@@ -23,7 +23,7 @@ known_gaps:
   - id: KE-009
     text: "Payments by national and provincial departments (the Procurement Payments Dashboard) can only be exported by hand and are not loaded yet."
   - id: KE-003
-    text: "Statistics South Africa's website blocks automated downloads, so inflation (CPI) comes from the OECD's copy of the Stats SA index, which can lag by months; population figures are not loaded yet."
+    text: "Statistics South Africa's website blocks automated downloads, so inflation (CPI) comes from the IMF's republication of Stats SA headline CPI (all urban areas); the OECD copy is used only as a fallback. Values from 2025-01 match Stats SA P0141. Earlier values are the IMF's linked back-series (OECD 2015-base series scaled) and can differ from Stats SA's rebased figures by about 0.1-0.2 index points. Population figures are not loaded yet."
   - id: KE-001
     text: "The eTenders live API often fails; tender data comes from the monthly bulk file plus whatever recent updates the API returned."
   - id: KE-012
@@ -39,4 +39,5 @@ display_sources:
   nt_budget: {page: "https://vulekamali.gov.za/datasets/budgeted-and-actual-national-expenditure", licence: "Vulekamali open data (attribute National Treasury)"}
   ppd_payments: {page: "https://data.etenders.gov.za/", licence: "National Treasury OCPO"}
   dmpr_fuel: {page: "https://www.dmpr.gov.za/Branches/Petroleum-Resources/Fuel-Prices", licence: "Public government information (DMPR / CEF)"}
+  imf_cpi: {page: "https://data.imf.org/en/datasets/IMF.STA:CPI", licence: "Source: International Monetary Fund, Consumer Price Index (CPI), https://data.imf.org/en/datasets/IMF.STA:CPI; IMF terms for statistical data; underlying data: Stats SA headline CPI (all urban areas)"}
   oecd_cpi: {page: "https://data-explorer.oecd.org/", licence: "CC BY 4.0 (OECD); underlying data: Statistics South Africa"}
