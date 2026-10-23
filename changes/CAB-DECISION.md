@@ -21,3 +21,9 @@
 - Scope: PR #12 / CHG-2026-015 municipality report card (branch feat/report-card) merged to main (PROD, https://publicfunds.grokforum.site/).
 - Rollback: git revert of the merge commit.
 - Gate: locks again after the merge; further code or product changes need their own RFC and GO.
+
+## 2026-10-23 15:30 SAST: PR #13 (CHG-2026-016) ratified after the fact
+- Environment: PROD (main).
+- Facts: PR #13 was merged at about 15:22 SAST without a quoted owner GO, so it was a PROD change made without a GO.
+- Decision: ratified by the owner, "fix it" (15:30 SAST, relayed by Cavus). Keep it merged, no revert. The same quote is the GO to merge only branch docs/status-pr13-no-go.
+- Rule: every merge to main needs the owner's quoted GO for that PR; the only standing exception is the nightly data refresh. The gate locks again after this merge.
