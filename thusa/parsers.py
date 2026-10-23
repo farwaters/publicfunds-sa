@@ -273,10 +273,16 @@ def fuel_history_rows(blob: bytes, name: str = "") -> list[dict]:
 _PDF_MONTH = re.compile(r"^(Jan|Feb|Mar|Apr|May|Jun|July?|Aug|Sept?|Oct|Nov|Dec)$")
 
 
+def _decimal_comma(tok: str) -> str:
+    return tok.replace(",", ".") if re.fullmatch(r"\d{3,4},\d{2,3}", tok) else tok
+
+
 def fuel_history_pdf_rows(blob: bytes, name: str = "") -> list[dict]:
     """Rows of a yearly DMPR 'Fuel Price History' PDF (same 7-column table as the DOCX). Each month row must
     yield exactly 7 numbers; rows that don't (PDF text splits some figures) are skipped and stay unknown -
-    figures are never guessed or re-joined beyond a thousands gap like '2 112.00'."""
+    figures are never guessed or re-joined beyond a thousands gap like '2 112.00'. A decimal comma typed by the
+    publisher ('1882,00', '1525,958': 3-4 digits, a comma, then 2-3 decimals, so never a thousands separator)
+    is read as the decimal point it stands for (CHG-2026-019)."""
     import pdfplumber
     out = []
     with pdfplumber.open(io.BytesIO(blob)) as pdf:
@@ -289,9 +295,9 @@ def fuel_history_pdf_rows(blob: bytes, name: str = "") -> list[dict]:
             words = pg.extract_words(x_tolerance=1.5, y_tolerance=2)
             for mw in (w for w in words if _PDF_MONTH.match(w["text"])):
                 cy = (mw["top"] + mw["bottom"]) / 2
-                nums = sorted((w for w in words if w["x0"] > mw["x1"] and re.fullmatch(r"[\d.]+", w["text"])
+                nums = sorted((w for w in words if w["x0"] > mw["x1"] and re.fullmatch(r"[\d.]+|\d{3,4},\d{2,3}", w["text"])
                                and abs((w["top"] + w["bottom"]) / 2 - cy) < 4), key=lambda w: w["x0"])
-                joined = re.sub(r"(?<![\d.])(\d) (\d{3}\.\d+)", r"\1\2", " ".join(w["text"] for w in nums))
+                joined = re.sub(r"(?<![\d.])(\d) (\d{3}\.\d+)", r"\1\2", " ".join(_decimal_comma(w["text"]) for w in nums))
                 vals = re.findall(r"\d+(?:\.\d+)?", joined)
                 if len(vals) != 7:
                     continue

@@ -72,6 +72,17 @@ def test_fuel_history_pdf_rows_skip_rows_that_dont_split_cleanly():
         parsers.fuel_history_pdf_rows(_history_pdf_without_heading(), "x.pdf")
 
 
+def test_fuel_history_pdf_rows_read_publisher_decimal_comma():
+    """CHG-2026-019: DMPR types some figures with a decimal comma ('1882,00', '1525,958'); read as the decimal point.
+    A comma with 1-3 leading digits (thousands-style) is not accepted, so such a row still stays unknown."""
+    rows = parsers.fuel_history_pdf_rows(_history_pdf(2023, [
+        ("Jan", ["2110.00", "2075.00", "2140.00", "2122,87", "2057.67", "1446.758", "1525,958"]),
+        ("Feb", ["2 110.00", "2075.00", "2140.00", "2,122", "2057.67", "1446.758", "1525.958"])]), "h.pdf")
+    jan = {r["grade"]: r["cents_per_litre"] for r in rows if r["month"] == 1}
+    assert jan["diesel_005_inland"] == 2122.87 and jan["paraffin_inland"] == 1525.958 and len(jan) == 7
+    assert {r["month"] for r in rows} == {1}
+
+
 def _history_pdf_without_heading():
     import matplotlib.pyplot as plt
     fig = plt.figure()
