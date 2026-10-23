@@ -35,8 +35,11 @@ The value depends on the name passed to the parser (it goes into `source_locator
 - path relative to the repo root: before `6401e136d51074a1`, after `6401e136d51074a1`
 - absolute path: before `bfb81f03f6022d42`, after `bfb81f03f6022d42`
 
+After merging origin/main (PR #20, CHG-2026-022, 2022-09 row recovered), recomputed over every `data/raw/dmpr_fuel/*/*.pdf`
+with the basename (as in CHG-2026-022): `80bc13d78db54047`, 581 rows; same before/after this change (label only).
+
 ## Tests
-- `pytest`: 161 passed, 60 skipped.
+- `pytest`: 161 passed, 60 skipped; after merging origin/main (PR #20): 166 passed, 60 skipped.
 - `scripts/dashboard_check.py` against a temporary local prices.json carrying the new label: problems []. File
   restored with git afterwards.
 
