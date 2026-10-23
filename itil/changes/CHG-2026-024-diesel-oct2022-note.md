@@ -14,7 +14,7 @@ Values in c/l, `source_locator` `fuel-price-history-2022.pdf#page1-<Mon>`:
 
 | Grade | 2022-09 | 2022-10 | Change |
 |---|---|---|---|
-| diesel_005_inland (0.05%) | 2396.1 | 2406.0 | +9.90 |
+| diesel_005_inland (0.05%) | 2396.1 | 2406.0 | +9.90 (official +10c wholesale) |
 | diesel_005_coast (0.05%) | 2330.9 | 2340.9 | +10.00 |
 | petrol_93_inland | 2295.0 | 2206.0 | -89.00 |
 | petrol_95_inland | 2338.0 | 2236.0 | -102.00 |
@@ -22,11 +22,15 @@ Values in c/l, `source_locator` `fuel-price-history-2022.pdf#page1-<Mon>`:
 
 - SAnews, "Reprieve at petrol pumps", 4 Oct 2022 (https://www.sanews.gov.za/south-africa/reprieve-petrol-pumps-0):
   93 ULP & LRP down 89c, 95 ULP & LRP down R1.02, diesel 0.05% up 10c; 95 ULP Gauteng 23.38 -> R22.36 (matches column 3).
-- Inland diesel: 2396.10 + 10 = 2406.10 implied; DMPR prints 2406.00. Coast moves exactly +10.00. Likely a printing slip.
-- The 93/95 split is official (article). The reason (octane gap reset each quarter) is not stated in the article: unverified.
+- DMRE statement of 30 Sep 2022 (effective 5 Oct 2022) (https://cefgroup.co.za/wp-content/uploads/2024/08/Press-Release-30-Sept-2022-Change-05-Oct-2022.pdf): section 1 gives diesel 0.05% as +10.00 c/l wholesale;
+  Annexure 1 gives Gauteng diesel 0.05% wholesale as 2,406.100 c/l. DMPR's history table (2406.00) is 0.10 c/l below
+  DMRE's own figure. Data kept as printed.
+- The 93/95 split is official: section 4 of the same statement says the differentials between 95 and 93 are adjusted
+  at the beginning of each quarter under the BFP Working Rules; the DMPR statement of 2 July 2025 (https://www.gov.za/news/media-statements/mineral-and-petroleum-resources-announces-adjustment-fuel-prices-2-july-2025) says the
+  differential is adjusted on the first Wednesday of each quarter.
 
 ## Change
-- New KE-014 row in the KEDB stating the above; DMPR's figure is kept as printed (2406.00), PublicFunds does not correct data.
+- New KE-014 row in the KEDB stating the above, citing the DMRE statement (URLs only; no contact details copied); DMPR's figure is kept as printed (2406.00), PublicFunds does not correct data.
 - Change-log line. No code, tests, parser or `public-data/` change.
 
 ## Data identical before/after
