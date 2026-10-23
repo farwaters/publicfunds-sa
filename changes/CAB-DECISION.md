@@ -49,3 +49,8 @@
 - Owner's GO: "GO", given at 17:44 SAST on 23 Oct 2026.
 - Checks (TEAM-PROTOCOL): Validator gave expert PASS (re-check at 969890d) and charter PASS; Scout gave shadow PASS and drift PASS; popia-review PASS.
 - Rollback: `git revert -m 1 ecdac4d` (merge commit of PR #18). The gate locks again after the merge.
+
+## 2026-10-23 17:51 SAST: PR #19 (CHG-2026-021, Coast 95 LRP label) to PROD
+- Owner's GO: "GO", given at 17:51 SAST on 23 Oct 2026.
+- Checks (TEAM-PROTOCOL): Validator gave expert PASS and charter PASS; Scout gave shadow PASS and drift PASS; popia-review PASS.
+- Rollback: `git revert -m 1 d54e362` (merge commit of PR #19). The gate locks again after the merge.
