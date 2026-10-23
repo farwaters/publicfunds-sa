@@ -8,7 +8,7 @@ from datetime import date, datetime, timezone
 
 from thusa.settings import get_paths
 
-SOURCES = ["muni_api", "etenders_ocds", "rsr", "ppd_payments", "nt_budget", "dmpr_fuel", "oecd_cpi", "agsa_annexures"]
+SOURCES = ["muni_api", "etenders_ocds", "rsr", "ppd_payments", "nt_budget", "dmpr_fuel", "oecd_cpi", "imf_cpi", "agsa_annexures"]
 
 
 def ingest(only: list[str] | None = None, refresh: bool = False) -> list[dict]:
@@ -27,6 +27,7 @@ def ingest(only: list[str] | None = None, refresh: bool = False) -> list[dict]:
         "nt_budget": lambda: vulekamali.run(store, Fetcher(retries=1)),
         "dmpr_fuel": lambda: prices.run_fuel(store, Fetcher(retries=2)),
         "oecd_cpi": lambda: prices.run_cpi(store, Fetcher(retries=2)),
+        "imf_cpi": lambda: prices.run_imf_cpi(store, Fetcher(retries=2)),
         "agsa_annexures": lambda: agsa.run(store, Fetcher(retries=2)),
     }
     out = []

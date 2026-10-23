@@ -349,8 +349,10 @@ def prices(con, refs: SourceRefs) -> dict:
                      "last_period": f"{fuel[-1]['year']}-{fuel[-1]['month']:02d}" if fuel else None},
             "cpi": {"measure": "Headline consumer price index, all items, South Africa",
                     "base": f"{cpi[0]['base_period']} = 100" if cpi and cpi[0]["base_period"] else None,
-                    "publisher": "Statistics South Africa (as republished by the OECD; Stats SA blocks automated "
-                                 "downloads, KE-003)",
+                    "publisher": ("Statistics South Africa (as republished by the IMF CPI dataset; Stats SA blocks "
+                                  "automated downloads, KE-003)" if cpi and cpi[0]["source_id"] == "imf_cpi" else
+                                  "Statistics South Africa (as republished by the OECD; Stats SA blocks automated "
+                                  "downloads, KE-003)"),
                     "columns": ["period", "index", "src"],
                     "rows": [[f"{r['year']}-{r['month']:02d}", r["index_value"], refs.ref(r["source_sha256"], used)]
                              for r in cpi],

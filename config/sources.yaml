@@ -114,6 +114,16 @@ sources:
     freshness_slo_days: 400
     mvp: true
     notes: "Secondary source because statssa.gov.za blocks scripted access (KE-003). Lags: last month 2025-01 on 19 Oct 2026 (KE-012)"
+  - id: imf_cpi
+    name: Headline CPI for South Africa (Stats SA data, IMF CPI dataset republication, Dec 2024 = 100)
+    owner_org: International Monetary Fund (data from Statistics South Africa)
+    url: https://api.imf.org/external/sdmx/2.1/data/IMF.STA,CPI/ZAF.CPI._T.IX.M
+    connector: sdmx_xml (thusa/connectors/prices.py)
+    licence: "IMF Special Terms for Statistical Data: reuse with attribution (Source: International Monetary Fund, Consumer Price Index (CPI))"
+    cadence: monthly
+    freshness_slo_days: 120
+    mvp: true
+    notes: "CHG-2026-018 (CSI-031). Values match Stats SA P0141 Table B1. Lags Stats SA by about two months (last month 2026-07 on 23 Oct 2026). Preferred over oecd_cpi in curated.cpi when loaded"
   - id: statssa_cpi
     name: Stats SA CPI (incl. average prices), PPI, P0151.1
     owner_org: Statistics South Africa

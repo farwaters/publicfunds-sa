@@ -254,6 +254,11 @@ def stage_prices(con, store: RawStore, sdir: Path) -> dict:
                 r["raw_file_id"] = f.sha256
                 r["source_locator"] = f"{f.name}:{r['source_locator']}"
                 yield r
+        for f in _files(store, "imf_cpi"):
+            for r in parsers.imf_cpi_rows(store.path_of(f).read_bytes()):
+                r["raw_file_id"] = f.sha256
+                r["source_locator"] = f"{f.name}:{r['source_locator']}"
+                yield r
     return {"staging.fuel_price": write_table(con, sdir, "staging.fuel_price", fuel(), FUEL_COLS),
             "staging.cpi": write_table(con, sdir, "staging.cpi", cpi(), CPI_COLS)}
 

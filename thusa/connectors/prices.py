@@ -6,6 +6,10 @@ dmpr_fuel : DMPR (via CEF) monthly fuel price adjustments. The public Fuel Price
 oecd_cpi  : Stats SA headline CPI is the primary source, but statssa.gov.za blocks scripted access (Incapsula,
             KE-003); we do not work around that. The OECD republishes the Stats SA national CPI (index 2015=100,
             CC BY 4.0) through its public SDMX API, which we use as a clearly labelled secondary source (KE-012).
+imf_cpi   : the OECD series lags (last month 2025-01). The IMF CPI dataset (IMF.STA:CPI, public SDMX API, IMF
+            "Special Terms for Statistical Data": reuse with attribution) carries the Stats SA headline index on
+            Stats SA's current base (Dec 2024 = 100) to the latest month (CHG-2026-018, CSI-031). When loaded it is
+            the curated CPI series; the OECD series stays as the fallback.
 """
 from __future__ import annotations
 
@@ -22,6 +26,9 @@ FUEL_PAGE = "https://www.dmpr.gov.za/Branches/Petroleum-Resources/Fuel-Prices"
 CPI_ID = "oecd_cpi"
 CPI_URL = ("https://sdmx.oecd.org/public/rest/data/OECD.SDD.TPS,DSD_PRICES@DF_PRICES_ALL,1.0/"
            "ZAF.M.N.CPI.IX._T.N._Z?startPeriod=2008-01&dimensionAtObservation=AllDimensions&format=csvfilewithlabels")
+
+IMF_CPI_ID = "imf_cpi"
+IMF_CPI_URL = "https://api.imf.org/external/sdmx/2.1/data/IMF.STA,CPI/ZAF.CPI._T.IX.M?startPeriod=2008-01"
 
 _CARD = re.compile(r"<h4>(.*?)</h4>.*?href=\"([^\"]+)\"", re.S)
 
@@ -94,6 +101,24 @@ def run_cpi(store: RawStore, fetcher: Fetcher) -> IngestResult:
         res.files.append(rf)
         res.status = "unchanged" if rf.status == "unchanged" else "ok"
         res.notes.append("secondary source: Stats SA CPI as republished by the OECD (Stats SA site blocks scripts, KE-003)")
+    except SourceBlocked as exc:
+        res.status, res.errors = "blocked", [str(exc)]
+    except FetchError as exc:
+        res.status, res.errors = "failed", [str(exc)]
+    res.requests = fetcher.requests_made
+    return res
+
+
+def run_imf_cpi(store: RawStore, fetcher: Fetcher) -> IngestResult:
+    res = IngestResult(IMF_CPI_ID)
+    try:
+        resp = fetcher.get(IMF_CPI_URL)
+        if b"StructureSpecificData" not in resp.content[:2000]:
+            raise FetchError(f"expected SDMX-ML data, got {resp.headers.get('content-type')}")
+        rf = store.save(IMF_CPI_ID, "imf_cpi_zaf_monthly.xml", resp.content, str(resp.url), resp.status_code)
+        res.files.append(rf)
+        res.status = "unchanged" if rf.status == "unchanged" else "ok"
+        res.notes.append("secondary source: Stats SA headline CPI (Dec 2024=100) as republished by the IMF CPI dataset")
     except SourceBlocked as exc:
         res.status, res.errors = "blocked", [str(exc)]
     except FetchError as exc:

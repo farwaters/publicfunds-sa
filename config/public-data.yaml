@@ -39,4 +39,5 @@ display_sources:
   nt_budget: {page: "https://vulekamali.gov.za/datasets/budgeted-and-actual-national-expenditure", licence: "Vulekamali open data (attribute National Treasury)"}
   ppd_payments: {page: "https://data.etenders.gov.za/", licence: "National Treasury OCPO"}
   dmpr_fuel: {page: "https://www.dmpr.gov.za/Branches/Petroleum-Resources/Fuel-Prices", licence: "Public government information (DMPR / CEF)"}
+  imf_cpi: {page: "https://data.imf.org/en/datasets/IMF.STA:CPI", licence: "Source: International Monetary Fund, Consumer Price Index (CPI); IMF terms for statistical data; underlying data: Statistics South Africa"}
   oecd_cpi: {page: "https://data-explorer.oecd.org/", licence: "CC BY 4.0 (OECD); underlying data: Statistics South Africa"}
