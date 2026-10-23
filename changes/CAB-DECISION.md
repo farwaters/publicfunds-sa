@@ -14,3 +14,10 @@
 - Scope: PR #9 / CHG-2026-013 glossary merged to main (PROD, https://publicfunds.grokforum.site/); PR #10 (STATUS.md, this CAB decision log) merged to main.
 - Rollback: git revert of each merge commit.
 - Gate: locks again after the merge; further code or product changes need their own RFC and GO.
+
+## 2026-10-23 15:07 SAST: PR #12 (CHG-2026-015 municipality report card) to PROD
+
+- Decision: GO. Owner's words: "GO".
+- Scope: PR #12 / CHG-2026-015 municipality report card (branch feat/report-card) merged to main (PROD, https://publicfunds.grokforum.site/).
+- Rollback: git revert of the merge commit.
+- Gate: locks again after the merge; further code or product changes need their own RFC and GO.
