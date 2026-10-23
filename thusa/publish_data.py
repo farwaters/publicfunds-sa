@@ -330,11 +330,17 @@ def flags(paths: Paths, con) -> dict:
                              "by_detector": {k: hidden[k] for k in sorted(hidden)}}}
 
 
+IMF_BACK_SERIES_NOTE = ("Values from 2025-01 match Stats SA P0141. Earlier values are the IMF's linked back-series "
+                        "(OECD 2015-base series scaled) and can differ from Stats SA's rebased figures by about "
+                        "0.1-0.2 index points.")
+
+
 def prices(con, refs: SourceRefs) -> dict:
     used: dict = {}
     from thusa.parsers import FUEL_GRADES
     fuel = _rows(con, "SELECT * FROM curated.fuel_price ORDER BY year, month, grade")
     cpi = _rows(con, "SELECT * FROM curated.cpi ORDER BY year, month")
+    imf = bool(cpi) and cpi[0]["source_id"] == "imf_cpi"
     return {"schema": SCHEMA, "kind": "prices",
             "fuel": {"unit": "South African cents per litre", "period": "month of the official price adjustment "
                      "(prices change on the first Wednesday of the month)",
@@ -347,17 +353,19 @@ def prices(con, refs: SourceRefs) -> dict:
                      "rows": [[r["year"], r["month"], r["grade"], float(r["cents_per_litre"]),
                                refs.ref(r["source_sha256"], used)] for r in fuel],
                      "last_period": f"{fuel[-1]['year']}-{fuel[-1]['month']:02d}" if fuel else None},
-            "cpi": {"measure": "Headline consumer price index, all items, South Africa",
+            "cpi": {"measure": ("Headline consumer price index, all items, all urban areas (Stats SA)" if imf else
+                                "Headline consumer price index, all items, South Africa"),
                     "base": f"{cpi[0]['base_period']} = 100" if cpi and cpi[0]["base_period"] else None,
                     "publisher": ("Stats SA headline CPI (all urban areas), as republished by the IMF. Source: International "
                                   "Monetary Fund, Consumer Price Index (CPI), https://data.imf.org/en/datasets/IMF.STA:CPI "
-                                  "(Stats SA blocks automated downloads, KE-003)" if cpi and cpi[0]["source_id"] == "imf_cpi" else
+                                  "(Stats SA blocks automated downloads, KE-003)" if imf else
                                   "Statistics South Africa (as republished by the OECD; Stats SA blocks automated "
                                   "downloads, KE-003)"),
                     "columns": ["period", "index", "src"],
                     "rows": [[f"{r['year']}-{r['month']:02d}", r["index_value"], refs.ref(r["source_sha256"], used)]
                              for r in cpi],
-                    "last_period": f"{cpi[-1]['year']}-{cpi[-1]['month']:02d}" if cpi else None},
+                    "last_period": f"{cpi[-1]['year']}-{cpi[-1]['month']:02d}" if cpi else None,
+                    **({"back_series_note": IMF_BACK_SERIES_NOTE} if imf else {})},
             "sources": used}
 
 

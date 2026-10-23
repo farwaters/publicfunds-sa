@@ -38,6 +38,10 @@ def test_curated_cpi_prefers_imf_single_base_with_lineage(tmp_path):
                        "fetched_at_utc FROM curated.cpi ORDER BY year, month").fetchall()
     assert [(r[0], r[1], r[2]) for r in rows] == [(2024, 12, 100.0), (2025, 1, 100.3)]   # no OECD 2015-base rows mixed in
     assert all(r[3] == "Dec 2024" and r[4] == "imf_cpi" and r[5] and len(r[6]) == 64 and r[7] for r in rows)
+    from thusa.publish_data import SourceRefs, prices
+    cpi = prices(con, SourceRefs(con))["cpi"]
+    assert cpi["back_series_note"].startswith("Values from 2025-01 match Stats SA P0141.")
+    assert cpi["measure"] == "Headline consumer price index, all items, all urban areas (Stats SA)"
 
 
 def test_dq_warns_when_imf_cpi_stale_or_oecd_fallback(tmp_path):
