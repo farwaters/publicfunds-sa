@@ -278,6 +278,46 @@ def _decimal_comma(tok: str) -> str:
     return tok.replace(",", ".") if re.fullmatch(r"\d{3,4},\d{2,3}", tok) else tok
 
 
+_PDF_VALUE = re.compile(r"\d{3,4}\.\d{2,3}|\d{3,4},\d{2,3}")
+
+
+def _split_row_by_columns(mw: dict, words: list[dict]) -> list[str]:
+    """CHG-2026-022: a month row whose figures the PDF prints on several text lines (2022 'Sep'). Joined only by
+    word coordinates: every whole-number word whose vertical centre lies in the month's own band (half the gap
+    to the nearest other word in the label column: a month or a row label such as 'Ytd' or 'Avg') must fall inside exactly one of the 7 value columns, taken from the x-ranges
+    of rows on the same page that read cleanly, with exactly one word per column. Anything else returns [] and
+    the month stays unknown."""
+    def cy(w):
+        return (w["top"] + w["bottom"]) / 2
+    labels = [w for w in words if _PDF_MONTH.match(w["text"]) and abs(w["x0"] - mw["x0"]) < 5]
+    # Any other word in the label column (month or not, e.g. 'Ytd', 'Avg') bounds the band, so the first and last
+    # months cannot reach into a heading or a summary row.
+    fences = [w for w in words if w is not mw and abs(w["x0"] - mw["x0"]) < 15 and w["x1"] <= mw["x1"] + 15
+              and not re.fullmatch(r"[\d.,]+", w["text"])]
+    gaps = [abs(cy(w) - cy(mw)) for w in fences]
+    if not gaps:
+        return []
+    half = min(gaps) / 2
+    cols: list[list[float]] = []
+    for lw in labels:
+        if lw is mw:
+            continue
+        row = sorted((w for w in words if w["x0"] > lw["x1"] and abs(cy(w) - cy(lw)) < 4), key=lambda w: w["x0"])
+        if len(row) == 7 and all(_PDF_VALUE.fullmatch(w["text"]) for w in row):
+            cols = [[w["x0"], w["x1"]] for w in row] if not cols else \
+                [[min(c[0], w["x0"]), max(c[1], w["x1"])] for c, w in zip(cols, row)]
+    if not cols:
+        return []
+    band = [w for w in words if w["x0"] > mw["x1"] and abs(cy(w) - cy(mw)) < half]
+    picked: dict[int, str] = {}
+    for w in band:
+        hit = [i for i, (a, b) in enumerate(cols) if w["x0"] < b and w["x1"] > a]
+        if not _PDF_VALUE.fullmatch(w["text"]) or len(hit) != 1 or hit[0] in picked:
+            return []
+        picked[hit[0]] = _decimal_comma(w["text"])
+    return [picked[i] for i in range(7)] if len(picked) == 7 else []
+
+
 def fuel_history_pdf_rows(blob: bytes, name: str = "") -> list[dict]:
     """Rows of a yearly DMPR 'Fuel Price History' PDF (same 7-column table as the DOCX). Each month row must
     yield exactly 7 numbers; rows that don't (PDF text splits some figures) are skipped and stay unknown -
@@ -302,6 +342,8 @@ def fuel_history_pdf_rows(blob: bytes, name: str = "") -> list[dict]:
                                and abs((w["top"] + w["bottom"]) / 2 - cy) < 4), key=lambda w: w["x0"])
                 joined = re.sub(r"(?<![\d.])(\d) (\d{3}\.\d+)", r"\1\2", " ".join(_decimal_comma(w["text"]) for w in nums))
                 vals = re.findall(r"\d+(?:\.\d+)?", joined)
+                if len(vals) != 7:
+                    vals = _split_row_by_columns(mw, words)
                 if len(vals) != 7:
                     continue
                 for (grade, label), v in zip(FUEL_GRADES, vals):
