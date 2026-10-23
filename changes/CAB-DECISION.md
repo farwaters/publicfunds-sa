@@ -39,3 +39,8 @@
 - Owner's GO: "GO on live site", given in the PublicFunds chat at 16:09 SAST in reply to "Is it a go for PR #16 on the live site?".
 - Checks (TEAM-PROTOCOL): Validator gave expert PASS and charter PASS; Scout gave shadow PASS (third review, at 7e95067) and drift PASS.
 - Rollback: git revert -m 1 of the merge commit. The gate locks again after the merge.
+
+## 2026-10-23 17:01 SAST: PR #17 (CHG-2026-019, fuel decimal-comma fix) to PROD
+- Owner's GO: "GO", given at 17:01 SAST on 23 Oct 2026.
+- Checks (TEAM-PROTOCOL): Scout gave shadow PASS and drift PASS; Validator gave expert PASS and charter PASS; popia-review PASS.
+- Rollback: `git revert -m 1 52940de` (merge commit of PR #17). The gate locks again after the merge.
