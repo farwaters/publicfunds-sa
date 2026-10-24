@@ -270,6 +270,25 @@ def check_by_type(page, vname, app, problems, cov, mun):
             say("the scroll hint is shown although the table fits (or is missing from the page)")
     except Exception as exc:
         say(f"scroll hint could not be checked ({type(exc).__name__})")
+    # 3c. no sideways overflow of the page itself, and a table that scrolls sideways is reachable from the keyboard (focusable, named, arrow keys scroll it)
+    try:
+        wrap = bt.locator(".tablewrap")
+        if page.evaluate("() => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1"):
+            say("the page scrolls sideways (horizontal overflow outside the table)")
+        if over:
+            if wrap.get_attribute("tabindex") != "0":
+                say("the by-type table scrolls sideways but is not keyboard-focusable (needs tabindex=0)")
+            if not (wrap.get_attribute("aria-label") or "").strip() or wrap.get_attribute("role") != "region":
+                say("the by-type table scrolls sideways but has no accessible name (role=region and aria-label)")
+            wrap.focus()
+            before = wrap.evaluate("e => e.scrollLeft")
+            page.keyboard.press("ArrowRight")
+            page.wait_for_timeout(250)
+            if not wrap.evaluate("(e, b) => e.scrollLeft > b", before):
+                say("the by-type table does not scroll sideways with the arrow keys")
+            wrap.evaluate("e => { e.scrollLeft = 0; }")
+    except Exception as exc:
+        say(f"overflow and keyboard scrolling could not be checked ({type(exc).__name__})")
     total = bt.locator("tbody td .nn").count()
     if total != seen:
         say(f"{total} n-of-N elements on the page, data has {seen}")
