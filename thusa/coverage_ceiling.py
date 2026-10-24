@@ -15,6 +15,8 @@ import re
 
 LABEL = {"budget": "budget", "actual_audited": "audited actuals", "uifw": "irregular & wasteful spending",
          "audit_opinion": "audit opinion", "procurement": "tender awards"}
+# CHG-2026-034 (option A): the four types the headline counts ("complete core data"). Tender awards are outside the headline.
+CORE = ("budget", "actual_audited", "uifw", "audit_opinion")
 FORBIDDEN_PUBLIC_WORDS = ("KE-", "cube", "MFMA", "eTenders", "Treasury", "AGSA", "uifwexp", "components_missing", "not_in_loaded", "publish")
 
 # Static strings the by-type view shows (the page copy is in the ceiling:begin..end block; parity-tested, jargon-tested).
@@ -145,3 +147,22 @@ def model(cov, mun):
     out["_banner"] = [f"{fy}: no municipality has complete data for {_join(ts)} in the data PublicFunds loads today."
                       for fy, ts in banner.items()]
     return out
+
+
+def core_gap_lines(cov):
+    """CHG-2026-034 (option A): one line per headline-window year in which no municipality has complete data for at least one of
+    the four core types (CORE), for the home headline, the coverage page and the report card. Descriptive, no cause. The count is the
+    headline's own `by_year` entry (complete of applicable); when that entry is absent the clause is left out. The headline itself,
+    its window and its computation are not touched: the year stays counted as a gap."""
+    by_year = {y["fye"]: y for y in cov["headline"].get("by_year", [])}
+    emp = {dt: set(empty_years(cov, dt)) for dt in CORE if dt in cov["data_types"]}
+    lines = []
+    for k in window(cov):
+        types = [LABEL[dt] for dt in emp if k in emp[dt]]
+        if not types:
+            continue
+        y = by_year.get(cov["years"][k])
+        so = f", so {y['complete']} of {y['applicable']} municipalities have complete core data for that year" if y else ""
+        lines.append(f"{cov['fy_labels'][k]}: no municipality has complete data for {_join(types)} in the data PublicFunds loads today"
+                     f"{so}. The headline counts the year as a gap.")
+    return lines

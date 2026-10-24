@@ -226,8 +226,9 @@ function errorBox(e) { return el("div", {class: "card err"}, el("b", {}, "Couldn
   el("p", {class: "small"}, "Data comes from ", link(BASE + "manifest.json", BASE), ". If the public data has just been set up it may not be live yet.")); }
 
 async function vHome() {
-  const [m, f] = await Promise.all([load("manifest.json"), load("flags.json")]);
+  const [m, f, cv] = await Promise.all([load("manifest.json"), load("flags.json"), load("coverage.json").catch(() => null)]);   // coverage.json only for the note under the headline
   const c = m.coverage, ctr = m.counts;
+  const gap = cv ? gapBox(coreGapLines(cv), {link: 1, style: "grid-column:1/-1;margin:0"}) : null;
   const gen = ageDays(m.generated_at_sast);
   const kp = (big, small) => el("div", {class: "card kpi"}, el("b", {}, big), el("span", {}, small));
   const notLoaded = m.sources.filter(s => !s.last_run_status || /blocked|failed|manual|partial/.test(s.last_run_status || ""));
@@ -235,6 +236,7 @@ async function vHome() {
     el("p", {class: "lead"}, "Budgets, spending, audit results and tenders for every municipality and national department - from official open data, with what is missing shown as clearly as what is there."),
     el("div", {class: "grid"},
       kp(c.complete_pct == null ? "unknown" : c.complete_pct + "%", `of municipality-years have complete core data (${c.complete} of ${c.applicable}; ${c.entities} municipalities, ${fyLabel(c.fye_min)}–${fyLabel(c.fye_max)})`),
+      gap,
       kp(ctr.municipalities, "municipalities and districts"),
       kp(ctr.departments, "national departments with budget data"),
       kp(ctr.awards.toLocaleString("en-ZA"), "published tender award records"),
@@ -300,7 +302,8 @@ async function vCoverage(params) {
   setView("Data coverage", el("p", {class: "lead"}, "Which official data exists for each municipality and financial year (July–June). Missing data is a finding in itself: it is shown, never hidden or filled in."),
     el("div", {class: "legend"}, Object.entries(STATE).filter(([k]) => k !== "?").map(([k, v]) => el("span", {}, el("i", {class: "s-" + k}), `${SYM[k]} ${v}`))),
     filters, body, el("h2", {}, "Summary"), summary,
-    el("p", {class: "small muted"}, `Headline: ${cov.headline.complete_pct}% of municipality-years from ${fyLabel(cov.headline.fye_min)} to ${fyLabel(cov.headline.fye_max)} have every core data type (budget, audited actuals, irregular & wasteful spending, audit opinion).`));
+    el("p", {class: "small muted"}, `Headline: ${cov.headline.complete_pct}% of municipality-years from ${fyLabel(cov.headline.fye_min)} to ${fyLabel(cov.headline.fye_max)} have every core data type (budget, audited actuals, irregular & wasteful spending, audit opinion).`),
+    gapBox(coreGapLines(cov), {link: 1}));
   draw();
 }
 
@@ -647,7 +650,27 @@ function ceilingModel(cov, mun) {
   out._banner = Object.entries(banner).map(([fy, ts]) => `${fy}: no municipality has complete data for ${join(ts)} in the data PublicFunds loads today.`);
   return out;
 }
+/* CHG-2026-034 (option A): one line per headline-window year in which no municipality has complete data for a core type; same
+   output as core_gap_lines() in thusa/coverage_ceiling.py (parity-tested). Needs coverage.json only. */
+function coreGapLines(cov) {
+  const CORE = ["budget", "actual_audited", "uifw", "audit_opinion"];
+  const LABEL = {budget: "budget", actual_audited: "audited actuals", uifw: "irregular & wasteful spending", audit_opinion: "audit opinion"};
+  const h = cov.headline, byYear = Object.fromEntries((h.by_year || []).map(y => [y.fye, y]));
+  const join = p => p.length === 1 ? p[0] : p.slice(0, -1).join(", ") + " and " + p[p.length - 1];
+  const lines = [];
+  cov.years.forEach((fye, k) => {
+    if (fye < h.fye_min || fye > h.fye_max) return;
+    const types = CORE.filter(dt => cov.data_types.includes(dt) && !cov.entities.some(e => e.c[dt][k] === "P")).map(dt => LABEL[dt]);
+    if (!types.length) return;
+    const y = byYear[fye], so = y ? `, so ${y.complete} of ${y.applicable} municipalities have complete core data for that year` : "";
+    lines.push(`${cov.fy_labels[k]}: no municipality has complete data for ${join(types)} in the data PublicFunds loads today${so}. The headline counts the year as a gap.`);
+  });
+  return lines;
+}
 /* ceiling:end */
+/* CHG-2026-034: the note under the headline, on the coverage page and on the report card (lines from coreGapLines) */
+const gapBox = (lines, o = {}) => lines.length ? el("div", {class: "gapnote" + (o.card ? "" : " card"), id: "gap-lines", role: "note", style: o.style || null}, lines.map(l => el("p", {}, el("b", {}, l))),
+  o.link ? el("p", {class: "small"}, el("a", {href: "#/unknowns"}, "What is missing, by data type →")) : null) : null;
 
 /* ---------------------------------------------------------------- known unknowns (CHG-2026-008) */
 async function vUnknowns() {
@@ -865,6 +888,7 @@ async function vCard(id) {
       row(["confirmed, published ", g("flags")], String(flags.length),
         "Only flags people reviewed and confirmed. Automated leads that are not confirmed are never shown or counted here. A confirmed flag is not a finding of wrongdoing.")),
     el("p", {class: "small"}, el("b", {}, "A blank means unknown, never zero. "), "If a figure says unknown or not available, it is not in the data PublicFunds loads today. It is not evidence of a good or bad result."),
+    gapBox(coreGapLines(cov), {card: 1}),
     el("p", {class: "small muted"}, "PublicFunds SA · publicfunds.grokforum.site"));
   const copy = el("button", {class: "btn-csv", onclick: async e => { try { await navigator.clipboard.writeText(location.href); e.target.textContent = "Link copied"; } catch (x) { e.target.textContent = "Copy the address bar to share"; } }}, "Copy link to this card");
   setView(`${m.name}: report card`,

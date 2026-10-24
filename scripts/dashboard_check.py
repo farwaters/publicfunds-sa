@@ -21,7 +21,7 @@ from playwright.sync_api import sync_playwright
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))      # thusa.coverage_ceiling, wherever the script is started from
-from thusa.coverage_ceiling import by_province, model, province_order  # noqa: E402
+from thusa.coverage_ceiling import by_province, core_gap_lines, model, province_order  # noqa: E402
 PAGES = [("home", "#/"), ("coverage", "#/coverage"), ("municipalities", "#/municipalities"),
          ("municipality", "#/m/MUN:BUF"), ("departments", "#/departments"), ("department", None),
          ("tenders", "#/tenders"), ("flags", "#/flags"), ("tools", "#/tools"), ("compare", "#/tools/compare?a=MUN:BUF&b=MUN:NMA&y=2024"),
@@ -37,9 +37,9 @@ PROVINCES = {"EC": "Eastern Cape", "FS": "Free State", "GT": "Gauteng", "KZN": "
              "NC": "Northern Cape", "NW": "North West", "WC": "Western Cape"}          # mirror of PROVINCES in index.html
 ROUTES = [r"^#?/?$", r"^#/coverage$", r"^#/municipalities$", r"^#/m/.+$", r"^#/departments$", r"^#/d/.+$", r"^#/tenders$", r"^#/flags$",
           r"^#/tools(?:/\w+)?$", r"^#/sources$", r"^#/unknowns$", r"^#/changes$", r"^#/glossary$"]   # mirror of `routes` in index.html
-# "published" strings that still exist elsewhere in the #/unknowns view (state wording not changed by CHG-2026-033); anything else with "publish" fails.
-PUBLISHED_ELSEWHERE_IN_VIEW = ("Fully published", "Partly published", "actually published", "Published data per province",
-                       "fully published, per financial year", "fully published, lowest first")
+# CHG-2026-034: state wording on the report card and the glossary says "not available", not "not published". "published" stays where it is
+# about an official source or this site's own release (attribution, "Data published <date>", "confirmed, published flags").
+BANNED_STATE_WORDING = ("not published", "has not published", "blank: not published", "data items published")
 MIN_OPACITY = 0.9
 
 
@@ -237,17 +237,63 @@ def check_by_type(page, vname, app, problems, cov, mun):
         if got is not None and got != exp:
             say(f"{what} reads {got!r}, expected {exp!r}")
 
-    # 6. the word "publish" anywhere in the view, except the strings that CHG-2026-033 leaves alone (PUBLISHED_ELSEWHERE_IN_VIEW)
+    # 6. the word "publish" anywhere in the #/unknowns view (CHG-2026-034 changed the last state wording there: nothing is left to allow)
     try:
         view = page.locator("#view")
         whole = re.sub(r"\s+", " ", view.inner_text(timeout=3000) if view.count() else page.locator("body").inner_text(timeout=3000))
-        rest = whole
-        for ok in PUBLISHED_ELSEWHERE_IN_VIEW:
-            rest = rest.replace(ok, "")
-        for m in re.finditer(r"publish", rest, re.I):
-            say(f"the word 'publish' appears outside the known remaining strings: ...{rest[max(0, m.start() - 40):m.end() + 40]}...")
+        for m in re.finditer(r"publish", whole, re.I):
+            say(f"the word 'publish' appears in the view: ...{whole[max(0, m.start() - 40):m.end() + 40]}...")
     except Exception as exc:
         say(f"page text could not be scanned for 'published' ({type(exc).__name__})")
+
+
+def check_gap_lines(page, vname, app, problems, cov):
+    """CHG-2026-034 (option A): the note under the headline (home), on the coverage page and on the report card equals core_gap_lines(coverage.json);
+    the headline itself is still there and unchanged; the report card and glossary no longer say 'not published'."""
+    base = app.split("#")[0]
+    want = core_gap_lines(cov)
+    h = cov["headline"]
+
+    def say(where, msg):
+        problems.append(f"{vname} gap-lines/{where}: {msg}")
+
+    for where, hash_ in (("home", "#/"), ("coverage", "#/coverage"), ("report-card", "#/m/MUN:BUF/card")):
+        page.goto(base + hash_)
+        page.wait_for_selector('#view[aria-busy="false"]', timeout=30000)
+        box = page.locator("#gap-lines")
+        if not want:
+            if box.count():
+                say(where, "a gap note is shown although no core type has an empty year")
+        elif box.count() != 1:
+            say(where, f"expected 1 gap note, found {box.count()}")
+        elif not box.is_visible():
+            say(where, "gap note present but not visible")
+        else:
+            got = [re.sub(r"\s+", " ", t).strip() for t in box.locator("p > b").all_inner_texts()]
+            if got != want:
+                say(where, f"gap lines read {got!r}, expected {want!r}")
+            if where == "home":
+                kpi = page.locator(".kpi").first
+                kt = re.sub(r"\s+", " ", kpi.inner_text())
+                for need in (f"{h['complete_pct']}%", f"{h['complete']} of {h['applicable']}"):
+                    if need not in kt:
+                        say(where, f"the headline card no longer shows {need!r}: {kt!r}")
+                kb, bb = kpi.bounding_box(), box.bounding_box()
+                if kb and bb and bb["y"] - (kb["y"] + kb["height"]) > 80:
+                    say(where, "the gap note is not next to the headline card")
+            if where != "report-card" and not page.locator('#gap-lines a[href="#/unknowns"]').count():
+                say(where, "gap note has no link to #/unknowns")
+        if where == "report-card":
+            txt = re.sub(r"\s+", " ", page.locator("#view").inner_text(timeout=3000))
+            for bad in BANNED_STATE_WORDING:
+                if bad in txt:
+                    say(where, f"state wording {bad!r} is still on the report card")
+    page.goto(base + "#/glossary")
+    page.wait_for_selector('#view[aria-busy="false"]', timeout=30000)
+    txt = re.sub(r"\s+", " ", page.locator("#view").inner_text(timeout=3000))
+    for bad in BANNED_STATE_WORDING + ("has not published it",):
+        if bad in txt:
+            say("glossary", f"state wording {bad!r} is still in the glossary")
 
 
 class Quiet(http.server.SimpleHTTPRequestHandler):
@@ -306,6 +352,7 @@ def main() -> int:
                 page.screenshot(path=str(f), full_page=vname == "desktop" and name in ("home", "flags", "tools", "unknowns", "changes"))
                 shots.append(str(f))
             check_by_type(page, vname, app, problems, cov, mun)      # CHG-2026-033: "By data type" table, banner, notes, order, text
+            check_gap_lines(page, vname, app, problems, cov)        # CHG-2026-034: note under the headline, coverage page, report card; wording
             # tools: inflation + fuel checker produce results; CSV download works
             page.goto(app.split("#")[0] + "#/tools")
             page.wait_for_selector('#view[aria-busy="false"]')

@@ -28,7 +28,7 @@ from pathlib import Path
 
 import pytest
 
-from thusa.coverage_ceiling import (HEADERS, by_province, ceiling, empty_years, jargon, model, pct, window)
+from thusa.coverage_ceiling import (CORE, HEADERS, by_province, ceiling, core_gap_lines, empty_years, jargon, model, pct, window)
 
 ROOT = Path(__file__).resolve().parents[1]
 COV = json.loads((ROOT / "public-data/v1/coverage.json").read_text())
@@ -102,7 +102,8 @@ def mutate_unknown_states_and_unmapped(cov):
 
 
 # ------------------------------------------------------------------ 1. parity page code vs reference
-def _page_model(cov, mun):
+def _run_block(expr, payload):
+    """Run the page's ceiling:begin..ceiling:end block in node and print JSON.stringify(<expr>) with `d` = the payload."""
     if not shutil.which("node"):
         if os.environ.get("PF_SKIP_NODE_PARITY") == "1":
             pytest.skip("PF_SKIP_NODE_PARITY=1 and node is not installed: the page code was NOT checked")
@@ -111,9 +112,13 @@ def _page_model(cov, mun):
     src = PAGE_JS.read_text()
     m = re.search(r"/\* ceiling:begin \*/(.*?)/\* ceiling:end \*/", src, re.S)
     assert m and src.count("/* ceiling:begin */") == 1 and src.count("/* ceiling:end */") == 1, f"{PAGE_JS}: ceiling:begin/end markers not found exactly once"
-    js = m.group(1) + "\nconst d = JSON.parse(require('fs').readFileSync(0, 'utf8')); console.log(JSON.stringify(ceilingModel(d.cov, d.mun)));"
-    r = subprocess.run(["node", "-e", js], input=json.dumps({"cov": cov, "mun": mun}), capture_output=True, text=True, check=True)
+    js = m.group(1) + f"\nconst d = JSON.parse(require('fs').readFileSync(0, 'utf8')); console.log(JSON.stringify({expr}));"
+    r = subprocess.run(["node", "-e", js], input=json.dumps(payload), capture_output=True, text=True, check=True)
     return json.loads(r.stdout)
+
+
+def _page_model(cov, mun):
+    return _run_block("ceilingModel(d.cov, d.mun)", {"cov": cov, "mun": mun})
 
 
 @pytest.mark.parametrize("name,mutate", [("real data", lambda c: c), ("validator case: opinion+budget 2022/23 emptied", mutate_validator_case),
@@ -233,3 +238,75 @@ def test_the_jargon_check_itself_catches_the_words():
         assert jargon(bad), bad
     assert not jargon("Highest possible with the data PublicFunds loads today: 83,3% (take-up of data)")
     assert set(HEADERS) == set(COV["data_types"])
+
+
+# ------------------------------------------------------------------ 5. CHG-2026-034 (option A): note under the headline, coverage page, report card
+REAL_GAP_LINE = ("2024/25: no municipality has complete data for budget, irregular & wasteful spending and audit opinion in the data "
+                 "PublicFunds loads today, so 0 of 257 municipalities have complete core data for that year. The headline counts the year as a gap.")
+
+
+def mutate_all_core_arrive(cov):
+    return _set(_set(_set(cov, "budget", 2025, "P"), "uifw", 2025, "P"), "audit_opinion", 2025, "P")
+
+
+def mutate_actuals_and_tenders_emptied(cov):
+    """Audited actuals 2021/22 lose every row (a core type, must be named) and tender awards 2022/23 too (outside the headline: must not be)."""
+    return _set(_set(cov, "actual_audited", 2022, "m", "not_in_loaded_sources"), "procurement", 2023, "m", "not_in_loaded_sources")
+
+
+def mutate_window_start_emptied(cov):
+    """Audited actuals 2019/20 (the first year of the headline window, FYE 2020) lose every row: the line must appear."""
+    return _set(cov, "actual_audited", 2020, "m", "not_in_loaded_sources")
+
+
+GAP_CASES = [("first year of the window emptied", mutate_window_start_emptied), ("real data", lambda c: c), ("validator case: opinion+budget 2022/23 emptied", mutate_validator_case),
+             ("partial arrival: 200 of 257 UIFW 2024/25", mutate_partial_arrival), ("UIFW 2024/25 arrives for all", mutate_year_arrives),
+             ("all three 2024/25 core types arrive", mutate_all_core_arrive),
+             ("audited actuals 2021/22 and tenders 2022/23 emptied", mutate_actuals_and_tenders_emptied),
+             ("'?' cells and an entity with no province", mutate_unknown_states_and_unmapped)]
+
+
+@pytest.mark.parametrize("name,mutate", GAP_CASES)
+def test_gap_lines_page_code_matches_reference(name, mutate):
+    cov = mutate(COV)
+    assert _run_block("coreGapLines(d.cov)", {"cov": cov}) == core_gap_lines(cov), name
+
+
+@needs_baseline
+def test_gap_lines_on_real_data_and_mutations():
+    assert core_gap_lines(COV) == [REAL_GAP_LINE]
+    v = core_gap_lines(mutate_validator_case(COV))
+    assert [x.split(":")[0] for x in v] == ["2022/23", "2024/25"] and "audit opinion" in v[0] and "budget" in v[0] and "irregular" not in v[0]
+    assert core_gap_lines(mutate_all_core_arrive(COV)) == []                      # nothing empty: no note at all
+    a = core_gap_lines(mutate_year_arrives(COV))
+    assert len(a) == 1 and "irregular" not in a[0] and "budget and audit opinion" in a[0]
+    w = core_gap_lines(mutate_window_start_emptied(COV))
+    assert [x.split(":")[0] for x in w] == ["2019/20", "2024/25"] and "audited actuals" in w[0]
+    t = core_gap_lines(mutate_actuals_and_tenders_emptied(COV))
+    assert [x.split(":")[0] for x in t] == ["2021/22", "2024/25"] and "audited actuals" in t[0] and not any("tender" in x for x in t)
+
+
+def test_gap_lines_use_only_the_four_core_types_and_the_headline_window():
+    assert CORE == ("budget", "actual_audited", "uifw", "audit_opinion") and "procurement" not in CORE
+    cov = _mini("Pm")                                     # two years 2024, 2025; one type
+    cov["data_types"] = ["procurement"]
+    cov["entities"] = [{"id": "M0", "c": {"procurement": "Pm"}, "r": {"procurement": "00"}}]
+    assert core_gap_lines(cov) == []                      # a tender-only gap is not a core gap
+    cov["data_types"] = ["budget"]
+    cov["entities"] = [{"id": "M0", "c": {"budget": "mm"}, "r": {"budget": "00"}}]
+    cov["headline"].update(fye_min=2025, by_year=[{"fye": 2025, "complete": 0, "applicable": 1}])
+    assert core_gap_lines(cov) == ["2024/25: no municipality has complete data for budget in the data PublicFunds loads today, so 0 of 1 "
+                                   "municipalities have complete core data for that year. The headline counts the year as a gap."]
+    cov["headline"]["fye_min"] = 2024                     # 2023/24 is empty too: now two lines (the window is the headline's, from the data)
+    assert [x.split(":")[0] for x in core_gap_lines(cov)] == ["2023/24", "2024/25"]
+    cov["headline"]["fye_max"] = 2024                     # window narrowed: the 2024/25 line goes
+    assert [x.split(":")[0] for x in core_gap_lines(cov)] == ["2023/24"]
+    del cov["headline"]["by_year"]
+    assert core_gap_lines(cov)[0] == ("2023/24: no municipality has complete data for budget in the data PublicFunds loads today. "
+                                      "The headline counts the year as a gap.")
+
+
+@pytest.mark.parametrize("name,mutate", GAP_CASES)
+def test_gap_lines_have_no_jargon_or_published(name, mutate):
+    for line in core_gap_lines(mutate(COV)):
+        assert not jargon(line), (jargon(line), line)
