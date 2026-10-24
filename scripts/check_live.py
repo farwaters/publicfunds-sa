@@ -19,6 +19,7 @@ import hashlib
 import http.client
 import json
 import math
+import re
 import sys
 import time
 import urllib.error
@@ -51,25 +52,42 @@ def safe_url(url: str) -> str:
     return urllib.parse.urlunsplit((p.scheme, host + port, p.path, "", ""))
 
 
+# Every message validate_url can raise. Fixed texts: none repeats any part of the URL, and _SAFE_ERROR (below) relies on this list.
+URL_ERRORS = (
+    "URL contains spaces or control characters",
+    "URL must be plain ASCII (write an international host name in its punycode form, xn--...)",
+    "not a valid URL (it could not be parsed)",
+    "only http and https URLs are allowed",
+    "URL has no host",
+    "URL host contains a percent sign",
+    "URLs with embedded credentials are not allowed",
+    "the site URL must not have a query string or fragment",
+)
+
+
 def validate_url(url: str, *, base: bool = False) -> str:
     """Accept only plain http(s) URLs with a host and no embedded credentials; raise ValueError otherwise.
     base=True (the --site value) also refuses a query string or fragment. Messages never repeat the URL."""
     if any(c.isspace() or ord(c) < 32 or ord(c) == 127 for c in url):  # urlsplit would silently drop some of them
-        raise ValueError("URL contains spaces or control characters")
+        raise ValueError(URL_ERRORS[0])
+    if not url.isascii():  # http.client cannot send it: the run would end in a UnicodeEncodeError that looks like an outage
+        raise ValueError(URL_ERRORS[1])
     try:
         p = urllib.parse.urlsplit(url)
         host = p.hostname
         _ = p.port  # raises ValueError for a bad port
     except ValueError:  # Python's message can repeat part of the URL (a bad port, for example): never pass it on
-        raise ValueError("not a valid URL (it could not be parsed)") from None
+        raise ValueError(URL_ERRORS[2]) from None
     if p.scheme not in ("http", "https"):
-        raise ValueError("only http and https URLs are allowed")  # fixed text: without a scheme, urlsplit would call "user" in user:pw@host the scheme
+        raise ValueError(URL_ERRORS[3])  # fixed text: without a scheme, urlsplit would call "user" in user:pw@host the scheme
     if not host:
-        raise ValueError("URL has no host")
+        raise ValueError(URL_ERRORS[4])
+    if "%" in host:  # %20 and friends: never a real host name here, and a lookup of it would be reported as an outage
+        raise ValueError(URL_ERRORS[5])
     if p.username is not None or p.password is not None:
-        raise ValueError("URLs with embedded credentials are not allowed")
+        raise ValueError(URL_ERRORS[6])
     if base and (p.query or p.fragment):
-        raise ValueError("the site URL must not have a query string or fragment")
+        raise ValueError(URL_ERRORS[7])
     return url
 
 
@@ -113,7 +131,7 @@ def fetch(url: str, timeout: float = 20.0, retries: int = 2, delay: float = 5.0)
 
 def parse_manifest(body: bytes) -> tuple[dict | None, str]:
     try:
-        m = json.loads(body.decode("utf-8"))
+        m = json.loads(body.decode("utf-8-sig"))  # a leading BOM is allowed (browsers drop it too)
     except (ValueError, UnicodeDecodeError, RecursionError):
         return None, "not valid JSON"
     if not isinstance(m, dict):
@@ -232,7 +250,7 @@ def run_checks(site: str, *, raw_url: str | None = None, expect_local: str | Non
     want = None
     if expect_local:
         try:
-            with open(expect_local, encoding="utf-8") as fh:
+            with open(expect_local, encoding="utf-8-sig") as fh:
                 want = _build_id(json.load(fh))
         except (OSError, ValueError, RecursionError):
             want = None
@@ -321,15 +339,36 @@ def _num(lo: float, hi: float, *, lo_open: bool = False, integer: bool = False):
             x = int(value) if integer else float(value)
         except ValueError:
             raise argparse.ArgumentTypeError("not a number") from None
-        if not math.isfinite(x) or x < lo or x > hi or (lo_open and x == lo):
+        if (not integer and not math.isfinite(x)) or x < lo or x > hi or (lo_open and x == lo):
             raise argparse.ArgumentTypeError(f"must be {'greater than' if lo_open else 'at least'} {lo:g} and at most {hi:g}")
         return x
     return conv
 
 
+_SAFE_ERROR = re.compile(
+    r"argument --?[a-z][a-z-]*(/--?[a-z][a-z-]*)?: ("
+    r"expected one argument|this flag takes no value|not a number|must be (greater than|at least) [0-9.e+]+ and at most [0-9.e+]+|"
+    r"no sample file names given: give at least one name, or leave the default|" + "|".join(re.escape(m) for m in URL_ERRORS) + r")"
+    r"|unrecognized arguments \(not repeated here\)|--warn-age-hours must be below --max-age-hours")
+_NO_VALUE = re.compile(r"(argument --?[a-z][a-z-]*(?:/--?[a-z][a-z-]*)?): ignored explicit argument ", re.S)
+
+
+class _Parser(argparse.ArgumentParser):
+    """Exit-2 error messages are limited to this script's own fixed texts. argparse builds some messages from what was
+    typed ("ignored explicit argument 'SECRET'" for --json=SECRET); those are replaced, and so is anything unexpected."""
+
+    def error(self, message):
+        m = _NO_VALUE.match(message)
+        if m:
+            message = f"{m.group(1)}: this flag takes no value"
+        if not _SAFE_ERROR.fullmatch(message):
+            message = "invalid command line (details not shown: they could repeat what was typed)"
+        super().error(message)
+
+
 def main(argv: list[str] | None = None) -> int:
-    # allow_abbrev=False: argparse's "ambiguous option" message would repeat what was typed, value included
-    ap = argparse.ArgumentParser(description="Read-only live site and data-age check (SLO-PD-1).", allow_abbrev=False)
+    # allow_abbrev=False (a behaviour change: --sit no longer means --site): argparse's "ambiguous option" message would repeat what was typed
+    ap = _Parser(description="Read-only live site and data-age check (SLO-PD-1).", allow_abbrev=False)
     ap.add_argument("--site", type=_site_arg, default=DEFAULT_SITE, help="site base URL, http or https (default: production)")
     ap.add_argument("--raw-url", type=_url_arg, help="manifest URL on the git host; compared with the site (the SLO's measuring point)")
     ap.add_argument("--expect-local", metavar="MANIFEST", help="local manifest.json whose build id the site must serve")

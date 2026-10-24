@@ -527,7 +527,8 @@ def test_rejected_urls_are_not_echoed(capsys, args):
 MARK = "zqxmark7f3a"  # lower case: urlsplit lower-cases a scheme, so a mixed-case marker would hide an echoed scheme
 BOTH = [f"{MARK}", f"{MARK}:pw@host", f"user:{MARK}@host", f"{MARK}:x@host/path", f"{MARK}://host", f"ftp://{MARK}", f"file:///{MARK}",
         f"//{MARK}", f"{MARK}@", f"http://u:{MARK}@h/", f"http://{MARK}:pw@h/", f"http://h:{MARK}/", f"http://h:{MARK}", f"http://{MARK}:99999999/",
-        f"http://[{MARK}/", f"http://h:{MARK}\n", f"http://{MARK} x/", f"http://\x00{MARK}", "http://", f"mailto:{MARK}@host", f"javascript:{MARK}"]
+        f"http://[{MARK}/", f"http://h:{MARK}\n", f"http://{MARK} x/", f"http://\x00{MARK}", "http://", f"mailto:{MARK}@host", f"javascript:{MARK}",
+        f"http://{MARK}\u00e9.example/", f"http://h/{MARK}\u00e9", f"http://h%20{MARK}/", f"http://{MARK}%0a/", f"http://[{MARK}%25eth0]/"]
 SITE_ONLY = [f"http://h/?q={MARK}", f"https://h/#{MARK}", f"http://h/p?{MARK}#{MARK}"]
 
 
@@ -626,6 +627,168 @@ def _is_rejected(url):
     return False
 
 
+FLAGS = ["--json", "--help", "-h", "--site", "--raw-url", "--wait", "--poll", "--retries", "--retry-delay", "--max-age-hours",
+         "--warn-age-hours", "--sample-files", "--expect-local"]
+
+
+@pytest.mark.parametrize("argv", [["--json=" + MARK], ["--json", "--json=" + MARK], ["--help=" + MARK], ["-h=" + MARK], ["--json="], ["--help="], ["-h="],
+                                  ["--json=" + MARK, "--site", "http://h"], ["--site", "http://h", "--json=" + MARK], ["--site=http://h", "--help=" + MARK],
+                                  ["--json=" + MARK + "\n"], ["--json=" + MARK, "--json=" + MARK]])
+def test_flags_that_take_no_value_do_not_echo_one(capsys, argv):
+    # argparse would print "ignored explicit argument '<value>'"
+    out = _rejected_main(argv, capsys)
+    assert MARK not in out and "ignored explicit" not in out and "takes no value" in out
+
+
+def test_a_help_request_still_works_and_a_value_after_it_is_never_echoed(capsys):
+    with pytest.raises(SystemExit) as e:
+        cl.main(["-h"])
+    assert e.value.code == 0 and "usage:" in capsys.readouterr().out
+    with pytest.raises(SystemExit) as e:
+        cl.main([f"-h{MARK}"])  # help is answered first: static text, nothing echoed
+    assert MARK not in "".join(capsys.readouterr())
+
+
+def test_error_messages_outside_the_fixed_list_are_replaced_not_printed(capsys):
+    # the fallback behind every argparse message built from typed input (an unknown choice, a bad type, ...)
+    ap = cl._Parser(prog="x")
+    for msg in (f"argument --json: ignored explicit argument '{MARK}'", f"argument --wait: invalid float value: '{MARK}'",
+                f"unrecognized arguments: {MARK}", f"argument --site: invalid choice: '{MARK}'", MARK):
+        with pytest.raises(SystemExit) as e:
+            ap.error(msg)
+        assert e.value.code == 2 and MARK not in "".join(capsys.readouterr())
+    with pytest.raises(SystemExit):
+        ap.error(f"{MARK} --warn-age-hours must be below --max-age-hours")  # not an exact match: replaced too
+    assert MARK not in "".join(capsys.readouterr())
+
+
+def test_every_url_message_is_reachable_and_shown_for_both_flags(capsys):
+    samples = {"URL contains spaces or control characters": "http://h x/", "plain ASCII": "http://h/\u00e9",
+               "not a valid URL": "http://h:notaport/", "only http and https": "user:pw@host", "no host": "http://",
+               "percent sign": "http://h%20x/", "embedded credentials": "http://u:p@h/"}
+    assert len(samples) == len(cl.URL_ERRORS) - 1  # all but the site-only one, tested below
+    for needle, url in samples.items():
+        for flag in ("--site", "--raw-url"):
+            assert needle in _rejected_main([flag, url], capsys), (flag, url)
+    assert "query string" in _rejected_main(["--site", "http://h/?q=1"], capsys)
+
+
+@pytest.mark.parametrize("flag", ["--retries", "--retry-delay"])
+@pytest.mark.parametrize("sign", ["", "-", "+"])
+@pytest.mark.parametrize("digits", [308, 309, 400, 5000])
+def test_huge_integers_are_a_bad_command_line_not_a_traceback(capsys, flag, sign, digits):
+    # int("9" * 309) cannot become a float: math.isfinite raised OverflowError (a traceback, exit 1)
+    out = _rejected_main([flag, sign + "9" * digits], capsys)
+    assert "at most" in out or "not a number" in out
+
+
+def test_num_converter_raises_only_argument_type_errors_for_huge_integers():
+    import argparse
+    conv = cl._num(0, 10, integer=True)
+    for v in ("9" * 309, "-" + "9" * 309, "9" * 400, "9" * 5000):
+        with pytest.raises(argparse.ArgumentTypeError):
+            conv(v)
+    assert conv("10") == 10 and conv("0") == 0
+
+
+@pytest.mark.parametrize("url", ["http://\u00e9.example/", "http://example.org/\u00e9", "http://\u0435xample.org/", "https://h/?q=\u00e9",
+                                 "http://\u4f8b\u3048.jp/", "http://exa\u200bmple.org/"])
+def test_non_ascii_urls_are_rejected_with_exit_2_not_reported_as_an_outage(capsys, url):
+    with pytest.raises(ValueError, match="plain ASCII"):
+        cl.validate_url(url)
+    out = _rejected_main(["--raw-url", url], capsys)
+    assert "plain ASCII" in out and "punycode" in out and "UnicodeEncodeError" not in out
+    st, _, err = cl.fetch(url, retries=0)
+    assert st is None and "plain ASCII" in err
+
+
+def test_a_punycode_host_is_ordinary_ascii_and_accepted():
+    assert cl.validate_url("http://xn--9ca.example/") == "http://xn--9ca.example/"
+
+
+@pytest.mark.parametrize("url", ["http://h%20x/", "http://h%0ax/", "http://h%0Dx/", "http://h%00/", "http://h%09x/", "http://%41/", "http://h%2520/",
+                                 "http://[fe80::1%25eth0]/"])
+def test_a_percent_sign_in_the_host_is_rejected_with_exit_2(capsys, url):
+    with pytest.raises(ValueError, match="percent sign"):
+        cl.validate_url(url)
+    for flag in ("--site", "--raw-url"):
+        out = _rejected_main([flag, url], capsys)
+        assert "percent sign" in out and "[BREACH]" not in out
+
+
+def test_percent_signs_elsewhere_in_the_url_are_fine():
+    assert cl.validate_url("http://h/a%20b?q=%41") == "http://h/a%20b?q=%41"
+    assert cl.validate_url("http://h:8080/%7Euser/", base=False)
+
+
+def test_a_manifest_with_a_utf8_bom_is_read_like_any_other(site, tmp_path):
+    # browsers drop a BOM when they read the file with fetch().json(), so the site works for readers: do not report an outage
+    site.routes[cl.MANIFEST_PATH] = (200, b"\xef\xbb\xbf" + json.dumps(manifest()).encode())
+    assert set(statuses(run(site.url)).values()) == {cl.OK}
+    assert cl.parse_manifest(b"\xef\xbb\xbf" + b'{"a": 1}') == ({"a": 1}, "")
+    # the local manifest given to --expect-local may carry one too
+    f = tmp_path / "manifest.json"
+    f.write_bytes(b"\xef\xbb\xbf" + json.dumps(manifest(build="B1")).encode())
+    assert run(site.url, expect_local=str(f))["local.build"][0] == cl.OK
+
+
+def test_other_leading_garbage_in_a_manifest_is_still_a_breach(site):
+    for body in (b"\xef\xbb\xbf\xef\xbb\xbf{}", b"\xff\xfe{}", b"\x00{}", b" \xef\xbb\xbf{}"):
+        site.routes[cl.MANIFEST_PATH] = (200, body)
+        assert run(site.url)["site.manifest"][0] == cl.BREACH, body
+
+
+@pytest.mark.parametrize("argv", [["--sit", "http://127.0.0.1:9"], ["--sit=http://127.0.0.1:9"], ["--raw", "http://127.0.0.1:9/m.json"], ["--wa", "5"],
+                                  ["--json-"], ["--js"], ["--ret", "1"], ["--retr", "1"], ["--exp", "x"], ["--max", "50"], ["--sample", "a.json"]])
+def test_flag_abbreviations_are_refused(capsys, argv):
+    # behaviour change: argparse accepts an unambiguous prefix by default (--sit for --site), and its "ambiguous option"
+    # message repeats what was typed. allow_abbrev=False turns both into one fixed "unrecognized arguments" error.
+    out = _rejected_main(argv, capsys)
+    assert "unrecognized arguments (not repeated here)" in out and "[OK]" not in out and "[BREACH]" not in out
+
+
+def test_every_documented_flag_is_still_accepted_in_full(site, capsys, monkeypatch):
+    rc = _main_default_site(monkeypatch, site, ["--wait=0", "--poll=1", "--max-age-hours=100", "--warn-age-hours=99", "--sample-files=prices.json",
+                                                "--retries=0", "--retry-delay=0", "--json"])
+    assert rc == 0
+
+
+def test_fuzzed_command_lines_never_echo_a_marker(capsys):
+    # tokens built from every flag, in every form, with the marker in the name or the value; a "--wait -1" at a random
+    # position guarantees a rejection before anything is fetched (a help request exits 0 first: static text)
+    rnd = random.Random(20261025)
+    seen = {0: 0, 2: 0}
+    for _ in range(600):
+        argv = []
+        for _ in range(rnd.randint(1, 5)):
+            f = rnd.choice(FLAGS)
+            form = rnd.randint(0, 7)
+            if form == 0:
+                argv.append(f)
+            elif form == 1:
+                argv.append(f"{f}={MARK}")
+            elif form == 2:
+                argv += [f, MARK]
+            elif form == 3:
+                argv.append(MARK)
+            elif form == 4:
+                argv.append(f"{f}{MARK}")
+            elif form == 5:
+                argv.append(f"{f}=")
+            elif form == 6:
+                argv += [f"{f}={MARK}", f"{f}={MARK}"]
+            else:
+                argv.append(f"-{MARK}" if f.startswith("-h") else f"{f[:rnd.randint(2, len(f))]}={MARK}")  # includes abbreviations
+        argv.insert(rnd.randint(0, len(argv)), "--wait=-1")
+        with pytest.raises(SystemExit) as e:
+            cl.main(argv)
+        cap = capsys.readouterr()
+        assert e.value.code in (0, 2) and "Traceback" not in cap.err, argv
+        assert MARK not in cap.out + cap.err, argv
+        seen[e.value.code] += 1
+    assert seen[2] > 300  # the generator really produces rejections
+
+
 def test_raw_url_query_string_is_never_printed(site, capsys, monkeypatch):
     raw = Site().healthy()
     try:
@@ -644,6 +807,15 @@ def test_unreachable_site_line_shows_host_but_no_secrets(capsys):
     rc = cl.main(["--site", f"http://127.0.0.1:{port}", "--retries", "0"])
     out = capsys.readouterr().out
     assert rc == 1 and f"http://127.0.0.1:{port}/ -> unreachable" in out
+
+
+def test_printed_site_is_the_normalised_safe_form_not_the_typed_string(capsys):
+    # validate_url already rejects userinfo, query and fragment for --site, so safe_url is the second layer: the printed
+    # form is rebuilt from the parsed parts (host lower-cased), never the typed string
+    with socket.socket() as s:
+        s.bind(("127.0.0.1", 0)); port = s.getsockname()[1]
+    res = run(f"HTTP://LocalHost:{port}/", retries=0)
+    assert res["site.home"][1].startswith(f"http://localhost:{port}/ -> unreachable")
 
 
 def test_script_is_stdlib_only_and_sends_no_credentials():
