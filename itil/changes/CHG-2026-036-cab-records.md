@@ -7,7 +7,7 @@
 | Type | Standard (`itil/change-enablement.md`: "docs/copy") |
 | CIs affected | `changes/CAB-DECISION.md` (one new section), `itil/registers/change-log.md` (status cells of CHG-2026-031, -033 and -034, one new row), the `Result:` line of `itil/changes/CHG-2026-031-rfc-records-wording.md`, `CHG-2026-033-by-type-n-of-n.md` and `CHG-2026-034-option-a-headline-and-wording.md`, this record |
 | Linked records | PRs #30, #32 and #33; `changes/CAB-DECISION.md` |
-| Rollback | Close the PR unmerged. If merged: `git revert -m 1 <merge commit>` (git is the rollback; no .bkp files) |
+| Rollback | Close the PR unmerged. If merged: `git revert -m 1 <merge commit>` (git is the rollback; no .bkp files). After #35 merges, `git revert -m 1 75fbd63` (#33) conflicts in the CHG-2026-034 RFC and `change-log.md`, because #35 edits both: revert #35 first, or resolve the doc conflicts |
 
 ## Problem
 The last entry in `changes/CAB-DECISION.md` is the 24 Oct 2026 11:07 SAST GO ("GO on 28 and 23"). Nothing records the owner's GO of 24 Oct 2026 16:06 SAST for the merges of #30 (merge commit 6f1b992), #32 (917b8e8) and #33 (75fbd63), and the change-log rows and RFC `Result:` lines for CHG-2026-031, -033 and -034 still say the PRs are open, "Awaiting review" or "Draft, not reviewed, no GO".
@@ -18,7 +18,7 @@ The last entry in `changes/CAB-DECISION.md` is the 24 Oct 2026 11:07 SAST GO ("G
 3. `Result:` lines of the three RFCs set to the merged state with the facts above. The header tables ("Owner GO: none ...") and the review lines are left as drafted, as CHG-2026-031 did for the earlier RFCs.
 
 ## What the recorded GO is, and is not
-- The owner's quote (chat, 24 Oct 2026 16:06 SAST): "GO on all merges; I can't review the code I don't know what you're doing". It was relayed by PublicFunds from the owner's chat message; it has not been independently verified.
+- The owner's quote (chat, 24 Oct 2026 16:06 SAST): "GO on all merges; I can't review the code I don't know what you're doing". It was logged by PublicFunds, from the owner's chat with PublicFunds (the PublicFunds bot chat); not independently verified by reviewers.
 - It predates the merged heads of #32 (`a4f99f4`, committed 16:47:16) and #33 (`bc35cd8`, committed 17:24:24), so it worked only as a blanket forward GO for the open PRs #29 to #33, applied by PublicFunds on the condition that three reviewers passed the exact head. The owner decides whether that suffices. The merged head of #30 (`bc53503`, committed 12:28:31) predates the GO.
 - The quote's own words mean the GO was given without the owner reviewing the content; the independent reviewers were the check instead.
 - Reviewer verdicts are **reported** (relayed in chat), not stored in the repository. For #30 the CHG-2026-031 RFC records Validator and Scout passes only at `7b1a2aa` and `c2166ab` (re-check of the latest commit requested); the merged head was `bc53503`. Scout's popia-review is reported to have covered `bc53503`; no separate expert or charter pass by Validator at `bc53503` is recorded in the repository, and none is claimed.
