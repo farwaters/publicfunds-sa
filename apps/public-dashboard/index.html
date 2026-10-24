@@ -235,7 +235,7 @@ async function vHome() {
   setView("Where does South Africa's public money go?",
     el("p", {class: "lead"}, "Budgets, spending, audit results and tenders for every municipality and national department - from official open data, with what is missing shown as clearly as what is there."),
     el("div", {class: "grid"},
-      kp(c.complete_pct == null ? "unknown" : c.complete_pct + "%", `of municipality-years have complete core data (${c.complete} of ${c.applicable}; ${c.entities} municipalities, ${fyLabel(c.fye_min)}–${fyLabel(c.fye_max)})`),
+      kp(c.complete_pct == null ? "unknown" : c.complete_pct + "%", `of municipality-years have complete core data (${c.complete} of ${c.applicable} municipality-years; ${c.entities} municipalities, ${fyLabel(c.fye_min)}–${fyLabel(c.fye_max)})`),
       gap,
       kp(ctr.municipalities, "municipalities and districts"),
       kp(ctr.departments, "national departments with budget data"),
@@ -676,7 +676,7 @@ function headlineContextLines(cov) {
   const CORE = ["budget", "actual_audited", "uifw", "audit_opinion"];
   const h = cov.headline, byYear = Object.fromEntries((h.by_year || []).map(y => [y.fye, y]));
   const join = p => p.length === 1 ? p[0] : p.slice(0, -1).join(", ") + " and " + p[p.length - 1];
-  const tenths = (c, a) => (Math.floor((2000 * c + a) / (2 * a)) / 10).toFixed(1);
+  const tenths = (c, a) => (Math.floor((2000 * c + a) / (2 * a)) / 10).toFixed(1).replace(".", ",");
   const win = [], gaps = [], rest = [];
   cov.years.forEach((fye, k) => {
     if (fye < h.fye_min || fye > h.fye_max) return;
@@ -688,11 +688,11 @@ function headlineContextLines(cov) {
   const c = rest.reduce((s, k) => s + byYear[cov.years[k]].complete, 0), a = rest.reduce((s, k) => s + byYear[cov.years[k]].applicable, 0);
   const contiguous = rest.every((k, i) => i === 0 || k === rest[i - 1] + 1);
   const alone = contiguous ? (rest.length === 1 ? labels(rest)[0] : `${labels(rest)[0]} to ${labels(rest)[rest.length - 1]}`) : join(labels(rest));
-  const lines = [`Includes ${join(labels(gaps))}, for which no municipality has complete data in what PublicFunds has loaded. ${alone} alone: ${tenths(c, a)}% (${c} of ${a}).`];
+  const lines = [`Includes ${join(labels(gaps))}, for which no municipality has complete data in what PublicFunds has loaded. ${alone} alone: ${tenths(c, a)}% (${c} of ${a} municipality-years).`];
   const nxt = byYear[h.fye_max + 1];
   if (nxt && nxt.all_core_due === false) {
     const hc = h.complete, ha = h.applicable + nxt.applicable;
-    lines.push(`Prediction, not a result: from the first data update on or after 1 December ${nxt.fye}, the year ${nxt.fy} counts in the headline. If it then looks like ${cov.fy_labels[gaps[gaps.length - 1]]} does today (no municipality with complete data), the headline would fall to about ${tenths(hc, ha)}% (${hc} of ${ha}).`);
+    lines.push(`Prediction, not a result: from the first data update on or after 1 December ${nxt.fye}, the year ${nxt.fy} counts in the headline. If it then looks like ${cov.fy_labels[gaps[gaps.length - 1]]} does today (no municipality with complete data), the headline would fall to about ${tenths(hc, ha)}% (${hc} of ${ha} municipality-years), because ${nxt.fy} would count as a gap, not because anything got worse, if nothing else changes.`);
   }
   return lines;
 }

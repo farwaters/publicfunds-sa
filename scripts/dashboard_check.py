@@ -39,7 +39,7 @@ ROUTES = [r"^#?/?$", r"^#/coverage$", r"^#/municipalities$", r"^#/m/.+$", r"^#/d
           r"^#/tools(?:/\w+)?$", r"^#/sources$", r"^#/unknowns$", r"^#/changes$", r"^#/glossary$"]   # mirror of `routes` in index.html
 # CHG-2026-034: state wording on the report card and the glossary says "not available", not "not published". "published" stays where it is
 # about an official source or this site's own release (attribution, "Data published <date>", "confirmed, published flags").
-BANNED_STATE_WORDING = ("not published", "has not published", "blank: not published", "data items published")
+BANNED_STATE_WORDING = ("not published", "has not published", "has not been published", "blank: not published", "data items published")
 MIN_OPACITY = 0.9
 MIN_CONTRAST = 3.0          # text colour against its effective background; real text on this page is >= 4.5 (axe checks that), so 3 only catches hidden text
 MIN_FONT_PX = 8             # anything smaller is not readable text (font-size:0 and the like)
@@ -384,12 +384,24 @@ def check_gap_lines(page, vname, app, problems, cov):
             if where == "home":
                 kpi = page.locator(".kpi").first
                 kt = re.sub(r"\s+", " ", kpi.inner_text())
-                for need in (f"{h['complete_pct']}%", f"{h['complete']} of {h['applicable']}"):
+                for need in (f"{h['complete_pct']}%", f"{h['complete']} of {h['applicable']} municipality-years"):
                     if need not in kt:
                         say(where, f"the headline card no longer shows {need!r}: {kt!r}")
                 kb, bb = kpi.bounding_box(), box.bounding_box()
                 if kb and bb and bb["y"] - (kb["y"] + kb["height"]) > 80:
                     say(where, "the gap note is not next to the headline card")
+            if where == "coverage":
+                fl = dict(zip(cov["years"], cov["fy_labels"]))
+                sent = page.locator('#view p.small.muted:has-text("Headline:")')
+                want_sent = (f"Headline: {h['complete_pct']}% of municipality-years from {fl[h['fye_min']]} to {fl[h['fye_max']]} have every core data type "
+                             f"(budget, audited actuals, irregular & wasteful spending, audit opinion).")
+                if sent.count() != 1:
+                    say(where, f"expected 1 headline sentence, found {sent.count()}")
+                else:
+                    readable(sent, "coverage headline sentence", lambda m: say("coverage", m))
+                    got_s = re.sub(r"\s+", " ", sent.inner_text(timeout=2000)).strip()
+                    if got_s != want_sent:
+                        say(where, f"headline sentence reads {got_s!r}, expected {want_sent!r}")
             if where != "report-card" and not page.locator('#gap-lines a[href="#/unknowns"]').count():
                 say(where, "gap note has no link to #/unknowns")
         if where == "report-card":

@@ -307,7 +307,8 @@ GAP_CASES = [("first year of the window emptied", mutate_window_start_emptied), 
              ("partial arrival: 200 of 257 UIFW 2024/25", mutate_partial_arrival), ("UIFW 2024/25 arrives for all", mutate_year_arrives),
              ("all three 2024/25 core types arrive", mutate_all_core_arrive),
              ("audited actuals 2021/22 and tenders 2022/23 emptied", mutate_actuals_and_tenders_emptied),
-             ("'?' cells and an entity with no province", mutate_unknown_states_and_unmapped)]
+             ("'?' cells and an entity with no province", mutate_unknown_states_and_unmapped),
+             ("a year before the window (lower bound of the window)", mutate_year_before_window)]
 
 
 @pytest.mark.parametrize("name,mutate", GAP_CASES)
@@ -357,9 +358,9 @@ def test_gap_lines_have_no_jargon_or_published(name, mutate):
 
 
 # ------------------------------------------------------------------ 6. CHG-2026-034 review fixes: context beside the headline, labels, wording
-REAL_CONTEXT = ["Includes 2024/25, for which no municipality has complete data in what PublicFunds has loaded. 2019/20 to 2023/24 alone: 90.8% (1167 of 1285).",
+REAL_CONTEXT = ["Includes 2024/25, for which no municipality has complete data in what PublicFunds has loaded. 2019/20 to 2023/24 alone: 90,8% (1167 of 1285 municipality-years).",
                 "Prediction, not a result: from the first data update on or after 1 December 2026, the year 2025/26 counts in the headline. If it then looks "
-                "like 2024/25 does today (no municipality with complete data), the headline would fall to about 64.9% (1167 of 1799)."]
+                "like 2024/25 does today (no municipality with complete data), the headline would fall to about 64,9% (1167 of 1799 municipality-years), because 2025/26 would count as a gap, not because anything got worse, if nothing else changes."]
 
 
 @needs_baseline
@@ -385,7 +386,7 @@ def test_headline_context_edge_cases():
     assert headline_context_lines(d) == REAL_CONTEXT[:1]                                 # no next year in the data: no prediction
     v = headline_context_lines(mutate_validator_case(c))                                 # 2022/23 and 2024/25 empty: not one block
     assert v[0].startswith("Includes 2022/23 and 2024/25, ") and "2019/20, 2020/21, 2021/22 and 2023/24 alone: " in v[0]
-    assert "(" + str(232 + 228 + 240 + 235) + " of " + str(257 * 4) + ")" in v[0] and "about" in v[1] and "like 2024/25 does today" in v[1]
+    assert "(" + str(232 + 228 + 240 + 235) + " of " + str(257 * 4) + " municipality-years)" in v[0] and "about" in v[1] and "like 2024/25 does today" in v[1]
     w = headline_context_lines(mutate_window_start_emptied(c))                           # window start empty: the rest is 2020/21 to 2023/24
     assert w[0].startswith("Includes 2019/20 and 2024/25, ") and "2020/21 to 2023/24 alone: " in w[0]
     assert headline_context_lines(copy.deepcopy(c) | {"data_types": []}) == []
@@ -464,3 +465,13 @@ def test_a_year_before_the_window_changes_nothing():
     """The reference ignores a year before fye_min: same cells, notes and banner as without it. (The page block is held equal by the parity case.)"""
     assert model(mutate_year_before_window(COV), MUN) == model(COV, MUN)
     assert mutate_year_before_window(COV)["years"][0] == COV["years"][0] - 1
+
+
+def test_headline_context_says_municipality_years_with_decimal_commas_and_why_the_prediction_falls():
+    """Each count carries its unit (not 'municipalities'), percentages use the decimal comma the by-type table uses, and the prediction says the fall
+    comes from the year counting as a gap, not from anything getting worse, and that it assumes nothing else changes."""
+    first, second = headline_context_lines(COV)
+    assert "90,8%" in first and "(1167 of 1285 municipality-years)" in first and "90.8" not in first
+    assert "64,9%" in second and "(1167 of 1799 municipality-years)" in second and "64.9" not in second
+    assert second.endswith("because 2025/26 would count as a gap, not because anything got worse, if nothing else changes.")
+    assert second.startswith("Prediction, not a result: ")

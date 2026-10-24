@@ -177,6 +177,11 @@ def core_gap_lines(cov):
     return lines
 
 
+def _comma(x):
+    """Decimal comma, as the by-type table shows (en-ZA)."""
+    return x.replace(".", ",")
+
+
 def _tenths(c, a):
     """c / a as a percentage with one decimal, rounded half up with integer arithmetic (same in Python and the page)."""
     return f"{(2000 * c + a) // (2 * a) / 10:.1f}"
@@ -203,11 +208,12 @@ def headline_context_lines(cov):
     a = sum(by_year[cov["years"][k]]["applicable"] for k in rest)
     alone = _span(labels(rest)) if rest == list(range(rest[0], rest[-1] + 1)) else _join(labels(rest))
     lines = [f"Includes {_join(labels(gaps))}, for which no municipality has complete data in what PublicFunds has loaded. "
-             f"{alone} alone: {_tenths(c, a)}% ({c} of {a})."]
+             f"{alone} alone: {_comma(_tenths(c, a))}% ({c} of {a} municipality-years)."]
     nxt = by_year.get(h["fye_max"] + 1)
     if nxt and nxt.get("all_core_due") is False:
         hc, ha = h["complete"], h["applicable"] + nxt["applicable"]
         lines.append(f"Prediction, not a result: from the first data update on or after 1 December {nxt['fye']}, the year {nxt['fy']} counts in "
                      f"the headline. If it then looks like {cov['fy_labels'][gaps[-1]]} does today (no municipality with complete data), "
-                     f"the headline would fall to about {_tenths(hc, ha)}% ({hc} of {ha}).")
+                     f"the headline would fall to about {_comma(_tenths(hc, ha))}% ({hc} of {ha} municipality-years), because {nxt['fy']} would "
+                     f"count as a gap, not because anything got worse, if nothing else changes.")
     return lines
