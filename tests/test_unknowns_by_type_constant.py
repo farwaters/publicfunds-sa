@@ -446,6 +446,13 @@ def test_how_to_read_does_not_contradict_the_lead_and_says_a_gap_is_not_wrongdoi
     assert "not yet due" not in t and "not due yet" not in t
     page = PAGE_JS.read_text()
     assert "often the audit is not yet due" not in page and t in page
+    # the About ("A blank means unknown") paragraph in the glossary view says the same sentence, word for word
+    sentence = "A gap is not evidence of wrongdoing. It usually means the data is not in what PublicFunds has loaded."
+    assert sentence in t
+    about = re.search(r'We never fill in a zero\. ([^"]*)"', page).group(1)
+    assert about.strip() == sentence and not jargon(about)
+    for old in ("often the audit is not due yet", "often the audit is not yet due", "not due yet", "the source has not published it"):
+        assert old not in page, old
 
 
 def test_csv_note_says_the_headers_changed():

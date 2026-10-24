@@ -444,6 +444,11 @@ def check_gap_lines(page, vname, app, problems, cov):
     for bad in BANNED_STATE_WORDING + ("has not published it",):
         if bad in txt:
             say("glossary", f"state wording {bad!r} is still in the glossary")
+    for bad in ("not due yet", "not yet due"):
+        if bad in txt:
+            say("glossary", f"{bad!r} is still in the glossary: the 2024/25 audits are due")
+    if "A gap is not evidence of wrongdoing. It usually means the data is not in what PublicFunds has loaded." not in txt:
+        say("glossary", "the glossary no longer carries the how-to-read sentence about a gap")
 
 
 class Quiet(http.server.SimpleHTTPRequestHandler):
