@@ -11,6 +11,7 @@ import functools
 import http.server
 import json
 import os
+import re
 import shutil
 import sys
 import threading
@@ -19,6 +20,8 @@ from pathlib import Path
 from playwright.sync_api import sync_playwright
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT))      # thusa.coverage_ceiling, wherever the script is started from
+from thusa.coverage_ceiling import by_province, model, province_order  # noqa: E402
 PAGES = [("home", "#/"), ("coverage", "#/coverage"), ("municipalities", "#/municipalities"),
          ("municipality", "#/m/MUN:BUF"), ("departments", "#/departments"), ("department", None),
          ("tenders", "#/tenders"), ("flags", "#/flags"), ("tools", "#/tools"), ("compare", "#/tools/compare?a=MUN:BUF&b=MUN:NMA&y=2024"),
@@ -27,6 +30,323 @@ PAGES = [("home", "#/"), ("coverage", "#/coverage"), ("municipalities", "#/munic
 AXE_JS = next((Path(x) for x in (os.environ.get("AXE_JS", ""), "/workspace/tools/web/node_modules/axe-core/axe.min.js",
                                  str(ROOT / "node_modules/axe-core/axe.min.js")) if x and Path(x).is_file()), None)
 VIEWPORTS = {"desktop": {"width": 1366, "height": 900}, "mobile": {"width": 390, "height": 844}}
+
+
+OLD_HEADERS = ("Irregular & wasteful spending", "Budget", "Audited actuals", "Audit opinion", "Tender awards")
+PROVINCES = {"EC": "Eastern Cape", "FS": "Free State", "GT": "Gauteng", "KZN": "KwaZulu-Natal", "LP": "Limpopo", "MP": "Mpumalanga",
+             "NC": "Northern Cape", "NW": "North West", "WC": "Western Cape"}          # mirror of PROVINCES in index.html
+ROUTES = [r"^#?/?$", r"^#/coverage$", r"^#/municipalities$", r"^#/m/.+$", r"^#/departments$", r"^#/d/.+$", r"^#/tenders$", r"^#/flags$",
+          r"^#/tools(?:/\w+)?$", r"^#/sources$", r"^#/unknowns$", r"^#/changes$", r"^#/glossary$"]   # mirror of `routes` in index.html
+# "published" strings that still exist elsewhere in the #/unknowns view (state wording not changed by CHG-2026-033); anything else with "publish" fails.
+PUBLISHED_ELSEWHERE_IN_VIEW = ("Fully published", "Partly published", "actually published", "Published data per province",
+                       "fully published, per financial year", "fully published, lowest first")
+MIN_OPACITY = 0.9
+MIN_CONTRAST = 3.0          # text colour against its effective background; real text on this page is >= 4.5 (axe checks that), so 3 only catches hidden text
+MIN_FONT_PX = 8             # anything smaller is not readable text (font-size:0 and the like)
+MIN_BOX_PX = 8
+# Runs in the page: for the element and every descendant that holds its own text, the effective opacity (own x every ancestor), the
+# computed text colour with its alpha, the effective background (blended up the ancestors, white when none is opaque), the font size
+# and the box. Hidden-text tricks (transparent or background-coloured text, font-size:0, opacity on a container, a zero-size box, text pushed off the
+# page, text-indent, clip-path, filter:opacity, a hidden-overflow container that clips the text) show here.
+READABILITY_JS = """root => {
+  const rgba = c => { const m = c.match(/rgba?\\(([^)]*)\\)/); if (!m) return [0, 0, 0, 0]; const v = m[1].split(/[ ,\\/]+/).filter(Boolean).map(Number); return [v[0], v[1], v[2], v.length > 3 ? v[3] : 1]; };
+  const bgOf = el => { const layers = []; for (let e = el; e; e = e.parentElement) { const c = rgba(getComputedStyle(e).backgroundColor); if (c[3] > 0) layers.push(c); if (c[3] === 1) break; }
+    let out = [255, 255, 255]; for (const c of layers.reverse()) out = out.map((x, i) => c[i] * c[3] + x * (1 - c[3])); return out; };
+  const lum = c => { const f = v => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); }; return 0.2126 * f(c[0]) + 0.7152 * f(c[1]) + 0.0722 * f(c[2]); };
+  const out = [], els = [root, ...root.querySelectorAll('*')];
+  for (const el of els) {
+    if (![...el.childNodes].some(n => n.nodeType === 3 && n.textContent.trim())) continue;
+    const cs = getComputedStyle(el), r = el.getBoundingClientRect(), fg = rgba(cs.color), bg = bgOf(el);
+    let o = 1; for (let e = el; e; e = e.parentElement) o *= parseFloat(getComputedStyle(e).opacity);
+    const eff = [0, 1, 2].map(i => fg[i] * fg[3] + bg[i] * (1 - fg[3])), l1 = lum(eff), l2 = lum(bg);
+    const hide = [];
+    if (parseFloat(cs.textIndent) <= -100) hide.push('text-indent ' + cs.textIndent);
+    if (r.right + scrollX <= 0 || r.bottom + scrollY <= 0) hide.push('positioned off the page');
+    for (let a = el; a; a = a.parentElement) {
+      const ac = getComputedStyle(a);
+      if (ac.clipPath && ac.clipPath !== 'none') hide.push('clip-path ' + ac.clipPath + ' on <' + a.tagName.toLowerCase() + '>');
+      const fm = /opacity\\(\\s*([0-9.]+)(%?)/.exec(ac.filter || ''); if (fm && parseFloat(fm[1]) / (fm[2] ? 100 : 1) < 0.9) hide.push('filter ' + ac.filter + ' on <' + a.tagName.toLowerCase() + '>');
+      if (/inset\\(|rect\\(/.test(ac.clip || '') ) hide.push('clip ' + ac.clip + ' on <' + a.tagName.toLowerCase() + '>');
+      if (ac.overflowX === 'hidden' || ac.overflowX === 'clip' || ac.overflowY === 'hidden' || ac.overflowY === 'clip') {   // scroll containers (auto/scroll) are not a clip
+        const ar = a.getBoundingClientRect(), ix = Math.max(0, Math.min(r.right, ar.right) - Math.max(r.left, ar.left)), iy = Math.max(0, Math.min(r.bottom, ar.bottom) - Math.max(r.top, ar.top));
+        if (r.width * r.height > 0 && ix * iy < 0.5 * r.width * r.height) hide.push('clipped by <' + a.tagName.toLowerCase() + '> (overflow hidden)');
+      }
+    }
+    out.push({tag: el.tagName.toLowerCase() + (el.id ? '#' + el.id : ''), opacity: o, alpha: fg[3], contrast: (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05),
+              font: parseFloat(cs.fontSize), w: r.width, h: r.height, vis: cs.visibility, disp: cs.display, hide});
+  }
+  return out; }"""
+
+
+def readable(loc, what, say):
+    """Text that exists and is 'visible' to Playwright but cannot be read: faded (effective opacity, ancestors included), transparent or
+    background-coloured text, font-size 0, a zero-size box. Applies to the element and to every descendant that holds text."""
+    try:
+        items = loc.evaluate(READABILITY_JS, timeout=2000)
+    except Exception as exc:
+        say(f"{what}: readability could not be read ({type(exc).__name__})")
+        return
+    if not items:
+        say(f"{what}: no text found to check")
+    for it in items:
+        why = []
+        if it["opacity"] < MIN_OPACITY:
+            why.append(f"effective opacity {it['opacity']:.2f} is below {MIN_OPACITY}")
+        if it["alpha"] < MIN_OPACITY:
+            why.append(f"the text colour is transparent (alpha {it['alpha']:.2f})")
+        elif it["contrast"] < MIN_CONTRAST:
+            why.append(f"the text colour is too close to its background (contrast {it['contrast']:.2f}:1, needs {MIN_CONTRAST}:1)")
+        if it["font"] < MIN_FONT_PX:
+            why.append(f"font size {it['font']}px")
+        if it["w"] < MIN_BOX_PX or it["h"] < MIN_BOX_PX:
+            why.append(f"box {it['w']:.0f}x{it['h']:.0f}px")
+        if it["vis"] != "visible" or it["disp"] == "none":
+            why.append(f"visibility {it['vis']}, display {it['disp']}")
+        why.extend(sorted(set(it.get("hide", []))))
+        if why:
+            say(f"{what}: text in <{it['tag']}> is not readable: " + "; ".join(why))
+
+
+def check_by_type(page, vname, app, problems, cov, mun):
+    """CHG-2026-033: the 'By data type' table on #/unknowns against the reference model (thusa/coverage_ceiling.py)."""
+    def say(msg):
+        problems.append(f"{vname} unknowns/by-type: {msg}")
+
+    def text(loc, what):
+        """Normalised visible text of a locator that must exist exactly once and be visible; None (and a problem) otherwise."""
+        try:
+            if loc.count() != 1:
+                say(f"{what}: expected 1 element, found {loc.count()}")
+                return None
+            if not loc.is_visible():
+                say(f"{what}: present but not visible")
+                return None
+            got = re.sub(r"\s+", " ", loc.inner_text(timeout=2000)).strip()
+            readable(loc, what, say)
+            return got
+        except Exception as exc:                      # a broken page must be reported, never crash the whole check
+            say(f"{what}: could not be read ({type(exc).__name__})")
+            return None
+
+    def top(loc):
+        try:
+            bb = loc.bounding_box(timeout=2000)
+            return bb["y"] if bb else None
+        except Exception:
+            return None
+
+    if app:                                           # app=None: the caller has already put the page under test in `page` (mock test)
+        page.goto(app.split("#")[0] + "#/unknowns")
+        page.wait_for_selector('#view[aria-busy="false"]')
+    want, bp = model(cov, mun), by_province(cov, mun)
+    tx = want["_text"]
+    bt = page.locator("#by-type")
+    table = bt.locator("table")
+    if bt.count() != 1 or table.count() != 1:
+        say("#by-type table not found")
+        return
+
+    # 1. headers: the exact new label in every column, never the old bare label; the empty-year marker inside that column's th;
+    #    the column ORDER is the data_types order
+    for dt, label in tx["headers"].items():
+        th = text(bt.locator(f'thead th[data-dt="{dt}"]'), f"header {dt}")
+        if th is None:
+            continue
+        marks = [f"{fy}: none complete" for fy in want[dt]["empty"]]
+        own = th
+        for m in marks:
+            if m not in th:
+                say(f"header {dt} lacks the marker {m!r}: {th!r}")
+            own = own.replace(m, "")
+        own = own.strip()
+        if own != label:
+            say(f"header {dt} reads {own!r}, expected {label!r}")
+        if own in OLD_HEADERS:
+            say(f"header {dt} still has the old bare label {own!r}")
+        if not marks and "none complete" in th:
+            say(f"header {dt} carries a marker but no year is empty for it")
+    try:
+        head_dts = bt.locator("thead th[data-dt]").evaluate_all("els => els.map(e => e.dataset.dt)")
+        head_idx = bt.locator("thead th[data-dt]").evaluate_all("els => els.map(e => Array.from(e.parentElement.children).indexOf(e))")
+        if head_dts != cov["data_types"]:
+            say(f"column order is {head_dts}, expected {cov['data_types']}")
+    except Exception as exc:
+        say(f"header order could not be read ({type(exc).__name__})")
+        head_dts, head_idx = [], []
+
+    # 1b. rows: the data-prov of each row, its visible province name and its position (lowest overall share first, as the page sorts)
+    try:
+        rows = bt.locator("tbody tr[data-prov]").evaluate_all(
+            "els => els.map(r => ({prov: r.dataset.prov, label: (r.children[0] || {}).innerText || '', "
+            "dts: Array.from(r.querySelectorAll('td[data-dt]')).map(c => c.dataset.dt), "
+            "idx: Array.from(r.querySelectorAll('td[data-dt]')).map(c => Array.from(r.children).indexOf(c))}))")
+        order = [r["prov"] for r in rows]
+        if order != province_order(cov, mun):
+            say(f"row order is {order}, expected {province_order(cov, mun)} (lowest overall share first)")
+        for r in rows:
+            if re.sub(r"\s+", " ", r["label"]).strip() != PROVINCES.get(r["prov"]):
+                say(f"row data-prov={r['prov']} shows the name {r['label']!r}, expected {PROVINCES.get(r['prov'])!r}")
+            if r["dts"] != head_dts or r["idx"] != head_idx:
+                say(f"row {r['prov']}: cells are in the order {r['dts']} at positions {r['idx']}, headers {head_dts} at {head_idx}")
+    except Exception as exc:
+        say(f"rows could not be read ({type(exc).__name__})")
+
+    # 2. banner: visible, readable, exact text, above the table, one link that resolves to an existing view; absent when nothing is empty
+    ban = page.locator("#by-type-banner")
+    if want["_banner"]:
+        b = text(ban, "banner")
+        if b is not None:
+            for line in want["_banner"]:
+                if line not in b:
+                    say(f"banner lacks {line!r}: {b!r}")
+            by, ty = top(ban), top(table)
+            if by is None or ty is None:
+                say("banner/table position could not be measured")
+            elif by >= ty:
+                say("banner is not above the table")
+            link = ban.locator("a.to-trend")
+            if link.count() != 1:
+                say("banner has no (single) link to the trend table")
+            else:
+                try:
+                    href = link.get_attribute("href", timeout=2000) or ""
+                    if not any(re.match(rx, href) for rx in ROUTES):
+                        say(f"trend link href {href!r} is not an existing route (the hash router would show 'Page not found')")
+                    elif page.locator("#trend").count() != 1:
+                        say("trend heading #trend not found (exactly one expected)")
+                    else:
+                        link.click(timeout=2000)
+                        now = page.evaluate("location.hash")
+                        if not any(re.match(rx, now) for rx in ROUTES) or now != "#/unknowns":
+                            say(f"after the click on the trend link the address is {now!r}, expected the same view '#/unknowns'")
+                        if page.locator("#by-type table").count() != 1:
+                            say("after the click on the trend link the by-type table is gone (the view was replaced)")
+                        ty2 = top(page.locator("#trend"))
+                        vh = page.evaluate("window.innerHeight")
+                        hb = page.evaluate("document.querySelector('header').getBoundingClientRect().bottom")   # the header is sticky
+                        if ty2 is None or not (hb - 2 <= ty2 < vh):
+                            say(f"after the click the trend heading is not in view below the sticky header "
+                                f"(top={ty2}, header bottom={hb}, viewport height={vh})")
+                except Exception as exc:
+                    say(f"trend link could not be exercised ({type(exc).__name__})")
+    elif ban.count() and ban.is_visible():
+        say("unexpected banner: no type has an empty year")
+
+    # 3. every province x data type cell shows exactly "<P> of <n>" as visible, readable text (no hover), the % matches,
+    #    and "(at most x% with the data loaded today)" is shown for exactly the types with an empty year
+    seen = 0
+    for p, d in bp.items():
+        for dt, c in d.items():
+            if not c["n"]:
+                continue
+            td = bt.locator(f'tbody tr[data-prov="{p}"] td[data-dt="{dt}"]')
+            nn = td.locator(".nn")
+            got = text(nn, f"cell {p}/{dt} n-of-N")
+            seen += 1
+            if got is None:
+                continue
+            if got != f"{c['P']} of {c['n']}":
+                say(f"cell {p}/{dt} shows {got!r}, data says '{c['P']} of {c['n']}'")
+            title = nn.get_attribute("title", timeout=2000) or ""
+            if title != f"{c['P']} of {c['n']} municipality-years":
+                say(f"cell {p}/{dt} n-of-N title is {title!r}, expected the count with its unit 'municipality-years'")
+            h = None
+            try:
+                bb = nn.bounding_box(timeout=2000)
+                h = bb["height"] if bb else None
+            except Exception:
+                pass
+            if h is None or h < 8:
+                say(f"cell {p}/{dt} n-of-N has no usable box (height {h})")
+            pc = text(td.locator(".pct"), f"cell {p}/{dt} percentage")
+            if pc is not None:
+                try:
+                    shown = float(re.sub(r"[^0-9.,]", "", pc).replace(",", "."))
+                    if abs(shown - 100 * c["P"] / c["n"]) > 0.051:
+                        say(f"cell {p}/{dt} percentage {pc!r} does not match {c['P']}/{c['n']}")
+                except ValueError:
+                    say(f"cell {p}/{dt} percentage {pc!r} is not a number")
+            hp, wanted_hp = td.locator(".hp"), tx["in_cell"][p][dt]
+            if wanted_hp:
+                g = text(hp, f"cell {p}/{dt} at-most text")
+                if g is not None and g != wanted_hp:
+                    say(f"cell {p}/{dt} reads {g!r}, expected {wanted_hp!r}")
+            elif hp.count():
+                say(f"cell {p}/{dt} has an at-most text but no year is empty for {dt}")
+    # 3b. sideways-scroll hint: visible (exact text) exactly while the table is wider than its box, hidden otherwise
+    try:
+        over = bt.locator(".tablewrap").evaluate("e => e.scrollWidth > e.clientWidth + 1")
+        hint = page.locator("#by-type-scrollhint")
+        if over:
+            got = text(hint, "scroll hint")
+            if got is not None and got != tx["scroll_hint"]:
+                say(f"scroll hint reads {got!r}, expected {tx['scroll_hint']!r}")
+        elif hint.count() != 1 or hint.is_visible():
+            say("the scroll hint is shown although the table fits (or is missing from the page)")
+    except Exception as exc:
+        say(f"scroll hint could not be checked ({type(exc).__name__})")
+    # 3c. no sideways overflow of the page itself, and a table that scrolls sideways is reachable from the keyboard (focusable, named, arrow keys scroll it)
+    try:
+        wrap = bt.locator(".tablewrap")
+        if page.evaluate("() => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1"):
+            say("the page scrolls sideways (horizontal overflow outside the table)")
+        if over:
+            if wrap.get_attribute("tabindex") != "0":
+                say("the by-type table scrolls sideways but is not keyboard-focusable (needs tabindex=0)")
+            if not (wrap.get_attribute("aria-label") or "").strip() or wrap.get_attribute("role") != "region":
+                say("the by-type table scrolls sideways but has no accessible name (role=region and aria-label)")
+            wrap.focus()
+            before = wrap.evaluate("e => e.scrollLeft")
+            page.keyboard.press("ArrowRight")
+            page.wait_for_timeout(250)
+            if not wrap.evaluate("(e, b) => e.scrollLeft > b", before):
+                say("the by-type table does not scroll sideways with the arrow keys")
+            wrap.evaluate("e => { e.scrollLeft = 0; }")
+    except Exception as exc:
+        say(f"overflow and keyboard scrolling could not be checked ({type(exc).__name__})")
+    total = bt.locator("tbody td .nn").count()
+    if total != seen:
+        say(f"{total} n-of-N elements on the page, data has {seen}")
+
+    # 4. notes: exact text per type, only for types with an empty year
+    for dt in cov["data_types"]:
+        li = page.locator(f'#by-type-notes li[data-dt="{dt}"]')
+        if want[dt]["note"]:
+            got = text(li, f"note {dt}")
+            if got is not None and got != want[dt]["note"]:
+                say(f"note {dt} reads {got!r}, expected {want[dt]['note']!r}")
+        elif li.count():
+            say(f"unexpected note for {dt}")
+
+    # 5. static strings: caption, how-to-read card, tender caption exactly as the model (which is jargon-tested in pytest)
+    for what, loc, exp in (("caption", page.locator("#by-type-caption"), tx["caption"]), ("csv note", page.locator("#by-type-csvnote"), tx["csv_note"]), ("legend (unit of x of y)", page.locator("#by-type-legend"), tx["legend"]),
+                           ("how-to-read card", page.locator("#by-type-howto"), tx["how_to_read"]),
+                           ("tender caption", page.locator("#by-type-tender"), tx["tender_caption"])):
+        got = text(loc, what)
+        if got is not None and got != exp:
+            say(f"{what} reads {got!r}, expected {exp!r}")
+
+    # 5b. the caption is fully visible: a paragraph above the scrolling box (never inside it) and no wider than the screen (it was clipped at 390 px)
+    try:
+        cap = page.locator("#by-type-caption")
+        if cap.count() == 1:
+            ok = cap.evaluate("e => !e.closest('.tablewrap') && e.getBoundingClientRect().left >= 0 && e.getBoundingClientRect().right <= innerWidth + 1 && e.scrollWidth <= e.clientWidth + 1")
+            if not ok:
+                say("the caption is inside the scrolling box, wider than the screen or clipped (it must be fully visible)")
+    except Exception as exc:
+        say(f"caption visibility could not be checked ({type(exc).__name__})")
+
+    # 6. the word "publish" anywhere in the view, except the strings that CHG-2026-033 leaves alone (PUBLISHED_ELSEWHERE_IN_VIEW)
+    try:
+        view = page.locator("#view")
+        whole = re.sub(r"\s+", " ", view.inner_text(timeout=3000) if view.count() else page.locator("body").inner_text(timeout=3000))
+        rest = whole
+        for ok in PUBLISHED_ELSEWHERE_IN_VIEW:
+            rest = rest.replace(ok, "")
+        for m in re.finditer(r"publish", rest, re.I):
+            say(f"the word 'publish' appears outside the known remaining strings: ...{rest[max(0, m.start() - 40):m.end() + 40]}...")
+    except Exception as exc:
+        say(f"page text could not be scanned for 'published' ({type(exc).__name__})")
 
 
 class Quiet(http.server.SimpleHTTPRequestHandler):
@@ -54,6 +374,8 @@ def main() -> int:
     base = f"http://127.0.0.1:{srv.server_address[1]}"
     app = f"{base}/apps/public-dashboard/index.html?data={base}/public-data/v1/"
     dep = json.loads((ROOT / "public-data" / "v1" / "departments.json").read_text())["departments"][0]["id"]
+    cov = json.loads((ROOT / "public-data" / "v1" / "coverage.json").read_text())
+    mun = json.loads((ROOT / "public-data" / "v1" / "municipalities.json").read_text())
     problems, shots, checks = [], [], {}
     with sync_playwright() as p:
         chrome = shutil.which("google-chrome") or shutil.which("chromium")   # box Chrome; else Playwright's own
@@ -82,6 +404,7 @@ def main() -> int:
                 f = out / f"{name}-{vname}.png"
                 page.screenshot(path=str(f), full_page=vname == "desktop" and name in ("home", "flags", "tools", "unknowns", "changes"))
                 shots.append(str(f))
+            check_by_type(page, vname, app, problems, cov, mun)      # CHG-2026-033: "By data type" table, banner, notes, order, text
             # tools: inflation + fuel checker produce results; CSV download works
             page.goto(app.split("#")[0] + "#/tools")
             page.wait_for_selector('#view[aria-busy="false"]')
