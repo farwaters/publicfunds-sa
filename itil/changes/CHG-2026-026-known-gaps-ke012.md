@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | Requested by / date (SAST) | Owner via Cavus backlog, 2026-10-24 ~08:26: fix the stale public KE-012 text. No GO to merge is given |
-| Environment | Built and tested in DEV (branch `chg-2026-026-known-gaps-ke012` from origin/main 15c55e7; PR open, not merged, nothing pushed to main); released to PROD only through the nightly publish after the owner's merge GO. One GO binds one RFC and one environment: a GO for this RFC binds that PROD release |
+| Environment | DEV build and test; PROD release via the nightly after the owner's merge GO |
 | Type | Standard (public wording only; no code, no data, no figures change) |
 | CIs affected | `config/public-data.yaml` (`known_gaps`, id KE-012), `itil/knowledge/known-errors.md` (KE-012 row; also published as manifest `known_errors[KE-012].symptom`), `itil/registers/change-log.md`, this record |
 | Linked records | KE-012; CHG-2026-019, CHG-2026-022 (months recovered); CHG-2026-018 (CPI via IMF); CHG-2026-025 |
