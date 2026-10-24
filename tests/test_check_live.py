@@ -249,18 +249,26 @@ def test_expect_local_waits_for_pages_to_deploy(site, tmp_path):
     assert res["local.build"][0] == cl.OK
 
 
-def test_expect_local_wait_rechecks_age_and_files_on_the_manifest_fetched_after_the_wait(site, tmp_path):
-    site.set_manifest(build="B1", age_hours=60)  # old build: stale and, below, its files are wrong
-    site.routes["/public-data/v1/prices.json"] = (200, b'{"p": 0}')
+OLD_FILES = {**FILES, "prices.json": b'{"p": 3}'}
+NEW_FILES = {**FILES, "prices.json": b'{"p": 33, "new": true}'}  # different length and sha256 from the old build's file
 
-    def deploy():  # Pages finishes deploying: the new, fresh build and its files
-        site.set_manifest(build="B9", age_hours=1)
-        site.routes["/public-data/v1/prices.json"] = (200, FILES["prices.json"])
+
+def test_expect_local_wait_rechecks_age_and_files_on_the_manifest_fetched_after_the_wait(site, tmp_path):
+    # Before the wait: the OLD build (stale, listing the old prices.json). After: the NEW build lists a different
+    # prices.json (other bytes and sha256) and the site serves that. Only the post-wait manifest agrees with what is
+    # served, so using the pre-wait manifest for the file checks (or the age check) fails this test.
+    site.set_manifest(build="B1", age_hours=60, files=OLD_FILES)
+    site.routes["/public-data/v1/prices.json"] = (200, OLD_FILES["prices.json"])
+
+    def deploy():  # Pages finishes deploying: the new, fresh build, its manifest and its files
+        site.set_manifest(build="B9", age_hours=1, files=NEW_FILES)
+        site.routes["/public-data/v1/prices.json"] = (200, NEW_FILES["prices.json"])
     threading.Timer(0.3, deploy).start()
     res = run(site.url, expect_local=_local(tmp_path, "B9"), wait=5, poll=0.1)
     assert res["local.build"][0] == cl.OK
     assert res["site.age"][0] == cl.OK and "1.0 h" in res["site.age"][1]  # not the 60 h of the pre-wait manifest
-    assert res["site.file.prices.json"][0] == cl.OK
+    assert res["site.file.prices.json"] == (cl.OK, f"{len(NEW_FILES['prices.json'])} bytes, sha256 matches the manifest")
+    assert all(s == cl.OK for s in statuses(res).values())
     assert "build B9" in res["site.manifest"][1]
 
 
@@ -393,6 +401,19 @@ def test_redirect_to_a_file_url_is_refused_and_http_redirects_are_followed(site)
     assert run(site.url)["site.home"][0] == cl.OK  # documented: redirects are followed
 
 
+def test_redirect_to_ftp_is_refused_before_any_connection_is_made(site):
+    # Python's own redirect handler refuses file:// but follows ftp://. The guard must refuse it before connecting:
+    # a listener stands in for an FTP server and must never see a connection (fails with the guard removed or with
+    # urllib's default opener, which would connect to it).
+    with socket.socket() as lst:
+        lst.bind(("127.0.0.1", 0)); lst.listen(5); lst.setblocking(False)
+        site.routes["/apps/public-dashboard/"] = (302, b"", {"Location": f"ftp://127.0.0.1:{lst.getsockname()[1]}/x"})
+        res = run(site.url)
+        assert res["site.app"] == (cl.BREACH, f"{cl.APP_PATH} -> HTTP 302")
+        with pytest.raises(BlockingIOError):  # nobody connected
+            lst.accept()
+
+
 @pytest.mark.parametrize("args", [["--wait", "-1"], ["--wait", "3601"], ["--wait", "nan"], ["--wait", "inf"], ["--wait", "x"],
                                   ["--poll", "0"], ["--poll", "0.5"], ["--poll", "-5"], ["--poll", "601"], ["--poll", "nan"],
                                   ["--max-age-hours", "0"], ["--max-age-hours", "-1"], ["--warn-age-hours", "0"],
@@ -411,6 +432,44 @@ def test_nonsense_flag_values_are_rejected_before_anything_is_fetched(site, caps
 def test_sensible_flag_values_are_accepted(site, capsys, monkeypatch):
     rc = _main_default_site(monkeypatch, site, ["--wait", "0", "--poll", "1", "--max-age-hours", "100", "--warn-age-hours", "99"])
     assert rc == 0
+
+
+@pytest.mark.parametrize("flag,url", [("--site", "http://u:pw@h:PORTSECRET/"), ("--site", "http://h:PORTSECRET/"),
+                                      ("--raw-url", "http://h:PORTSECRET/m.json"), ("--site", "http://h:99999999/"),
+                                      ("--site", "http://[::1/")])
+def test_a_bad_port_or_unparseable_url_gets_a_fixed_message_without_any_part_of_the_url(capsys, flag, url):
+    with pytest.raises(SystemExit) as e:
+        cl.main([flag, url])
+    cap = capsys.readouterr()
+    assert e.value.code == 2 and "could not be parsed" in cap.err
+    for part in ("PORTSECRET", "u:pw", "99999999", "[::1"):
+        assert part not in cap.out + cap.err
+
+
+def test_validate_url_and_fetch_never_repeat_python_s_parser_message():
+    with pytest.raises(ValueError) as e:
+        cl.validate_url("http://h:PORTSECRET/")
+    assert "PORTSECRET" not in str(e.value) and str(e.value) == "not a valid URL (it could not be parsed)"
+    status, _, err = cl.fetch("http://u:pw@h:PORTSECRET/")
+    assert status is None and "PORTSECRET" not in err and "pw" not in err
+
+
+@pytest.mark.parametrize("value", ["", " ", ",", " , ,"])
+def test_empty_sample_files_is_rejected_with_exit_2_and_nothing_is_fetched(site, capsys, value):
+    with pytest.raises(SystemExit) as e:
+        cl.main(["--site", site.url, "--sample-files", value])
+    assert e.value.code == 2 and not site.hits and "at least one name" in capsys.readouterr().err
+
+
+def test_run_checks_also_refuses_an_empty_sample_file_list(site):
+    with pytest.raises(ValueError):
+        cl.run_checks(site.url, sample_files=" , ", now_fn=lambda: NOW)
+    assert not site.hits
+
+
+def test_a_single_sample_file_still_works(site):
+    res = run(site.url, sample_files="prices.json")
+    assert [n for n in res if n.startswith("site.file.")] == ["site.file.prices.json"]
 
 
 # ---- CLI defaults (a fixed clock, the local site standing in for production) ----

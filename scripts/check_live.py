@@ -58,8 +58,8 @@ def validate_url(url: str, *, base: bool = False) -> str:
         p = urllib.parse.urlsplit(url)
         host = p.hostname
         _ = p.port  # raises ValueError for a bad port
-    except ValueError as e:
-        raise ValueError(f"not a valid URL: {e}") from None
+    except ValueError:  # Python's message can repeat part of the URL (a bad port, for example): never pass it on
+        raise ValueError("not a valid URL (it could not be parsed)") from None
     if p.scheme not in ("http", "https"):
         raise ValueError(f"only http and https URLs are allowed (got scheme {p.scheme or 'none'!r})")
     if not host:
@@ -158,13 +158,21 @@ def _build_id(m: dict | None) -> str | None:
     return bid if isinstance(bid, str) and bid else None
 
 
+def sample_names(sample_files: str) -> list[str]:
+    """The sample file names; raises ValueError if there are none (an empty list would be a silent, empty OK)."""
+    names = [n.strip() for n in sample_files.split(",") if n.strip()]
+    if not names:
+        raise ValueError("no sample file names given")
+    return names
+
+
 def _file_checks(site: str, manifest: dict, sample_files: str, get) -> list[tuple[str, str, str]]:
     files = manifest.get("files")
     if not isinstance(files, list):
         return [("site.files", BREACH, f"manifest `files` is not a list (found {type(files).__name__})")]
     listed = {f.get("name"): f for f in files if isinstance(f, dict)}
     results = []
-    for name in [n.strip() for n in sample_files.split(",") if n.strip()]:
+    for name in sample_names(sample_files):
         entry = listed.get(name)
         if entry is None:
             results.append((f"site.file.{name}", BREACH, "not listed in the manifest"))
@@ -194,6 +202,7 @@ def run_checks(site: str, *, raw_url: str | None = None, expect_local: str | Non
                retries: int = 2, retry_delay: float = 5.0, timeout: float = 20.0, now_fn=None) -> list[tuple[str, str, str]]:
     now_fn = now_fn or (lambda: datetime.now(timezone.utc))
     validate_url(site, base=True)
+    sample_names(sample_files)
     if raw_url:
         validate_url(raw_url)
     site = site.rstrip("/")
@@ -289,6 +298,14 @@ def _site_arg(value: str) -> str:
         raise argparse.ArgumentTypeError(str(e)) from None
 
 
+def _names_arg(value: str) -> str:
+    try:
+        sample_names(value)
+    except ValueError as e:
+        raise argparse.ArgumentTypeError(f"{e}: give at least one name, or leave the default") from None
+    return value
+
+
 def _url_arg(value: str) -> str:
     try:
         return validate_url(value)
@@ -317,7 +334,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--poll", type=_num(1, MAX_POLL), default=30.0, help=f"seconds between polls while waiting, 1 to {MAX_POLL:g}, default 30")
     ap.add_argument("--max-age-hours", type=_num(0, 24 * 365, lo_open=True), default=48.0, help="SLO-PD-1 breach threshold, default 48")
     ap.add_argument("--warn-age-hours", type=_num(0, 24 * 365, lo_open=True), default=30.0, help="early-warning threshold, must be below --max-age-hours, default 30")
-    ap.add_argument("--sample-files", default=SAMPLE_FILES, help="comma-separated data files to checksum")
+    ap.add_argument("--sample-files", type=_names_arg, default=SAMPLE_FILES, help="comma-separated data files to checksum; at least one (an empty list is refused)")
     ap.add_argument("--retries", type=_num(0, 10, integer=True), default=2, help="extra attempts per request, 0 to 10, default 2")
     ap.add_argument("--retry-delay", type=_num(0, 60), default=5.0, help="seconds between attempts, 0 to 60, default 5")
     ap.add_argument("--json", action="store_true", help="print JSON instead of text")
