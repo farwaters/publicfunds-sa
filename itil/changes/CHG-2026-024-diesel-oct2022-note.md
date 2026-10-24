@@ -55,4 +55,4 @@ DMPR prices and a government news source.
 ## Review
 Four checks (expert, shadow, charter, drift) and popia-review by someone other than the author before any merge. Merge needs the owner's quoted GO for CHG-2026-024 naming the PROD publish at the next nightly.
 
-Result: DEV build succeeded; awaiting review.
+Result: DEV build succeeded; merged as PR #22 (merge commit 5dac17c, 2026-10-24 10:40 SAST) on the owner's GO quoted in `changes/CAB-DECISION.md` (section "PRs #22, #24, #26, #25 and #27 to PROD, in sequence"); Validator and Scout PASS at head df6a370 as recorded there. PROD: not yet published. The data files and public text change only at the next nightly publish; as of 2026-10-24 11:22 SAST origin/main is still 6abd695 and the last data commit is 15c55e7 (2026-10-24 03:05 SAST, before this merge).
