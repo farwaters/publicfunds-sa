@@ -46,7 +46,7 @@ CHG-2026-022/023): before `80bc13d78db54047`, after `80bc13d78db54047`, 581 rows
 ## Tests
 - `pytest`: 166 passed, 60 skipped (worktree on PYTHONPATH; the shared venv otherwise imports the older /workspace/publicfunds checkout, which gives 539 rows / `89c020f2bb3f1f82`).
 - `scripts/dashboard_check.py`: problems [].
-- Re-run 2026-10-24 ~09:35 SAST after the symptom rearrangement and RFC wording (docs only): `pytest` 166 passed, 60 skipped; PDF fingerprint 581 rows `80bc13d78db54047`; dashboard check problems []; `_known_errors()` KE-014 symptom 261 characters, uncut.
+- Re-run 2026-10-24 (before 09:25 SAST) after the symptom rearrangement and RFC wording (docs only): `pytest` 166 passed, 60 skipped; PDF fingerprint 581 rows `80bc13d78db54047`; dashboard check problems []; `_known_errors()` KE-014 symptom 261 characters, uncut.
 
 ## POPIA review
 PASS. Record contains no personal information, IDs, contacts, accounts, credentials or supplier names; only official
