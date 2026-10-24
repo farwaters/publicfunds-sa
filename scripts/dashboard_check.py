@@ -41,6 +41,55 @@ ROUTES = [r"^#?/?$", r"^#/coverage$", r"^#/municipalities$", r"^#/m/.+$", r"^#/d
 PUBLISHED_ELSEWHERE_IN_VIEW = ("Fully published", "Partly published", "actually published", "Published data per province",
                        "fully published, per financial year", "fully published, lowest first")
 MIN_OPACITY = 0.9
+MIN_CONTRAST = 3.0          # text colour against its effective background; real text on this page is >= 4.5 (axe checks that), so 3 only catches hidden text
+MIN_FONT_PX = 8             # anything smaller is not readable text (font-size:0 and the like)
+MIN_BOX_PX = 8
+# Runs in the page: for the element and every descendant that holds its own text, the effective opacity (own x every ancestor), the
+# computed text colour with its alpha, the effective background (blended up the ancestors, white when none is opaque), the font size
+# and the box. Hidden-text tricks (transparent or background-coloured text, font-size:0, opacity on a container, a zero-size box) show here.
+READABILITY_JS = """root => {
+  const rgba = c => { const m = c.match(/rgba?\\(([^)]*)\\)/); if (!m) return [0, 0, 0, 0]; const v = m[1].split(/[ ,\\/]+/).filter(Boolean).map(Number); return [v[0], v[1], v[2], v.length > 3 ? v[3] : 1]; };
+  const bgOf = el => { const layers = []; for (let e = el; e; e = e.parentElement) { const c = rgba(getComputedStyle(e).backgroundColor); if (c[3] > 0) layers.push(c); if (c[3] === 1) break; }
+    let out = [255, 255, 255]; for (const c of layers.reverse()) out = out.map((x, i) => c[i] * c[3] + x * (1 - c[3])); return out; };
+  const lum = c => { const f = v => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); }; return 0.2126 * f(c[0]) + 0.7152 * f(c[1]) + 0.0722 * f(c[2]); };
+  const out = [], els = [root, ...root.querySelectorAll('*')];
+  for (const el of els) {
+    if (![...el.childNodes].some(n => n.nodeType === 3 && n.textContent.trim())) continue;
+    const cs = getComputedStyle(el), r = el.getBoundingClientRect(), fg = rgba(cs.color), bg = bgOf(el);
+    let o = 1; for (let e = el; e; e = e.parentElement) o *= parseFloat(getComputedStyle(e).opacity);
+    const eff = [0, 1, 2].map(i => fg[i] * fg[3] + bg[i] * (1 - fg[3])), l1 = lum(eff), l2 = lum(bg);
+    out.push({tag: el.tagName.toLowerCase() + (el.id ? '#' + el.id : ''), opacity: o, alpha: fg[3], contrast: (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05),
+              font: parseFloat(cs.fontSize), w: r.width, h: r.height, vis: cs.visibility, disp: cs.display});
+  }
+  return out; }"""
+
+
+def readable(loc, what, say):
+    """Text that exists and is 'visible' to Playwright but cannot be read: faded (effective opacity, ancestors included), transparent or
+    background-coloured text, font-size 0, a zero-size box. Applies to the element and to every descendant that holds text."""
+    try:
+        items = loc.evaluate(READABILITY_JS, timeout=2000)
+    except Exception as exc:
+        say(f"{what}: readability could not be read ({type(exc).__name__})")
+        return
+    if not items:
+        say(f"{what}: no text found to check")
+    for it in items:
+        why = []
+        if it["opacity"] < MIN_OPACITY:
+            why.append(f"effective opacity {it['opacity']:.2f} is below {MIN_OPACITY}")
+        if it["alpha"] < MIN_OPACITY:
+            why.append(f"the text colour is transparent (alpha {it['alpha']:.2f})")
+        elif it["contrast"] < MIN_CONTRAST:
+            why.append(f"the text colour is too close to its background (contrast {it['contrast']:.2f}:1, needs {MIN_CONTRAST}:1)")
+        if it["font"] < MIN_FONT_PX:
+            why.append(f"font size {it['font']}px")
+        if it["w"] < MIN_BOX_PX or it["h"] < MIN_BOX_PX:
+            why.append(f"box {it['w']:.0f}x{it['h']:.0f}px")
+        if it["vis"] != "visible" or it["disp"] == "none":
+            why.append(f"visibility {it['vis']}, display {it['disp']}")
+        if why:
+            say(f"{what}: text in <{it['tag']}> is not readable: " + "; ".join(why))
 
 
 def check_by_type(page, vname, app, problems, cov, mun):
@@ -57,7 +106,9 @@ def check_by_type(page, vname, app, problems, cov, mun):
             if not loc.is_visible():
                 say(f"{what}: present but not visible")
                 return None
-            return re.sub(r"\s+", " ", loc.inner_text(timeout=2000)).strip()
+            got = re.sub(r"\s+", " ", loc.inner_text(timeout=2000)).strip()
+            readable(loc, what, say)
+            return got
         except Exception as exc:                      # a broken page must be reported, never crash the whole check
             say(f"{what}: could not be read ({type(exc).__name__})")
             return None
@@ -68,16 +119,6 @@ def check_by_type(page, vname, app, problems, cov, mun):
             return bb["y"] if bb else None
         except Exception:
             return None
-
-    def opaque(loc, what):
-        """Effective opacity (own x every ancestor) must be at least MIN_OPACITY: text kept 'visible' but faded out is not readable."""
-        try:
-            o = loc.evaluate("el => { let o = 1; for (let e = el; e; e = e.parentElement) o *= parseFloat(getComputedStyle(e).opacity); return o; }",
-                             timeout=2000)
-            if o < MIN_OPACITY:
-                say(f"{what}: effective opacity {o:.2f} is below {MIN_OPACITY}")
-        except Exception as exc:
-            say(f"{what}: opacity could not be read ({type(exc).__name__})")
 
     if app:                                           # app=None: the caller has already put the page under test in `page` (mock test)
         page.goto(app.split("#")[0] + "#/unknowns")
@@ -140,7 +181,6 @@ def check_by_type(page, vname, app, problems, cov, mun):
     if want["_banner"]:
         b = text(ban, "banner")
         if b is not None:
-            opaque(ban, "banner")
             for line in want["_banner"]:
                 if line not in b:
                     say(f"banner lacks {line!r}: {b!r}")
@@ -178,7 +218,7 @@ def check_by_type(page, vname, app, problems, cov, mun):
         say("unexpected banner: no type has an empty year")
 
     # 3. every province x data type cell shows exactly "<P> of <n>" as visible, readable text (no hover), the % matches,
-    #    and "(highest possible x%)" is shown for exactly the types with an empty year
+    #    and "(at most x% with the data loaded today)" is shown for exactly the types with an empty year
     seen = 0
     for p, d in bp.items():
         for dt, c in d.items():
@@ -190,9 +230,11 @@ def check_by_type(page, vname, app, problems, cov, mun):
             seen += 1
             if got is None:
                 continue
-            opaque(nn, f"cell {p}/{dt} n-of-N")
             if got != f"{c['P']} of {c['n']}":
                 say(f"cell {p}/{dt} shows {got!r}, data says '{c['P']} of {c['n']}'")
+            title = nn.get_attribute("title", timeout=2000) or ""
+            if title != f"{c['P']} of {c['n']} municipality-years":
+                say(f"cell {p}/{dt} n-of-N title is {title!r}, expected the count with its unit 'municipality-years'")
             h = None
             try:
                 bb = nn.bounding_box(timeout=2000)
@@ -211,11 +253,23 @@ def check_by_type(page, vname, app, problems, cov, mun):
                     say(f"cell {p}/{dt} percentage {pc!r} is not a number")
             hp, wanted_hp = td.locator(".hp"), tx["in_cell"][p][dt]
             if wanted_hp:
-                g = text(hp, f"cell {p}/{dt} highest-possible text")
+                g = text(hp, f"cell {p}/{dt} at-most text")
                 if g is not None and g != wanted_hp:
                     say(f"cell {p}/{dt} reads {g!r}, expected {wanted_hp!r}")
             elif hp.count():
-                say(f"cell {p}/{dt} has a highest-possible text but no year is empty for {dt}")
+                say(f"cell {p}/{dt} has an at-most text but no year is empty for {dt}")
+    # 3b. sideways-scroll hint: visible (exact text) exactly while the table is wider than its box, hidden otherwise
+    try:
+        over = bt.locator(".tablewrap").evaluate("e => e.scrollWidth > e.clientWidth + 1")
+        hint = page.locator("#by-type-scrollhint")
+        if over:
+            got = text(hint, "scroll hint")
+            if got is not None and got != tx["scroll_hint"]:
+                say(f"scroll hint reads {got!r}, expected {tx['scroll_hint']!r}")
+        elif hint.count() != 1 or hint.is_visible():
+            say("the scroll hint is shown although the table fits (or is missing from the page)")
+    except Exception as exc:
+        say(f"scroll hint could not be checked ({type(exc).__name__})")
     total = bt.locator("tbody td .nn").count()
     if total != seen:
         say(f"{total} n-of-N elements on the page, data has {seen}")
@@ -231,7 +285,8 @@ def check_by_type(page, vname, app, problems, cov, mun):
             say(f"unexpected note for {dt}")
 
     # 5. static strings: caption, how-to-read card, tender caption exactly as the model (which is jargon-tested in pytest)
-    for what, loc, exp in (("caption", table.locator("caption"), tx["caption"]), ("how-to-read card", page.locator("#by-type-howto"), tx["how_to_read"]),
+    for what, loc, exp in (("caption", table.locator("caption"), tx["caption"]), ("legend (unit of x of y)", page.locator("#by-type-legend"), tx["legend"]),
+                           ("how-to-read card", page.locator("#by-type-howto"), tx["how_to_read"]),
                            ("tender caption", page.locator("#by-type-tender"), tx["tender_caption"])):
         got = text(loc, what)
         if got is not None and got != exp:
