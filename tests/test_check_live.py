@@ -19,14 +19,14 @@ NOW = datetime(2026, 10, 24, 12, 0, tzinfo=timezone(timedelta(hours=2)))
 FILES = {"municipalities.json": b'{"m": 1}', "departments.json": b'{"d": 2}', "prices.json": b'{"p": 3}'}
 
 
-def manifest(age_hours=8.0, build="B1", files=FILES):
-    ts = (NOW - timedelta(hours=age_hours)).isoformat()
+def manifest(age_hours=8.0, build="B1", files=FILES, tz=None):
+    ts = (NOW - timedelta(hours=age_hours)).astimezone(tz or NOW.tzinfo).isoformat()
     return {"generated_at_sast": ts, "build": {"id": build},
             "files": [{"name": n, "bytes": len(b), "sha256": hashlib.sha256(b).hexdigest()} for n, b in files.items()]}
 
 
 class Site:
-    """Tiny mutable site: routes maps path -> (status, bytes); fail_first maps path -> number of 500s before success."""
+    """Tiny mutable site: routes maps path -> (status, bytes[, headers]); fail_first maps path -> number of 500s before success."""
 
     def __init__(self):
         self.routes, self.fail_first, self.hits = {}, {}, {}
@@ -38,8 +38,15 @@ class Site:
                 if site.fail_first.get(self.path, 0) > 0:
                     site.fail_first[self.path] -= 1
                     self.send_response(500); self.end_headers(); return
-                status, body = site.routes.get(self.path, (404, b""))
-                self.send_response(status); self.end_headers(); self.wfile.write(body)
+                status, body, *extra = site.routes.get(self.path, (404, b""))
+                headers = dict(extra[0]) if extra else {}
+                truncate = headers.pop("X-Truncate", None)  # promise more bytes than are sent, then hang up
+                self.send_response(status)
+                for k, v in headers.items():
+                    self.send_header(k, v)
+                if truncate:
+                    self.send_header("Content-Length", str(len(body) + 50))
+                self.end_headers(); self.wfile.write(body)
 
             def log_message(self, *a):
                 pass
@@ -156,15 +163,37 @@ def test_404_is_not_retried(site):
     assert site.hits["/"] == 1
 
 
-def test_sample_file_checksum_and_missing(site):
-    site.routes["/public-data/v1/prices.json"] = (200, b'{"p": 999}')
+def test_sample_file_missing_and_unlisted(site):
     site.routes["/public-data/v1/departments.json"] = (404, b"")
     res = run(site.url)
-    assert res["site.file.prices.json"][0] == cl.BREACH and "differ" in res["site.file.prices.json"][1]
     assert res["site.file.departments.json"][0] == cl.BREACH
     assert res["site.file.municipalities.json"][0] == cl.OK
     res = run(site.url, sample_files="nope.json")
     assert res["site.file.nope.json"][0] == cl.BREACH and "not listed" in res["site.file.nope.json"][1]
+
+
+def test_same_length_corrupt_body_is_caught_by_the_sha_check_alone(site):
+    assert len(b'{"p": 9}') == len(FILES["prices.json"])  # same byte count, different content
+    site.routes["/public-data/v1/prices.json"] = (200, b'{"p": 9}')
+    res = run(site.url)
+    assert res["site.file.prices.json"][0] == cl.BREACH and "sha256 differs" in res["site.file.prices.json"][1]
+    assert res["site.file.municipalities.json"][0] == cl.OK
+
+
+def test_wrong_byte_count_is_caught_by_the_length_check_alone(site):
+    m = manifest()
+    for f in m["files"]:
+        if f["name"] == "prices.json":
+            f["bytes"] += 1  # the sha256 in the manifest is still the right one for the served body
+    site.routes[cl.MANIFEST_PATH] = (200, json.dumps(m).encode())
+    res = run(site.url)
+    assert res["site.file.prices.json"][0] == cl.BREACH and "bytes" in res["site.file.prices.json"][1]
+    assert "sha256" not in res["site.file.prices.json"][1]
+
+
+def test_shorter_corrupt_body_breaches(site):
+    site.routes["/public-data/v1/prices.json"] = (200, b'{"p": 999}')
+    assert run(site.url)["site.file.prices.json"][0] == cl.BREACH
 
 
 def test_raw_manifest_same_build_older_or_missing(site):
@@ -179,6 +208,20 @@ def test_raw_manifest_same_build_older_or_missing(site):
         assert run(site.url, raw_url=url)["raw.age"][0] == cl.BREACH
         raw.routes.pop(cl.MANIFEST_PATH)
         assert run(site.url, raw_url=url)["raw.manifest"][0] == cl.BREACH
+    finally:
+        raw.srv.shutdown(); raw.srv.server_close()
+
+
+def test_raw_manifest_with_missing_build_ids_is_not_ok(site):
+    raw = Site().healthy()
+    try:
+        url = raw.url + cl.MANIFEST_PATH
+        for site_build, raw_build in ((None, None), ("B1", None), (None, "B1")):
+            site.set_manifest(build=site_build); raw.set_manifest(build=raw_build)
+            status, detail = run(site.url, raw_url=url)["raw.manifest"]
+            assert status == cl.WARN and "cannot confirm the same build" in detail
+        site.set_manifest(build="B1"); raw.set_manifest(build="B1")
+        assert run(site.url, raw_url=url)["raw.manifest"][0] == cl.OK
     finally:
         raw.srv.shutdown(); raw.srv.server_close()
 
@@ -206,6 +249,36 @@ def test_expect_local_waits_for_pages_to_deploy(site, tmp_path):
     assert res["local.build"][0] == cl.OK
 
 
+def test_expect_local_wait_rechecks_age_and_files_on_the_manifest_fetched_after_the_wait(site, tmp_path):
+    site.set_manifest(build="B1", age_hours=60)  # old build: stale and, below, its files are wrong
+    site.routes["/public-data/v1/prices.json"] = (200, b'{"p": 0}')
+
+    def deploy():  # Pages finishes deploying: the new, fresh build and its files
+        site.set_manifest(build="B9", age_hours=1)
+        site.routes["/public-data/v1/prices.json"] = (200, FILES["prices.json"])
+    threading.Timer(0.3, deploy).start()
+    res = run(site.url, expect_local=_local(tmp_path, "B9"), wait=5, poll=0.1)
+    assert res["local.build"][0] == cl.OK
+    assert res["site.age"][0] == cl.OK and "1.0 h" in res["site.age"][1]  # not the 60 h of the pre-wait manifest
+    assert res["site.file.prices.json"][0] == cl.OK
+    assert "build B9" in res["site.manifest"][1]
+
+
+def test_expect_local_wait_that_never_succeeds_still_reports_age_and_files(site, tmp_path):
+    site.set_manifest(build="B1", age_hours=60)
+    res = run(site.url, expect_local=_local(tmp_path, "B9"), wait=0.3, poll=0.1)
+    assert res["local.build"][0] == cl.BREACH and res["site.age"][0] == cl.BREACH
+
+
+def test_wait_with_zero_poll_does_not_busy_loop(site, tmp_path):
+    site.set_manifest(build="B1")
+    before = site.hits.get(cl.MANIFEST_PATH, 0)
+    res = run(site.url, expect_local=_local(tmp_path, "B9"), wait=0.5, poll=0)
+    polls = site.hits[cl.MANIFEST_PATH] - before
+    assert res["local.build"][0] == cl.BREACH
+    assert 2 <= polls <= 0.5 / cl.MIN_POLL + 3  # polled, but never faster than MIN_POLL
+
+
 def test_main_exit_codes_text_and_json(site, capsys, monkeypatch):
     monkeypatch.setattr(cl, "run_checks", functools.partial(cl.run_checks, now_fn=lambda: NOW))  # fixed clock
     args = ["--site", site.url, "--retries", "0", "--retry-delay", "0"]
@@ -217,6 +290,196 @@ def test_main_exit_codes_text_and_json(site, capsys, monkeypatch):
     data = json.loads(capsys.readouterr().out)
     assert data["result"].startswith("BREACH") and any(c["status"] == "BREACH" for c in data["checks"])
     assert "SAST" in data["checked_at"]
+
+
+# ---- odd manifests, truncated bodies, other parsing errors: BREACH line, RESULT line, exit 1, never a traceback ----
+
+def _main_default_site(monkeypatch, site, extra=()):
+    monkeypatch.setattr(cl, "run_checks", functools.partial(cl.run_checks, now_fn=lambda: NOW))
+    return cl.main(["--site", site.url, "--retries", "0", "--retry-delay", "0", *extra])
+
+
+@pytest.mark.parametrize("files", [None, {"municipalities.json": 1}, "municipalities.json", 7, [1, "x", None]])
+def test_manifest_files_not_a_usable_list_is_a_breach(site, capsys, monkeypatch, files):
+    m = manifest(); m["files"] = files
+    site.routes[cl.MANIFEST_PATH] = (200, json.dumps(m).encode())
+    rc = _main_default_site(monkeypatch, site)
+    out = capsys.readouterr().out
+    assert rc == 1 and "Traceback" not in out and "RESULT: BREACH" in out
+    if isinstance(files, list):  # a list of junk: every sample file is "not listed"
+        assert "[BREACH] site.file.prices.json: not listed in the manifest" in out
+    else:
+        assert "[BREACH] site.files: manifest `files` is not a list" in out
+
+
+def test_manifest_without_files_key_is_a_breach(site):
+    m = manifest(); del m["files"]
+    site.routes[cl.MANIFEST_PATH] = (200, json.dumps(m).encode())
+    assert run(site.url)["site.files"][0] == cl.BREACH
+
+
+def test_truncated_body_is_a_breach_not_a_traceback(site, capsys, monkeypatch):
+    full = json.dumps(manifest()).encode()
+    site.routes[cl.MANIFEST_PATH] = (200, full[:40], {"X-Truncate": "1"})
+    rc = _main_default_site(monkeypatch, site)
+    out = capsys.readouterr().out
+    assert rc == 1 and "Traceback" not in out and "RESULT: BREACH" in out
+    assert "[BREACH] site.manifest:" in out and "truncated" in out
+
+
+def test_truncated_sample_file_is_a_breach(site):
+    site.routes["/public-data/v1/prices.json"] = (200, b'{"p"', {"X-Truncate": "1"})
+    res = run(site.url)
+    assert res["site.file.prices.json"][0] == cl.BREACH and "truncated" in res["site.file.prices.json"][1]
+
+
+def test_truncated_body_is_retried(site):
+    site.routes[cl.MANIFEST_PATH] = (200, b"{", {"X-Truncate": "1"})
+    run(site.url, retries=2)
+    assert site.hits[cl.MANIFEST_PATH] == 3
+
+
+@pytest.mark.parametrize("body", [b"[" * 200000, b"\xff\xfe not utf-8", b'{"generated_at_sast": {"a": 1}}',
+                                  b'{"generated_at_sast": 12345, "files": []}', b"null"])
+def test_other_unparseable_manifests_are_breaches(site, capsys, monkeypatch, body):
+    site.routes[cl.MANIFEST_PATH] = (200, body)
+    rc = _main_default_site(monkeypatch, site)
+    out = capsys.readouterr().out
+    assert rc == 1 and "Traceback" not in out and "[BREACH]" in out and "RESULT: BREACH" in out
+
+
+def test_an_unexpected_error_inside_a_check_becomes_a_breach_line(site, monkeypatch):
+    def boom(*a, **k):
+        raise TypeError("unexpected")
+    monkeypatch.setattr(cl, "_age_checks", boom)
+    res = run(site.url)
+    assert res["site.age"] == (cl.BREACH, "check could not be evaluated (TypeError)")
+
+
+def test_main_reports_a_breach_if_run_checks_itself_fails(site, capsys, monkeypatch):
+    def boom(*a, **k):
+        raise RuntimeError("boom")
+    monkeypatch.setattr(cl, "run_checks", boom)
+    rc = cl.main(["--site", site.url])
+    out = capsys.readouterr().out
+    assert rc == 1 and "[BREACH] check_live: the check itself failed (RuntimeError)" in out and "RESULT: BREACH (1)" in out
+
+
+# ---- URL and flag validation ----
+
+@pytest.mark.parametrize("url", ["file:///etc/passwd", "file://localhost/etc/passwd", "ftp://example.org/x", "gopher://example.org", "javascript:alert(1)",
+                                 "example.org", "http://", "//example.org", ""])
+@pytest.mark.parametrize("flag", ["--site", "--raw-url"])
+def test_only_http_and_https_urls_are_accepted(capsys, flag, url):
+    with pytest.raises(SystemExit) as e:
+        cl.main([flag, url])
+    assert e.value.code == 2 and "Traceback" not in capsys.readouterr().err
+
+
+def test_run_checks_and_fetch_refuse_other_schemes_too(site):
+    with pytest.raises(ValueError):
+        cl.run_checks("file:///etc", now_fn=lambda: NOW)
+    with pytest.raises(ValueError):
+        cl.run_checks(site.url, raw_url="ftp://example.org/m.json", now_fn=lambda: NOW)
+    assert cl.fetch("file:///etc/passwd")[0] is None and "http" in cl.fetch("file:///etc/passwd")[2]
+
+
+def test_redirect_to_a_file_url_is_refused_and_http_redirects_are_followed(site):
+    site.routes["/apps/public-dashboard/"] = (302, b"", {"Location": "file:///etc/passwd"})
+    res = run(site.url)
+    assert res["site.app"][0] == cl.BREACH
+    site.routes["/"] = (302, b"", {"Location": "/real-home"})
+    site.routes["/real-home"] = (200, b"home")
+    assert run(site.url)["site.home"][0] == cl.OK  # documented: redirects are followed
+
+
+@pytest.mark.parametrize("args", [["--wait", "-1"], ["--wait", "3601"], ["--wait", "nan"], ["--wait", "inf"], ["--wait", "x"],
+                                  ["--poll", "0"], ["--poll", "0.5"], ["--poll", "-5"], ["--poll", "601"], ["--poll", "nan"],
+                                  ["--max-age-hours", "0"], ["--max-age-hours", "-1"], ["--warn-age-hours", "0"],
+                                  ["--warn-age-hours", "-3"], ["--max-age-hours", "inf"],
+                                  ["--warn-age-hours", "48"], ["--warn-age-hours", "50"],
+                                  ["--max-age-hours", "20"],  # below the default warn of 30
+                                  ["--retries", "-1"], ["--retries", "11"], ["--retries", "1.5"],
+                                  ["--retry-delay", "-1"], ["--retry-delay", "61"]])
+def test_nonsense_flag_values_are_rejected_before_anything_is_fetched(site, capsys, args):
+    with pytest.raises(SystemExit) as e:
+        cl.main(["--site", site.url, *args])
+    assert e.value.code == 2 and not site.hits
+    assert "Traceback" not in capsys.readouterr().err
+
+
+def test_sensible_flag_values_are_accepted(site, capsys, monkeypatch):
+    rc = _main_default_site(monkeypatch, site, ["--wait", "0", "--poll", "1", "--max-age-hours", "100", "--warn-age-hours", "99"])
+    assert rc == 0
+
+
+# ---- CLI defaults (a fixed clock, the local site standing in for production) ----
+
+@pytest.mark.parametrize("age,verdict,code", [(29, "OK", 0), (31, "WARN (1)", 0), (49, "BREACH (1)", 1)])
+def test_main_with_no_flags_uses_the_slo_defaults(site, capsys, monkeypatch, age, verdict, code):
+    site.set_manifest(age_hours=age)
+    monkeypatch.setattr(cl, "DEFAULT_SITE", site.url)
+    monkeypatch.setattr(cl, "run_checks", functools.partial(cl.run_checks, now_fn=lambda: NOW, retries=0, retry_delay=0))
+    assert cl.main([]) == code
+    assert f"RESULT: {verdict} (checked " in capsys.readouterr().out
+
+
+def test_main_boundaries_are_strict_30h_is_ok_and_48h_is_warn_not_breach(site, capsys, monkeypatch):
+    monkeypatch.setattr(cl, "DEFAULT_SITE", site.url)
+    monkeypatch.setattr(cl, "run_checks", functools.partial(cl.run_checks, now_fn=lambda: NOW, retries=0, retry_delay=0))
+    site.set_manifest(age_hours=30)
+    assert cl.main([]) == 0 and "RESULT: OK (" in capsys.readouterr().out
+    site.set_manifest(age_hours=30.01)
+    assert cl.main([]) == 0 and "RESULT: WARN (1) (" in capsys.readouterr().out
+    site.set_manifest(age_hours=48)
+    assert cl.main([]) == 0 and "RESULT: WARN (1) (" in capsys.readouterr().out
+    site.set_manifest(age_hours=48.01)
+    assert cl.main([]) == 1 and "RESULT: BREACH (1) (" in capsys.readouterr().out
+
+
+def test_times_are_shown_in_sast_with_the_exact_format(site):
+    utc, west = timezone.utc, timezone(timedelta(hours=-5))
+    for tz in (utc, west, None):  # the same instant written three ways: 04:00 SAST on 24 October
+        site.set_manifest(age_hours=8, tz=tz)
+        assert run(site.url)["site.age"] == (cl.OK, "data is 8.0 h old (generated 2026-10-24 04:00 SAST)")
+    assert cl._sast(datetime(2026, 12, 31, 23, 30, tzinfo=utc)) == "2027-01-01 01:30 SAST"
+
+
+# ---- printing never echoes userinfo or a query string ----
+
+def test_safe_url_strips_userinfo_query_and_fragment():
+    assert cl.safe_url("https://user:pw@example.org:8443/a/b?token=SECRET#frag") == "https://example.org:8443/a/b"
+    assert cl.safe_url("http://[::1]:8080/x?y=1") == "http://[::1]:8080/x"
+    assert cl.safe_url("http://host:notaport/") == "<unreadable URL>"
+
+
+@pytest.mark.parametrize("args", [["--site", "http://user:SECRETPW@127.0.0.1:9"], ["--site", "http://127.0.0.1:9/?token=SECRETQ"],
+                                  ["--site", "http://127.0.0.1:9/#SECRETF"], ["--raw-url", "http://u:SECRETPW@127.0.0.1:9/m.json"]])
+def test_rejected_urls_are_not_echoed(capsys, args):
+    with pytest.raises(SystemExit) as e:
+        cl.main(args)
+    cap = capsys.readouterr()
+    assert e.value.code == 2 and "SECRET" not in cap.out + cap.err
+
+
+def test_raw_url_query_string_is_never_printed(site, capsys, monkeypatch):
+    raw = Site().healthy()
+    try:
+        raw.routes.pop(cl.MANIFEST_PATH)  # the raw check fails, so its details are printed
+        for extra in ([], ["--json"]):
+            rc = _main_default_site(monkeypatch, site, ["--raw-url", raw.url + cl.MANIFEST_PATH + "?token=SECRETQ", *extra])
+            cap = capsys.readouterr()
+            assert rc == 1 and "raw.manifest" in cap.out and "SECRET" not in cap.out + cap.err
+    finally:
+        raw.srv.shutdown(); raw.srv.server_close()
+
+
+def test_unreachable_site_line_shows_host_but_no_secrets(capsys):
+    with socket.socket() as s:
+        s.bind(("127.0.0.1", 0)); port = s.getsockname()[1]
+    rc = cl.main(["--site", f"http://127.0.0.1:{port}", "--retries", "0"])
+    out = capsys.readouterr().out
+    assert rc == 1 and f"http://127.0.0.1:{port}/ -> unreachable" in out
 
 
 def test_script_is_stdlib_only_and_sends_no_credentials():
