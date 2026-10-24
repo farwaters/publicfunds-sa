@@ -3,6 +3,7 @@ import functools
 import hashlib
 import importlib.util
 import json
+import random
 import socket
 import threading
 from datetime import datetime, timedelta, timezone
@@ -519,6 +520,110 @@ def test_rejected_urls_are_not_echoed(capsys, args):
         cl.main(args)
     cap = capsys.readouterr()
     assert e.value.code == 2 and "SECRET" not in cap.out + cap.err
+
+
+# ---- nothing that is rejected is ever repeated (a leak of part of a URL, userinfo or flag value) ----
+
+MARK = "zqxmark7f3a"  # lower case: urlsplit lower-cases a scheme, so a mixed-case marker would hide an echoed scheme
+BOTH = [f"{MARK}", f"{MARK}:pw@host", f"user:{MARK}@host", f"{MARK}:x@host/path", f"{MARK}://host", f"ftp://{MARK}", f"file:///{MARK}",
+        f"//{MARK}", f"{MARK}@", f"http://u:{MARK}@h/", f"http://{MARK}:pw@h/", f"http://h:{MARK}/", f"http://h:{MARK}", f"http://{MARK}:99999999/",
+        f"http://[{MARK}/", f"http://h:{MARK}\n", f"http://{MARK} x/", f"http://\x00{MARK}", "http://", f"mailto:{MARK}@host", f"javascript:{MARK}"]
+SITE_ONLY = [f"http://h/?q={MARK}", f"https://h/#{MARK}", f"http://h/p?{MARK}#{MARK}"]
+
+
+def _rejected_main(argv, capsys):
+    with pytest.raises(SystemExit) as e:
+        cl.main(argv)
+    cap = capsys.readouterr()
+    assert e.value.code == 2, argv
+    assert "Traceback" not in cap.err
+    return cap.out + cap.err
+
+
+@pytest.mark.parametrize("flag,urls", [("--site", BOTH + SITE_ONLY), ("--raw-url", BOTH)])
+def test_scheme_less_and_malformed_urls_get_fixed_messages(capsys, flag, urls):
+    for url in urls:
+        assert MARK not in _rejected_main([flag, url], capsys), url
+        assert MARK not in _rejected_main([f"{flag}={url}"], capsys), url
+
+
+@pytest.mark.parametrize("url", BOTH + SITE_ONLY)
+def test_validate_url_fetch_and_run_checks_never_repeat_a_rejected_url(url):
+    with pytest.raises(ValueError) as e:
+        cl.validate_url(url, base=True)
+    assert MARK not in str(e.value) and "pw" not in str(e.value).replace("not a valid URL", "")
+    if url not in SITE_ONLY:  # fetch() takes any http(s) URL; only --site refuses a query string or fragment
+        st, _, err = cl.fetch(url, retries=0)
+        assert st is None and MARK not in err
+    with pytest.raises(ValueError) as e2:
+        cl.run_checks(url, now_fn=lambda: NOW)
+    assert MARK not in str(e2.value)
+
+
+@pytest.mark.parametrize("url", ["http://h /x", "http://h/\tx", "http://h/\nx", "http://h/\x00", "http://h\x7f/", "http://\u00a0h/"])
+def test_urls_with_whitespace_or_control_characters_are_rejected(capsys, url):
+    with pytest.raises(ValueError, match="spaces or control characters"):
+        cl.validate_url(url)
+    assert "control" in _rejected_main(["--site", url], capsys)
+
+
+def test_user_pw_host_without_a_scheme_is_not_described_as_a_scheme(capsys):
+    # urlsplit("user:pw@host") reports the scheme "user": the message must not say so
+    err = _rejected_main(["--site", "user:pw@host"], capsys)
+    assert "user" not in err.split("error:")[-1] and "scheme" not in err.split("error:")[-1]
+    with pytest.raises(ValueError) as e:
+        cl.validate_url("secretpw:x@host")
+    assert "secretpw" not in str(e.value) and str(e.value) == "only http and https URLs are allowed"
+
+
+@pytest.mark.parametrize("flag", ["--wait", "--poll", "--max-age-hours", "--warn-age-hours", "--retries", "--retry-delay"])
+def test_bad_numeric_flag_values_are_not_repeated(capsys, flag):
+    for value in (MARK, f"1{MARK}", f"{MARK}1e999", f"{MARK}.5", "9" * 5000 + MARK):
+        assert MARK not in _rejected_main([flag, value], capsys), (flag, value)
+
+
+def test_unknown_arguments_abbreviations_and_stray_values_are_not_repeated(capsys):
+    for argv in ([MARK], [f"user:{MARK}@host"], [f"--{MARK}"], [f"--{MARK}=1"], [f"--s={MARK}"], [f"--sit={MARK}"], [f"--r={MARK}"],
+                 ["--site", "http://h", MARK], [f"--sample-files{MARK}", "x"], [f"-{MARK}"]):
+        assert MARK not in _rejected_main(argv, capsys), argv
+
+
+def test_empty_sample_files_and_missing_values_are_not_repeated(capsys):
+    for argv in (["--sample-files", ""], ["--sample-files", " , "], ["--site"], ["--wait"], ["--warn-age-hours", "60", "--max-age-hours", "50"]):
+        assert MARK not in _rejected_main(argv + ["--raw-url", f"x:{MARK}@h"], capsys), argv
+
+
+def test_fuzzed_rejected_urls_never_echo_a_marker(capsys):
+    rnd = random.Random(20261024)
+    pieces = ["http", "https", "ftp", "file", "user", "pw", ":", "//", "/", "@", "?", "#", "[", "]", "%", "\\", " ", "\n", "\x00", ".", "-", "_",
+              "host", "h", "99999999", "80", "x", "=", "&", "\u00e9", ";"]
+    rejected = 0
+    for _ in range(1500):
+        parts = [rnd.choice(pieces) for _ in range(rnd.randint(0, 8))]
+        parts.insert(rnd.randint(0, len(parts)), MARK)
+        url = "".join(parts)
+        for base in (False, True):
+            try:
+                cl.validate_url(url, base=base)
+            except ValueError as e:
+                rejected += 1
+                assert MARK not in str(e), repr(url)
+                continue
+            # accepted: whatever is printed must carry no userinfo, query or fragment
+            shown = cl.safe_url(url)
+            assert "?" not in shown and "#" not in shown and "@" not in shown, repr(url)
+        if _is_rejected(url):
+            out = _rejected_main(["--raw-url", url], capsys)
+            assert MARK not in out, repr(url)
+    assert rejected > 1500  # the generator really produces rejected input (it counts both validate_url modes)
+
+
+def _is_rejected(url):
+    try:
+        cl.validate_url(url)
+    except ValueError:
+        return True
+    return False
 
 
 def test_raw_url_query_string_is_never_printed(site, capsys, monkeypatch):

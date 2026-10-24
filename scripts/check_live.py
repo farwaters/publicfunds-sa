@@ -54,6 +54,8 @@ def safe_url(url: str) -> str:
 def validate_url(url: str, *, base: bool = False) -> str:
     """Accept only plain http(s) URLs with a host and no embedded credentials; raise ValueError otherwise.
     base=True (the --site value) also refuses a query string or fragment. Messages never repeat the URL."""
+    if any(c.isspace() or ord(c) < 32 or ord(c) == 127 for c in url):  # urlsplit would silently drop some of them
+        raise ValueError("URL contains spaces or control characters")
     try:
         p = urllib.parse.urlsplit(url)
         host = p.hostname
@@ -61,7 +63,7 @@ def validate_url(url: str, *, base: bool = False) -> str:
     except ValueError:  # Python's message can repeat part of the URL (a bad port, for example): never pass it on
         raise ValueError("not a valid URL (it could not be parsed)") from None
     if p.scheme not in ("http", "https"):
-        raise ValueError(f"only http and https URLs are allowed (got scheme {p.scheme or 'none'!r})")
+        raise ValueError("only http and https URLs are allowed")  # fixed text: without a scheme, urlsplit would call "user" in user:pw@host the scheme
     if not host:
         raise ValueError("URL has no host")
     if p.username is not None or p.password is not None:
@@ -318,7 +320,7 @@ def _num(lo: float, hi: float, *, lo_open: bool = False, integer: bool = False):
         try:
             x = int(value) if integer else float(value)
         except ValueError:
-            raise argparse.ArgumentTypeError(f"not a number: {value!r}") from None
+            raise argparse.ArgumentTypeError("not a number") from None
         if not math.isfinite(x) or x < lo or x > hi or (lo_open and x == lo):
             raise argparse.ArgumentTypeError(f"must be {'greater than' if lo_open else 'at least'} {lo:g} and at most {hi:g}")
         return x
@@ -326,7 +328,8 @@ def _num(lo: float, hi: float, *, lo_open: bool = False, integer: bool = False):
 
 
 def main(argv: list[str] | None = None) -> int:
-    ap = argparse.ArgumentParser(description="Read-only live site and data-age check (SLO-PD-1).")
+    # allow_abbrev=False: argparse's "ambiguous option" message would repeat what was typed, value included
+    ap = argparse.ArgumentParser(description="Read-only live site and data-age check (SLO-PD-1).", allow_abbrev=False)
     ap.add_argument("--site", type=_site_arg, default=DEFAULT_SITE, help="site base URL, http or https (default: production)")
     ap.add_argument("--raw-url", type=_url_arg, help="manifest URL on the git host; compared with the site (the SLO's measuring point)")
     ap.add_argument("--expect-local", metavar="MANIFEST", help="local manifest.json whose build id the site must serve")
@@ -338,7 +341,9 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--retries", type=_num(0, 10, integer=True), default=2, help="extra attempts per request, 0 to 10, default 2")
     ap.add_argument("--retry-delay", type=_num(0, 60), default=5.0, help="seconds between attempts, 0 to 60, default 5")
     ap.add_argument("--json", action="store_true", help="print JSON instead of text")
-    a = ap.parse_args(argv)
+    a, extra = ap.parse_known_args(argv)
+    if extra:  # argparse would print them back (a URL typed without --site, for example)
+        ap.error("unrecognized arguments (not repeated here)")
     if a.warn_age_hours >= a.max_age_hours:
         ap.error("--warn-age-hours must be below --max-age-hours")
     try:
