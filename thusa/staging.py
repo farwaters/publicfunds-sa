@@ -242,7 +242,8 @@ def stage_prices(con, store: RawStore, sdir: Path) -> dict:
     hold the same month; the most recently fetched document wins (deduplicated in the curated model)."""
     def fuel():
         for f in _files(store, "dmpr_fuel"):
-            parse = parsers.fuel_history_pdf_rows if f.name.endswith(".pdf") else parsers.fuel_history_rows
+            parse = (parsers.fuel_history_pdf_rows if f.name.endswith(".pdf") else
+                     parsers.fuel_regulations_xlsx_rows if f.name.endswith(".xlsx") else parsers.fuel_history_rows)
             for r in parse(store.path_of(f).read_bytes(), f.name):
                 r["raw_file_id"], r["fetched_at_utc"] = f.sha256, f.fetched_at_utc
                 r["source_locator"] = f"{f.name}:{r['source_locator']}"

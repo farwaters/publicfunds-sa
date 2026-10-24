@@ -353,6 +353,112 @@ def fuel_history_pdf_rows(blob: bytes, name: str = "") -> list[dict]:
     return out
 
 
+_XL_EFFECTIVE = re.compile(r"effective\s+(\d{1,2})\s+([a-z]+)\s+(\d{4})", re.I)
+_XL_NAME = re.compile(r"^([A-Za-z]+)-(\d{4})-Fuel-Regulations\.xlsx$")
+
+
+def _col_letter(i: int) -> str:
+    return chr(65 + i) if i < 26 else chr(64 + i // 26) + chr(65 + i % 26)
+
+
+def fuel_regulations_xlsx_rows(blob: bytes, name: str = "") -> list[dict]:
+    """CHG-2026-027: the 7 history grades for one month from a DMPR '<Month>-<Year>-Fuel-Regulations.xlsx' workbook
+    (cells only; the document properties are never read). Zone 9C is labelled GAUTENG in the workbook (the inland
+    reference); 1A is the coast reference zone (the workbook does not label it 'coast'; the mapping is proven by data, see CHG-2026-027).
+    Petrol: 'ACTUAL PUMP PRICE' (whole cents, as in the history table) from the 93 RON, the 95 RON lead replacement
+    (zone 1A, history grade petrol_95_coast) and the 95 RON unleaded (zone 9C, petrol_95_inland) sections of sheet 'Petrol'. Diesel 0.05% sulphur and illuminating
+    paraffin: the 'RTL Wholesale Price' column of sheets 'Diesel' and 'Illuminating Paraffin'. Fails closed
+    (ValueError, no rows) when a sheet, section heading, effective date, price column, zone row or numeric value is
+    missing, ambiguous or implausible, or when the effective month disagrees with the file name."""
+    def fail(msg):
+        raise ValueError(f"{name}: {msg}")
+
+    def sheet(sheet_name):
+        try:
+            return xlsx_sheet(blob, sheet_name)
+        except KeyError:
+            fail(f"worksheet {sheet_name!r} not found")
+
+    def text(c):
+        return re.sub(r"\s+", " ", str(c)).strip() if isinstance(c, str) else ""
+
+    def sections(rows, sheet_name, heads):
+        """[(key, first row index, last row index, heading cell column)] for each heading regex, in sheet order."""
+        found = []
+        for i, r in enumerate(rows):
+            for j, c in enumerate(r):
+                for key, rx in heads:
+                    if text(c) and re.search(rx, text(c), re.I):
+                        found.append((key, i, j))
+                        break
+        keys = [k for k, _, _ in found]
+        for key, _ in heads:
+            if keys.count(key) != 1:
+                fail(f"sheet {sheet_name!r}: expected exactly one {key!r} section, found {keys.count(key)}")
+        found.sort(key=lambda t: t[1])
+        ends = [f[1] for f in found[1:]] + [len(rows)]
+        return [(k, a, b, j) for (k, a, j), b in zip(found, ends)]
+
+    def effective(rows, a, b, sheet_name, key):
+        hits = {(m.group(1), m.group(2).lower(), m.group(3)) for r in rows[a:b] for c in r
+                for m in [_XL_EFFECTIVE.search(text(c))] if m}
+        if len(hits) != 1:
+            fail(f"sheet {sheet_name!r} section {key!r}: expected one 'EFFECTIVE <day> <month> <year>' date, found {sorted(hits)}")
+        _, mon, yr = hits.pop()
+        month = _MONTHS.get(mon[:3])
+        if not month:
+            fail(f"sheet {sheet_name!r} section {key!r}: unknown month {mon!r}")
+        return int(yr), month
+
+    def zone_price(rows, a, b, sheet_name, key, zone, price_hdr):
+        """(value, cell) of the price column in the one row of this section whose zone cell is `zone`."""
+        hdr = next((i for i in range(a, b) if any(text(c).lower() == "zones" for c in rows[i])), None)
+        if hdr is None:
+            fail(f"sheet {sheet_name!r} section {key!r}: 'ZONES' header row not found")
+        zcol = next(j for j, c in enumerate(rows[hdr]) if text(c).lower() == "zones")
+        pcols = {j for j, c in enumerate(rows[hdr]) if price_hdr(text(c).lower())}      # first header line only
+        if len(pcols) != 1:
+            fail(f"sheet {sheet_name!r} section {key!r}: price column header not found exactly once")
+        pcol = pcols.pop()
+        hits = [i for i in range(hdr + 1, b) if len(rows[i]) > zcol and text(rows[i][zcol]) == zone]
+        if len(hits) != 1:
+            fail(f"sheet {sheet_name!r} section {key!r}: zone {zone} row found {len(hits)} times, expected once")
+        v = rows[hits[0]][pcol] if len(rows[hits[0]]) > pcol else None
+        if isinstance(v, bool) or not isinstance(v, (int, float)) or not 500 <= v <= 10000:
+            fail(f"sheet {sheet_name!r} section {key!r} zone {zone}: price cell {_col_letter(pcol)}{hits[0] + 1} is {v!r}")
+        return float(v), f"{_col_letter(pcol)}{hits[0] + 1}"
+
+    plan = [  # (sheet, heading regexes, price header test, [(grade, section key, zone)])
+        ("Petrol", [("petrol93", r"^93 RON\b"), ("petrol95_lrp", r"^95 RON LEAD REPLACEMENT\b"),
+                    ("petrol95_ulp", r"^95 RON UNLEADED\b")], lambda h: h == "actual",
+         [("petrol_93_inland", "petrol93", "9C"), ("petrol_95_coast", "petrol95_lrp", "1A"),
+          ("petrol_95_inland", "petrol95_ulp", "9C")]),
+        ("Diesel", [("diesel005", r"^diesel 0\.05\s*% sul(?:ph|f)ur\b"), ("diesel0005", r"^diesel 0\.005\s*% sul(?:ph|f)ur\b")],
+         lambda h: h == "rtl", [("diesel_005_inland", "diesel005", "9C"), ("diesel_005_coast", "diesel005", "1A")]),
+        ("Illuminating Paraffin", [("paraffin", r"^illuminating paraffin$")], lambda h: h == "rtl",
+         [("paraffin_inland", "paraffin", "9C"), ("paraffin_coast", "paraffin", "1A")]),
+    ]
+    labels = dict(FUEL_GRADES)
+    out, when = [], set()
+    for sheet_name, heads, price_hdr, wanted in plan:
+        rows = sheet(sheet_name)
+        secs = {k: (a, b) for k, a, b, _ in sections(rows, sheet_name, heads)}
+        for key in {k for _, k, _ in wanted}:
+            when.add(effective(rows, *secs[key], sheet_name, key))
+        for grade, key, zone in wanted:
+            v, cell = zone_price(rows, *secs[key], sheet_name, key, zone, price_hdr)
+            out.append({"grade": grade, "grade_label": labels[grade], "cents_per_litre": v,
+                        "source_locator": f"{name}#{sheet_name}!{zone}@{cell}"})
+    if len(when) != 1:
+        fail(f"sections disagree on the effective month: {sorted(when)}")
+    year, month = when.pop()
+    m = _XL_NAME.match(name)
+    if m and (_MONTHS.get(m.group(1)[:3].lower()), int(m.group(2))) != (month, year):
+        fail(f"file name says {m.group(1)} {m.group(2)} but the workbook is effective {year}-{month:02d}")
+    order = [g for g, _ in FUEL_GRADES]
+    return [{"year": year, "month": month, **r} for r in sorted(out, key=lambda r: order.index(r["grade"]))]
+
+
 def oecd_cpi_rows(data: bytes) -> list[dict]:
     rows = []
     for i, r in enumerate(csv.DictReader(io.StringIO(data.decode("utf-8-sig"))), 2):
@@ -398,6 +504,13 @@ def _col_index(ref: str) -> int:
 
 def xlsx_first_sheet(blob: bytes) -> list[list]:
     """Cell values of the first worksheet (stdlib only: strings, numbers; blanks -> None)."""
+    return xlsx_sheet(blob, None)
+
+
+def xlsx_sheet(blob: bytes, sheet_name: str | None) -> list[list]:
+    """Cell values of the named worksheet (the first one when `sheet_name` is None). Reads only the workbook,
+    its relationships, the shared strings and the sheet XML - never the document properties. Raises KeyError
+    when the sheet is missing."""
     import zipfile
     from xml.etree import ElementTree as ET
     z = zipfile.ZipFile(io.BytesIO(blob))
@@ -406,7 +519,11 @@ def xlsx_first_sheet(blob: bytes) -> list[list]:
         for si in ET.fromstring(z.read("xl/sharedStrings.xml")).findall("m:si", _XNS):
             shared.append("".join(t.text or "" for t in si.iter(f"{{{_XNS['m']}}}t")))
     wb = ET.fromstring(z.read("xl/workbook.xml"))
-    rid = wb.find("m:sheets/m:sheet", _XNS).get(_RNS)
+    sheets = wb.findall("m:sheets/m:sheet", _XNS)
+    pick = next((sh for sh in sheets if sheet_name is None or sh.get("name") == sheet_name), None)
+    if pick is None:
+        raise KeyError(f"worksheet {sheet_name!r} not found")
+    rid = pick.get(_RNS)
     rels = ET.fromstring(z.read("xl/_rels/workbook.xml.rels"))
     target = next(r.get("Target") for r in rels if r.get("Id") == rid).lstrip("/")
     sheet = ET.fromstring(z.read(target if target.startswith("xl/") else "xl/" + target))
