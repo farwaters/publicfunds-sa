@@ -21,7 +21,7 @@ from playwright.sync_api import sync_playwright
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))      # thusa.coverage_ceiling, wherever the script is started from
-from thusa.coverage_ceiling import by_province, core_gap_lines, model, province_order  # noqa: E402
+from thusa.coverage_ceiling import by_province, core_gap_lines, headline_context_lines, model, province_order  # noqa: E402
 PAGES = [("home", "#/"), ("coverage", "#/coverage"), ("municipalities", "#/municipalities"),
          ("municipality", "#/m/MUN:BUF"), ("departments", "#/departments"), ("department", None),
          ("tenders", "#/tenders"), ("flags", "#/flags"), ("tools", "#/tools"), ("compare", "#/tools/compare?a=MUN:BUF&b=MUN:NMA&y=2024"),
@@ -326,6 +326,7 @@ def check_gap_lines(page, vname, app, problems, cov):
     the headline itself is still there and unchanged; the report card and glossary no longer say 'not published'."""
     base = app.split("#")[0]
     want = core_gap_lines(cov)
+    want_ctx = headline_context_lines(cov)
     h = cov["headline"]
 
     def say(where, msg):
@@ -346,6 +347,15 @@ def check_gap_lines(page, vname, app, problems, cov):
             got = [re.sub(r"\s+", " ", t).strip() for t in box.locator("p > b").all_inner_texts()]
             if got != want:
                 say(where, f"gap lines read {got!r}, expected {want!r}")
+            # the note must be READABLE, not only present: effective opacity (ancestors included), non-transparent colour that differs from the
+            # effective background (white on white), font size > 0, a real box; and it never uses the word 'publish' (nor do its context lines)
+            readable(box, f"gap note ({where})", lambda m, w=where: say(w, m))
+            whole = re.sub(r"\s+", " ", box.inner_text(timeout=2000))
+            if re.search(r"publish", whole, re.I):
+                say(where, f"the word 'publish' appears in the gap note: {whole!r}")
+            ctx = [re.sub(r"\s+", " ", t).strip() for t in box.locator('p[data-note="context"]').all_inner_texts()]
+            if ctx != (want_ctx if where == "home" else []):
+                say(where, f"headline context lines read {ctx!r}, expected {(want_ctx if where == 'home' else [])!r}")
             if where == "home":
                 kpi = page.locator(".kpi").first
                 kt = re.sub(r"\s+", " ", kpi.inner_text())
@@ -362,6 +372,35 @@ def check_gap_lines(page, vname, app, problems, cov):
             for bad in BANNED_STATE_WORDING:
                 if bad in txt:
                     say(where, f"state wording {bad!r} is still on the report card")
+    # home KPI: the tender count says what it counts, not that the source "published" it
+    page.goto(base + "#/")
+    page.wait_for_selector('#view[aria-busy="false"]', timeout=30000)
+    kpis = [re.sub(r"\s+", " ", t).strip() for t in page.locator(".kpi span").all_inner_texts()]
+    if sum(1 for t in kpis if re.fullmatch(r"tender award records", t)) != 1 or any("published" in t for t in kpis if "tender" in t):
+        say("home", f"the tender KPI label must read exactly 'tender award records' (no 'published'): {kpis!r}")
+    # coverage map, tender awards: every 'not applicable' cell with the old reason now says what it means
+    page.goto(base + "#/coverage?dt=procurement")
+    page.wait_for_selector('#view[aria-busy="false"]', timeout=30000)
+    titles = page.locator("table.heat td").evaluate_all("els => els.map(e => e.title)")
+    new, old = "tender award records are not counted for this year", "was not publishing"
+    n_new = sum(1 for t in titles if t.endswith(": " + new))
+    n_exp = sum(1 for e in cov["entities"] for r in e["r"]["procurement"] if r not in ("0", 0) and cov["reasons"][int(r) - 1] == "source_not_publishing_yet")
+    if n_new != n_exp or any(old in t for t in titles):
+        say("coverage", f"{n_new} tender cells say {new!r}, expected {n_exp} (from coverage.json); old wording present: {any(old in t for t in titles)}")
+    # #/unknowns: the lead sentence
+    page.goto(base + "#/unknowns")
+    page.wait_for_selector('#view[aria-busy="false"]', timeout=30000)
+    lead = page.locator("#view p.lead")
+    fl = {y: l for y, l in zip(cov["years"], cov["fy_labels"])}
+    want_lead = (f"For each province, how much of the expected data PublicFunds has for its municipalities, over the financial years "
+                 f"{fl[h['fye_min']]} to {fl[h['fye_max']]} (the years whose audits are due). Lowest first, so the biggest blind spots are at the top.")
+    if lead.count() != 1:
+        say("unknowns", f"expected 1 lead sentence, found {lead.count()}")
+    else:
+        readable(lead, "unknowns lead", lambda m: say("unknowns", m))
+        got = re.sub(r"\s+", " ", lead.inner_text(timeout=2000)).strip()
+        if got != want_lead:
+            say("unknowns", f"lead reads {got!r}, expected {want_lead!r}")
     page.goto(base + "#/glossary")
     page.wait_for_selector('#view[aria-busy="false"]', timeout=30000)
     txt = re.sub(r"\s+", " ", page.locator("#view").inner_text(timeout=3000))

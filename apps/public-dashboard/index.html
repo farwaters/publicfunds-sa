@@ -116,7 +116,7 @@ const TYPES = {metro:"Metro",local:"Local municipality",district:"District munic
 const DT = {budget:"Budget",actual_audited:"Audited actuals",uifw:"Irregular & wasteful spending",audit_opinion:"Audit opinion",procurement:"Tender awards"};
 const STATE = {P:"present",p:"partial",m:"missing","-":"not applicable","?":"not computed"};
 const SYM = {P:"✓",p:"~",m:"✗","-":"–","?":"?"};
-const REASON = {audit_not_yet_due:"audit not yet due",source_not_publishing_yet:"source was not publishing yet",components_missing:"some parts missing",
+const REASON = {audit_not_yet_due:"audit not yet due",source_not_publishing_yet:"tender award records are not counted for this year",components_missing:"some parts missing",
   not_in_loaded_sources:"not in the loaded sources",opinion_outstanding:"audit outstanding",entity_not_in_existence:"municipality did not exist that year",
   award_values_missing:"many award values missing"};
 const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
@@ -228,7 +228,7 @@ function errorBox(e) { return el("div", {class: "card err"}, el("b", {}, "Couldn
 async function vHome() {
   const [m, f, cv] = await Promise.all([load("manifest.json"), load("flags.json"), load("coverage.json").catch(() => null)]);   // coverage.json only for the note under the headline
   const c = m.coverage, ctr = m.counts;
-  const gap = cv ? gapBox(coreGapLines(cv), {link: 1, style: "grid-column:1/-1;margin:0"}) : null;
+  const gap = cv ? gapBox(coreGapLines(cv), {link: 1, style: "grid-column:1/-1;margin:0", extra: headlineContextLines(cv)}) : null;
   const gen = ageDays(m.generated_at_sast);
   const kp = (big, small) => el("div", {class: "card kpi"}, el("b", {}, big), el("span", {}, small));
   const notLoaded = m.sources.filter(s => !s.last_run_status || /blocked|failed|manual|partial/.test(s.last_run_status || ""));
@@ -239,7 +239,7 @@ async function vHome() {
       gap,
       kp(ctr.municipalities, "municipalities and districts"),
       kp(ctr.departments, "national departments with budget data"),
-      kp(ctr.awards.toLocaleString("en-ZA"), "published tender award records"),
+      kp(ctr.awards.toLocaleString("en-ZA"), "tender award records"),
       kp(ctr.flags_confirmed, `flags confirmed by review · ${ctr.leads_hidden} automated leads still being checked (hidden)`)),
     el("h2", {}, "How fresh is this?"),
     el("div", {class: "card"}, el("p", {}, "Data published ", el("b", {}, dateSast(m.generated_at_sast)), gen != null && gen > 2 ? el("span", {class: "pill bad", style: "margin-left:.5rem"}, "older than our 48-hour target") : el("span", {class: "pill ok", style: "margin-left:.5rem"}, "up to date")),
@@ -670,9 +670,34 @@ function coreGapLines(cov) {
   });
   return lines;
 }
+/* Beside the home headline: same measure without the gap years, and a labelled prediction; mirror of headline_context_lines() (parity-tested). */
+function headlineContextLines(cov) {
+  const CORE = ["budget", "actual_audited", "uifw", "audit_opinion"];
+  const h = cov.headline, byYear = Object.fromEntries((h.by_year || []).map(y => [y.fye, y]));
+  const join = p => p.length === 1 ? p[0] : p.slice(0, -1).join(", ") + " and " + p[p.length - 1];
+  const tenths = (c, a) => (Math.floor((2000 * c + a) / (2 * a)) / 10).toFixed(1);
+  const win = [], gaps = [], rest = [];
+  cov.years.forEach((fye, k) => {
+    if (fye < h.fye_min || fye > h.fye_max) return;
+    win.push(k);
+    (CORE.some(dt => cov.data_types.includes(dt) && !cov.entities.some(e => e.c[dt][k] === "P")) ? gaps : rest).push(k);
+  });
+  if (!gaps.length || !rest.length || win.some(k => !byYear[cov.years[k]])) return [];
+  const labels = ks => ks.map(k => cov.fy_labels[k]);
+  const c = rest.reduce((s, k) => s + byYear[cov.years[k]].complete, 0), a = rest.reduce((s, k) => s + byYear[cov.years[k]].applicable, 0);
+  const contiguous = rest.every((k, i) => i === 0 || k === rest[i - 1] + 1);
+  const alone = contiguous ? (rest.length === 1 ? labels(rest)[0] : `${labels(rest)[0]} to ${labels(rest)[rest.length - 1]}`) : join(labels(rest));
+  const lines = [`Includes ${join(labels(gaps))}, for which no municipality has complete data in what PublicFunds has loaded. ${alone} alone: ${tenths(c, a)}% (${c} of ${a}).`];
+  const nxt = byYear[h.fye_max + 1];
+  if (nxt && nxt.all_core_due === false) {
+    const hc = h.complete, ha = h.applicable + nxt.applicable;
+    lines.push(`Prediction, not a result: from the first data update on or after 1 December ${nxt.fye}, the year ${nxt.fy} counts in the headline. If it then looks like ${cov.fy_labels[gaps[gaps.length - 1]]} does today (no municipality with complete data), the headline would fall to about ${tenths(hc, ha)}% (${hc} of ${ha}).`);
+  }
+  return lines;
+}
 /* ceiling:end */
 /* CHG-2026-034: the note under the headline, on the coverage page and on the report card (lines from coreGapLines) */
-const gapBox = (lines, o = {}) => lines.length ? el("div", {class: "gapnote" + (o.card ? "" : " card"), id: "gap-lines", role: "note", style: o.style || null}, lines.map(l => el("p", {}, el("b", {}, l))),
+const gapBox = (lines, o = {}) => lines.length ? el("div", {class: "gapnote" + (o.card ? "" : " card"), id: "gap-lines", role: "note", style: o.style || null}, lines.map(l => el("p", {}, el("b", {}, l))), (o.extra || []).map(l => el("p", {class: "small", "data-note": "context"}, l)),
   o.link ? el("p", {class: "small"}, el("a", {href: "#/unknowns"}, "What is missing, by data type →")) : null) : null;
 
 /* ---------------------------------------------------------------- known unknowns (CHG-2026-008) */
@@ -733,7 +758,7 @@ async function vUnknowns() {
   const notes = cov.data_types.filter(dt => R[dt].note);
   const gapLines = R._banner;
   setView("Known unknowns, by province",
-    el("p", {class: "lead"}, `What share of the data a taxpayer should be able to see is available in the data PublicFunds loads, for each province's municipalities. Financial years ${fyLabel(h.fye_min)} to ${fyLabel(h.fye_max)} (years whose audits are due). Lowest first: the biggest blind spots are at the top.`),
+    el("p", {class: "lead"}, `For each province, how much of the expected data PublicFunds has for its municipalities, over the financial years ${fyLabel(h.fye_min)} to ${fyLabel(h.fye_max)} (the years whose audits are due). Lowest first, so the biggest blind spots are at the top.`),
     gapLines.length ? el("div", {class: "card gapnote", id: "by-type-banner", role: "note"}, gapLines.map(l => el("p", {}, el("b", {}, l))),
       el("p", {class: "small"}, el("a", {class: "to-trend", href: "#/unknowns", onclick: toTrend}, "Share per financial year, in the trend table below ↓"))) : null,
     el("div", {class: "wide-last"}, table("Data available per province (all five data types together)", [

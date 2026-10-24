@@ -174,3 +174,39 @@ def core_gap_lines(cov):
         lines.append(f"{cov['fy_labels'][k]}: no municipality has complete data for {_join(types)} in the data PublicFunds loads today"
                      f"{so}. The headline counts the year as a gap.")
     return lines
+
+
+def _tenths(c, a):
+    """c / a as a percentage with one decimal, rounded half up with integer arithmetic (same in Python and the page)."""
+    return f"{(2000 * c + a) // (2 * a) / 10:.1f}"
+
+
+def _span(labels):
+    return labels[0] if len(labels) == 1 else f"{labels[0]} to {labels[-1]}"
+
+
+def headline_context_lines(cov):
+    """Beside the home headline (CHG-2026-034, option A), computed from coverage.json only; the headline, its window and its computation are
+    not touched. Only when a window year is a gap year (core_gap_lines): the same measure over the window's other years, and, while the
+    next year is not yet counted (all_core_due false), a labelled prediction for the day it enters. It stops by itself when the data changes."""
+    h = cov["headline"]
+    by_year = {y["fye"]: y for y in h.get("by_year", [])}
+    gap = {k for dt in CORE if dt in cov["data_types"] for k in empty_years(cov, dt)}
+    win = window(cov)
+    gaps = [k for k in win if k in gap]
+    rest = [k for k in win if k not in gap]
+    if not gaps or not rest or any(cov["years"][k] not in by_year for k in win):
+        return []
+    labels = lambda ks: [cov["fy_labels"][k] for k in ks]
+    c = sum(by_year[cov["years"][k]]["complete"] for k in rest)
+    a = sum(by_year[cov["years"][k]]["applicable"] for k in rest)
+    alone = _span(labels(rest)) if rest == list(range(rest[0], rest[-1] + 1)) else _join(labels(rest))
+    lines = [f"Includes {_join(labels(gaps))}, for which no municipality has complete data in what PublicFunds has loaded. "
+             f"{alone} alone: {_tenths(c, a)}% ({c} of {a})."]
+    nxt = by_year.get(h["fye_max"] + 1)
+    if nxt and nxt.get("all_core_due") is False:
+        hc, ha = h["complete"], h["applicable"] + nxt["applicable"]
+        lines.append(f"Prediction, not a result: from the first data update on or after 1 December {nxt['fye']}, the year {nxt['fy']} counts in "
+                     f"the headline. If it then looks like {cov['fy_labels'][gaps[-1]]} does today (no municipality with complete data), "
+                     f"the headline would fall to about {_tenths(hc, ha)}% ({hc} of {ha}).")
+    return lines

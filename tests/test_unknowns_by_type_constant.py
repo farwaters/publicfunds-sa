@@ -28,7 +28,8 @@ from pathlib import Path
 
 import pytest
 
-from thusa.coverage_ceiling import (CORE, HEADERS, by_province, ceiling, core_gap_lines, empty_years, jargon, model, pct, window)
+from thusa.coverage_ceiling import (CORE, HEADERS, by_province, ceiling, core_gap_lines, empty_years, headline_context_lines, jargon, model, pct,
+                                    window)
 
 ROOT = Path(__file__).resolve().parents[1]
 COV = json.loads((ROOT / "public-data/v1/coverage.json").read_text())
@@ -339,3 +340,85 @@ def test_gap_lines_use_only_the_four_core_types_and_the_headline_window():
 def test_gap_lines_have_no_jargon_or_published(name, mutate):
     for line in core_gap_lines(mutate(COV)):
         assert not jargon(line), (jargon(line), line)
+
+
+# ------------------------------------------------------------------ 6. CHG-2026-034 review fixes: context beside the headline, labels, wording
+REAL_CONTEXT = ["Includes 2024/25, for which no municipality has complete data in what PublicFunds has loaded. 2019/20 to 2023/24 alone: 90.8% (1167 of 1285).",
+                "Prediction, not a result: from the first data update on or after 1 December 2026, the year 2025/26 counts in the headline. If it then looks "
+                "like 2024/25 does today (no municipality with complete data), the headline would fall to about 64.9% (1167 of 1799)."]
+
+
+@needs_baseline
+def test_headline_context_on_real_data_and_it_does_not_touch_the_headline():
+    before = copy.deepcopy(COV)
+    assert headline_context_lines(COV) == REAL_CONTEXT
+    assert COV == before                                              # a pure function: the data, the headline and the window are untouched
+    h = COV["headline"]
+    assert (h["complete"], h["applicable"], h["complete_pct"], h["fye_min"], h["fye_max"]) == (1167, 1542, 75.7, 2020, 2025)
+    by = {y["fye"]: y for y in h["by_year"]}                          # the numbers come from the data, not from constants
+    assert sum(by[f]["complete"] for f in range(2020, 2025)) == 1167 and sum(by[f]["applicable"] for f in range(2020, 2025)) == 1285
+    assert h["applicable"] + by[2026]["applicable"] == 1799 and by[2026]["all_core_due"] is False
+
+
+def test_headline_context_edge_cases():
+    c = copy.deepcopy(COV)
+    assert headline_context_lines(mutate_all_core_arrive(c)) == []                       # no gap year: nothing to say
+    d = copy.deepcopy(c); del d["headline"]["by_year"]
+    assert headline_context_lines(d) == []                                               # no per-year counts: nothing invented
+    d = copy.deepcopy(c); d["headline"]["by_year"] = [dict(y, all_core_due=True) if y["fye"] == 2026 else y for y in d["headline"]["by_year"]]
+    assert headline_context_lines(d) == REAL_CONTEXT[:1]                                 # next year already counted: no prediction
+    d = copy.deepcopy(c); d["headline"]["by_year"] = [y for y in d["headline"]["by_year"] if y["fye"] != 2026]
+    assert headline_context_lines(d) == REAL_CONTEXT[:1]                                 # no next year in the data: no prediction
+    v = headline_context_lines(mutate_validator_case(c))                                 # 2022/23 and 2024/25 empty: not one block
+    assert v[0].startswith("Includes 2022/23 and 2024/25, ") and "2019/20, 2020/21, 2021/22 and 2023/24 alone: " in v[0]
+    assert "(" + str(232 + 228 + 240 + 235) + " of " + str(257 * 4) + ")" in v[0] and "about" in v[1] and "like 2024/25 does today" in v[1]
+    w = headline_context_lines(mutate_window_start_emptied(c))                           # window start empty: the rest is 2020/21 to 2023/24
+    assert w[0].startswith("Includes 2019/20 and 2024/25, ") and "2020/21 to 2023/24 alone: " in w[0]
+    assert headline_context_lines(copy.deepcopy(c) | {"data_types": []}) == []
+
+
+def test_headline_context_rounds_half_up_like_the_page():
+    from thusa.coverage_ceiling import _tenths
+    assert [_tenths(c, a) for c, a in ((1167, 1285), (1167, 1799), (1, 8), (1, 16), (2, 3), (0, 5), (5, 5))] == ["90.8", "64.9", "12.5", "6.3", "66.7", "0.0", "100.0"]
+
+
+@pytest.mark.parametrize("name,mutate", GAP_CASES)
+def test_headline_context_page_code_matches_reference(name, mutate):
+    cov = mutate(COV)
+    assert _run_block("headlineContextLines(d.cov)", {"cov": cov}) == headline_context_lines(cov), name
+
+
+def test_headline_context_page_code_edge_cases_match_reference():
+    d = copy.deepcopy(COV); d["headline"]["by_year"] = [dict(y, all_core_due=True) if y["fye"] == 2026 else y for y in d["headline"]["by_year"]]
+    e = copy.deepcopy(COV); del e["headline"]["by_year"]
+    f = copy.deepcopy(COV); f["headline"]["by_year"] = [y for y in f["headline"]["by_year"] if y["fye"] != 2026]
+    for cov in (d, e, f, mutate_all_core_arrive(COV)):
+        assert _run_block("headlineContextLines(d.cov)", {"cov": cov}) == headline_context_lines(cov)
+
+
+@pytest.mark.parametrize("name,mutate", GAP_CASES)
+def test_headline_context_has_no_jargon_or_published(name, mutate):
+    for line in headline_context_lines(mutate(COV)):
+        assert not jargon(line), (jargon(line), line)
+
+
+def test_reason_label_for_tender_cells_is_plain_and_the_old_one_is_gone():
+    page = PAGE_JS.read_text()
+    m = re.search(r"const REASON = \{(.*?)\};", page, re.S)
+    reasons = dict(re.findall(r'(\w+):"([^"]*)"', m.group(1)))
+    assert reasons["source_not_publishing_yet"] == "tender award records are not counted for this year"
+    assert "was not publishing" not in page and "publish" not in " ".join(reasons.values())
+    assert not jargon(reasons["source_not_publishing_yet"])
+    # it is the only reason on the 500 tender cells in the data (checked against coverage.json, so the label stays true to what it labels)
+    cells = [(COV["reasons"][int(r) - 1], e["c"]["procurement"][i]) for e in COV["entities"] for i, r in enumerate(e["r"]["procurement"]) if r != "0"]
+    assert sum(1 for why, st in cells if why == "source_not_publishing_yet") == 500
+    assert {st for why, st in cells if why == "source_not_publishing_yet"} == {"-"}         # shown as "not applicable: <label>"
+
+
+def test_home_tender_kpi_and_unknowns_lead_in_the_page_source():
+    page = PAGE_JS.read_text()
+    assert 'kp(ctr.awards.toLocaleString("en-ZA"), "tender award records")' in page and "published tender award records" not in page
+    lead = re.search(r'class: "lead"\}, `(For each province[^`]*)`', page).group(1)
+    assert lead.startswith("For each province, how much of the expected data PublicFunds has for its municipalities, over the financial years ")
+    assert lead.endswith("(the years whose audits are due). Lowest first, so the biggest blind spots are at the top.")
+    assert not jargon(re.sub(r"\$\{[^}]*\}", "2019/20", lead)) and "taxpayer should be able" not in page
