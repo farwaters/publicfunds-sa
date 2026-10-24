@@ -1,0 +1,147 @@
+"""CHG-2026-033: reference model for the 'By data type' table on #/unknowns. Pure functions of the published
+public-data/v1/coverage.json and municipalities.json; no pandas, no file I/O. The page code (ceilingModel in
+apps/public-dashboard/index.html, between the ceiling:begin and ceiling:end markers) must give exactly the same output;
+tests/test_unknowns_by_type_constant.py runs both on real and mutated data and compares them, and
+scripts/dashboard_check.py uses the same functions for the expected texts, so no check imports from a test module.
+
+DEFINITION (descriptive, no cause): a window year is EMPTY for a data type when no municipality has a fully present ('P') cell
+for it in coverage.json. The highest share a province can reach is (applicable cells outside empty years) / (all applicable cells).
+Nothing here says WHY a year is empty (source lag, a failed load, never published): that is not in coverage.json.
+"""
+from __future__ import annotations
+
+import math
+import re
+
+LABEL = {"budget": "budget", "actual_audited": "audited actuals", "uifw": "irregular & wasteful spending",
+         "audit_opinion": "audit opinion", "procurement": "tender awards"}
+FORBIDDEN_PUBLIC_WORDS = ("KE-", "cube", "MFMA", "eTenders", "Treasury", "AGSA", "uifwexp", "components_missing", "not_in_loaded", "publish")
+
+# Static strings the by-type view shows (the page copy is in the ceiling:begin..end block; parity-tested, jargon-tested).
+HEADERS = {"budget": "Budget data available (original + adjusted)", "actual_audited": "Audited actuals data available",
+           "uifw": "Irregular & wasteful spending data available", "audit_opinion": "Audit opinion available",
+           "procurement": "Tender award data available (with a value)"}
+CAPTION = "Share of municipality-years for which the data is available, per province and data type. This is not how much was spent or lost."
+HOW_TO_READ = ("How to read this: a municipality-year counts as available when all the data for that data type and year is in the data "
+               "PublicFunds loads, as partly available when only some of it is, and as missing when none was found. A gap is not evidence of "
+               "wrongdoing: often the audit is not yet due, or the data is not in the data PublicFunds loads. Tender awards before 2021/22 are "
+               "not counted for most municipalities; most counted municipality-years have no award records loaded, and some awards have no value.")
+TENDER_CAPTION = ("Tender awards: years before 2021/22 are not counted for most municipalities, so N is about four years per municipality, "
+                  "not six. Most counted municipality-years have no award records loaded, and some awards have no value.")
+
+
+def jargon(text):
+    """Internal ids and words that must never reach a public string: the list above (case-insensitive) and any KE-nnn id."""
+    low = text.lower()
+    return [w for w in FORBIDDEN_PUBLIC_WORDS if (w in text if w == "KE-" else w.lower() in low)] + (["KE-nnn"] if re.search(r"KE-\d", text) else [])
+
+
+def pct(a, b):
+    return math.floor(1000 * a / b + 0.5) / 10 if b else None      # same rounding as the page's Math.round
+
+
+def window(cov):
+    h = cov["headline"]
+    return [k for k, y in enumerate(cov["years"]) if h["fye_min"] <= y <= h["fye_max"]]
+
+
+def empty_years(cov, dt):
+    """Window year indexes in which no municipality has a fully present cell for `dt`."""
+    return [k for k in window(cov) if not any(e["c"][dt][k] == "P" for e in cov["entities"])]
+
+
+def missing_budget_part(cov, mun, k):
+    """'adjusted budget' / 'original budget' when one part is published for some municipalities and the other for none; else None."""
+    fye = str(cov["years"][k])
+    ys = [m["years"].get(fye) or {} for m in mun["municipalities"]]
+    nb, na = sum(1 for y in ys if y.get("budget")), sum(1 for y in ys if y.get("adjusted"))
+    if nb and not na:
+        return "adjusted budget"
+    if na and not nb:
+        return "original budget"
+    return None
+
+
+def province_order(cov, mun):
+    """Province codes in the order the page lists them: lowest overall share (all types, window) first; ties keep first-seen order
+    in coverage.json (JS sort is stable). Same counting as by_province, '-' and '?' skipped."""
+    prov = {m["id"]: m["province"] for m in mun["municipalities"]}
+    ks = window(cov)
+    tot: dict = {}
+    for e in cov["entities"]:
+        p = prov.get(e["id"])
+        if p is None:
+            continue
+        t = tot.setdefault(p, [0, 0])
+        for dt in cov["data_types"]:
+            for k in ks:
+                st = e["c"][dt][k]
+                if st not in ("-", "?"):
+                    t[1] += 1
+                    t[0] += st == "P"
+    return sorted(tot, key=lambda p: pct(*tot[p]) if tot[p][1] else 101)
+
+
+def by_province(cov, mun):
+    """{province: {data type: {P, n, n_empty}}} over the window, skipping '-' and '?' cells (same rule as the page)."""
+    prov = {m["id"]: m["province"] for m in mun["municipalities"]}
+    ks = window(cov)
+    emp = {dt: set(empty_years(cov, dt)) for dt in cov["data_types"]}
+    out: dict = {}
+    for e in cov["entities"]:
+        p = prov.get(e["id"])
+        if p is None:
+            continue
+        for dt in cov["data_types"]:
+            c = out.setdefault(p, {}).setdefault(dt, {"P": 0, "n": 0, "n_empty": 0})
+            for k in ks:
+                st = e["c"][dt][k]
+                if st in ("-", "?"):
+                    continue
+                c["n"] += 1
+                c["P"] += st == "P"
+                c["n_empty"] += k in emp[dt]
+    return out
+
+
+def ceiling(c):
+    return pct(c["n"] - c["n_empty"], c["n"])
+
+
+def dec(x):
+    """One decimal with a decimal comma, as the page's num() shows percentages (83,3%)."""
+    return f"{x:.1f}".replace(".", ",")
+
+
+def range_text(vals):
+    a, b = dec(min(vals)), dec(max(vals))
+    return a + "%" if a == b else f"{a}–{b}% depending on the province"
+
+
+def _join(parts):
+    return parts[0] if len(parts) == 1 else ", ".join(parts[:-1]) + " and " + parts[-1]
+
+
+def model(cov, mun):
+    """The complete expected page content for the table: per type {empty, ceiling, note}, the banner lines and the n-of-N cells."""
+    bp = by_province(cov, mun)
+    out: dict = {"cells": {p: {dt: {"P": c["P"], "n": c["n"]} for dt, c in sorted(d.items())} for p, d in sorted(bp.items())}}
+    banner: dict = {}
+    for dt in cov["data_types"]:
+        emp = empty_years(cov, dt)
+        ceil = {p: ceiling(bp[p][dt]) for p in sorted(bp) if bp[p][dt]["n"]}
+        parts = []
+        for k in emp:
+            fy = cov["fy_labels"][k]
+            part = missing_budget_part(cov, mun, k) if dt == "budget" else None
+            parts.append(f"no municipality has the {part} for {fy}" if part else f"no municipality has complete data for {fy}")
+            banner.setdefault(fy, []).append(("the " + part) if part else LABEL[dt])
+        out[dt] = {"empty": [cov["fy_labels"][k] for k in emp], "ceiling": ceil,
+                   "note": (f"Highest possible with the data PublicFunds loads today: {range_text(list(ceil.values()))} "
+                            f"({'; '.join(parts)}).") if emp else None}
+    hp = {p: {dt: (f"(highest possible {dec(ceil_p[dt])}%)" if out[dt]["empty"] and dt in ceil_p else None) for dt in cov["data_types"]}
+          for p, ceil_p in ((p, {dt: out[dt]["ceiling"][p] for dt in cov["data_types"] if p in out[dt]["ceiling"]}) for p in sorted(bp))}
+    out["_text"] = {"headers": dict(HEADERS), "caption": CAPTION, "how_to_read": HOW_TO_READ, "tender_caption": TENDER_CAPTION, "in_cell": hp}
+    out["_banner"] = [f"{fy}: no municipality has complete data for {_join(ts)} in the data PublicFunds loads today."
+                      for fy, ts in banner.items()]
+    return out
