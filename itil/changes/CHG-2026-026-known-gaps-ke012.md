@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | Requested by / date (SAST) | Owner via Cavus backlog, 2026-10-24 ~08:26: fix the stale public KE-012 text. No GO to merge is given |
-| Environment | DEV only (branch `chg-2026-026-known-gaps-ke012` from origin/main 15c55e7; PR open, not merged, nothing pushed to main) |
+| Environment | Built and tested in DEV (branch `chg-2026-026-known-gaps-ke012` from origin/main 15c55e7; PR open, not merged, nothing pushed to main); released to PROD only through the nightly publish after the owner's merge GO. One GO binds one RFC and one environment: a GO for this RFC binds that PROD release |
 | Type | Standard (public wording only; no code, no data, no figures change) |
 | CIs affected | `config/public-data.yaml` (`known_gaps`, id KE-012), `itil/knowledge/known-errors.md` (KE-012 row; also published as manifest `known_errors[KE-012].symptom`), `itil/registers/change-log.md`, this record |
 | Linked records | KE-012; CHG-2026-019, CHG-2026-022 (months recovered); CHG-2026-018 (CPI via IMF); CHG-2026-025 |
@@ -45,12 +45,13 @@ PDFs, months recovered by CHG-2026-019/022); the CPI clause now says Stats SA CP
 Real `_known_errors()` run on this branch (worktree first on sys.path), `known_errors[KE-012].symptom` (281 characters including the ellipsis):
 > Price benchmarks are partial: December 2025 fuel prices are unknown (not in the November 2025 PDF; no December 2025 PDF at the DMPR path, HTTP 404) and history starts 2019-01 (2015–2018 not at that path, HTTP 404). Checked 23-24 Oct 2026; the current-year DOCX covers 2026 only. D…
 
-Out of scope (mentioned, left in place, Law J): `config/sources.yaml` line 105 still says "Earlier years not loaded (KE-012)" (stale; own change).
+Not changed (Law J): `config/sources.yaml` line 105 (`mvp_load_2026_10_19`) still says "Earlier years not loaded (KE-012)". Re-read 2026-10-24: it is a dated note on the 19 Oct 2026 October-ZIP load, which loaded Jan-Oct 2026 only, so it is accurate for that day and not clearly stale; the next line (`history_pdfs`) records the 2019-2025 load. An earlier version of this RFC called it stale; that is withdrawn.
 `public-data/` is not edited by hand. The live manifest changes only at the next nightly refresh and publish after this is merged, which runs on current
 origin/main (CHG-2026-025). Three manifest fields change at that publish: `known_gaps[KE-012].text`, `known_errors[KE-012].symptom`, and `generated_at_sast`.
 Until then the live text stays as it is.
 
 ### Merge GO and PROD publish
+Sequence with the follow-ups: merge #24 first. PR #25 (CHG-2026-027, 2025-12 recovered) and PR #27 (CHG-2026-029, wording that replaces this change's "December 2025 is unknown" text) are then merged TOGETHER under one GO and land before the same nightly publish. #25 must not go live without #27.
 The owner's merge GO should quote CHG-2026-026 and name the PROD publish at the next nightly (the push of `public-data/` to origin/main, which GitHub Pages
 serves). A GO for another change (PR #22, #23) does not cover this one.
 
