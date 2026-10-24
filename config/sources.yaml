@@ -104,6 +104,7 @@ sources:
     mvp: true
     mvp_load_2026_10_19: "ok: October 2026 adjustment ZIP; 'History of Fuel Prices' table Jan-Oct 2026, 7 grades (70 rows). Earlier years not loaded (KE-012)"
     history_pdfs: "2019-2025 yearly DMPR Fuel-Price-History PDFs, fetched once each (thusa/connectors/prices.py FUEL_HISTORY_PDFS, CHG-2026-009)"
+    history_xlsx: "DMPR fuel regulations xlsx (government public information): 2025-12 only, from December-2025-Fuel-Regulations.xlsx on the DMPR Petrol Price Archive page (thusa/connectors/prices.py FUEL_REGULATIONS_XLSX, CHG-2026-027). Terms: DMPR Terms & Conditions allow free reproduction if accurate, with the source URL and copyright status acknowledged (https://www.dmpr.gov.za/Terms-Conditions)"
   - id: oecd_cpi
     name: Headline CPI for South Africa (Stats SA data, OECD republication)
     owner_org: OECD (data from Statistics South Africa)

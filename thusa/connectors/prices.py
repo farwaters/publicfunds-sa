@@ -68,9 +68,35 @@ def run_fuel_history(store: RawStore, fetcher: Fetcher, res: IngestResult) -> No
             res.notes.append(f"fuel price history {year}: {exc}")
 
 
+# CHG-2026-027: no December 2025 history table exists at the yearly-PDF address (the 2025 PDF ends at November and
+# the current-year DOCX covers 2026 only), so 2025-12 is read from DMPR's own 'December-2025-Fuel-Regulations.xlsx'
+# (DMPR Petrol Price Archive page; the page's link goes through a broken /uat1/ path, the normal /Portals/ path is
+# the public file). Only gap months are listed here: other months stay with the history PDFs. Source type: DMPR
+# fuel regulations xlsx (government public information; DMPR Terms & Conditions: free reproduction if accurate and
+# the source URL and copyright status are acknowledged).
+_XLSX = ("https://www.dmpr.gov.za/Portals/0/Resources/Fuel%20Prices%20Adjustments/Fuel%20Prices%20Per%20Zone/"
+         "{y}/{m}%20{y}/{m}-{y}-Fuel-Regulations.xlsx")
+FUEL_REGULATIONS_XLSX = {"December-2025-Fuel-Regulations.xlsx": _XLSX.format(y=2025, m="December")}
+
+
+def run_fuel_regulations_xlsx(store: RawStore, fetcher: Fetcher, res: IngestResult) -> None:
+    """Fetch each gap-month workbook once (the file is a past month's regulations); a failure is noted, not fatal."""
+    for name, url in sorted(FUEL_REGULATIONS_XLSX.items()):
+        if store.latest(FUEL_ID, name):
+            continue
+        try:
+            resp = fetcher.get(url)
+            if not resp.content.startswith(b"PK"):
+                raise FetchError(f"expected an xlsx workbook, got {resp.headers.get('content-type')}")
+            res.files.append(store.save(FUEL_ID, name, resp.content, str(resp.url), resp.status_code))
+        except (SourceBlocked, FetchError) as exc:
+            res.notes.append(f"fuel regulations xlsx {name}: {exc}")
+
+
 def run_fuel(store: RawStore, fetcher: Fetcher, max_docs: int = 1) -> IngestResult:
     res = IngestResult(FUEL_ID)
     run_fuel_history(store, fetcher, res)
+    run_fuel_regulations_xlsx(store, fetcher, res)
     try:
         docs = fuel_documents(fetcher.get(FUEL_PAGE).text)
         if not docs:
