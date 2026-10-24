@@ -64,3 +64,16 @@
 - Owner's GO: "GO on both", given at 19:03 SAST on 23 Oct 2026 (asked in Cavus's chat: "Merge both PublicFunds PRs to the live site?"; verified).
 - Checks (TEAM-PROTOCOL): Validator gave expert PASS and charter PASS; Scout gave shadow PASS and drift PASS; popia-review PASS.
 - Rollback: `git revert -m 1 74456bc` (merge commit of PR #21). The gate locks again after the merge.
+
+## 2026-10-24 10:39 SAST: PRs #22, #24, #26, #25 and #27 to PROD, in sequence
+- Environment: PROD (main). The live data files change only at the next nightly publish.
+- Owner's GO, quoted (24 Oct 2026 10:39 SAST): "There is no cost associated with publicfunds - it's a free service. GO on natural and logical sequence". It covers the approved sequence only: #22, then #24, then #26, then #25 and #27 together. It does not cover PR #23, which stays open and unmerged.
+- Checks: Validator PASS and Scout PASS at the reviewed heads #22 df6a370, #24 d95a862, #26 8a2da10, #25 c567ba7, #27 aa6f2f0. Each PR head was confirmed to be exactly that SHA before its merge. For #24, #26 and #27 the only change after review is a merge of origin/main into the branch (conflicts in `itil/registers/change-log.md`, and `itil/knowledge/known-errors.md` for #26, resolved by keeping every row, KE-014 before KE-015); pushed heads #24 959e415, #26 e13bd12, #27 0444dfc.
+- Merges (merge commits) and snapshot tags:
+  - PR #22 (CHG-2026-024, KE-014): `5dac17c`, tag `snapshot-2026-10-24-1040`. Rollback: `git revert -m 1 5dac17c`.
+  - PR #24 (CHG-2026-026, KE-012 known_gaps): `f6ea633`, tag `snapshot-2026-10-24-1041`. Rollback: `git revert -m 1 f6ea633`.
+  - PR #26 (CHG-2026-028, KE-015): `a758e58`, tag `snapshot-2026-10-24-1042`. Rollback: `git revert -m 1 a758e58`.
+  - PRs #25 (CHG-2026-027, fuel 2025-12 workbook) and #27 (CHG-2026-029, public wording) together: `7e2127c` (#25 head c567ba7 is contained; GitHub shows #25 as merged), tag `snapshot-2026-10-24-1045`. Rollback: `git revert -m 1 7e2127c`.
+- Checks after the merges: pytest with THUSA_ROOT unset 166 passed, 60 skipped after #22, #24 and #26, and 196 passed, 61 skipped after #25 and #27; `scripts/dashboard_check.py` problems []; no file under `public-data/` changed in any merge; PDF fingerprint 80bc13d78db54047 over 581 rows and combined fingerprint b7f3d278d8c12246 over 588 rows (data copy; the December 2025 workbook fetched into the copy only).
+- Not done: no nightly run, no publish, no change to `public-data/`. The first nightly after these merges must fetch the December 2025 workbook; verify it with the PROD checklist in the CHG-2026-027 RFC (7 rows for 2025-12, `counts.fuel_rows` 658) and report immediately if it fails.
+- The gate locks again after the merge of #27. Further changes need their own RFC and GO.
