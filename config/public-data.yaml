@@ -27,7 +27,7 @@ known_gaps:
   - id: KE-001
     text: "The eTenders live API often fails; tender data comes from the monthly bulk file plus whatever recent updates the API returned."
   - id: KE-012
-    text: "No fuel month is missing between January 2019 and the latest month. Fuel prices come from the Department of Mineral and Petroleum Resources' (DMPR) yearly price history tables. Earlier yearly tables are not at the address DMPR uses for the 2019-2025 tables (HTTP 404), so history starts in January 2019. December 2025 is not in any history table (the November 2025 table has an empty December row, and no December 2025 history table is published at that address); it is read from DMPR's December 2025 fuel regulations workbook, and the source is linked in each row."
+    text: "No fuel month is missing between January 2019 and the latest month. Values are shown as published; where DMPR's own figures are known to differ, see the known error KE-014. Fuel prices come from the Department of Mineral and Petroleum Resources' (DMPR) yearly price history tables. Earlier yearly tables are not at the address DMPR uses for the 2019-2025 tables (HTTP 404), so history starts in January 2019. December 2025 is not in any history table (the November 2025 table has an empty December row, and no December 2025 history table is published at that address); it is read from DMPR's December 2025 fuel regulations workbook, and the source is linked in each row."
 population:
   status: unknown
   reason: "Population and household counts per municipality (Stats SA Census 2022) are not loaded yet: the Stats SA website blocks automated downloads (KE-003)."
@@ -38,6 +38,6 @@ display_sources:
   rsr: {page: "https://ocpo.treasury.gov.za/", licence: "Public register (National Treasury); used only to count leads, never published here"}
   nt_budget: {page: "https://vulekamali.gov.za/datasets/budgeted-and-actual-national-expenditure", licence: "Vulekamali open data (attribute National Treasury)"}
   ppd_payments: {page: "https://data.etenders.gov.za/", licence: "National Treasury OCPO"}
-  dmpr_fuel: {page: "https://www.dmpr.gov.za/Branches/Petroleum-Resources/Fuel-Prices", licence: "Public government information (DMPR / CEF); December 2025 reproduced accurately from DMPR's December 2025 fuel regulations workbook under the DMPR Terms & Conditions (source URL in each row; copyright: DMPR)"}
+  dmpr_fuel: {page: "https://www.dmpr.gov.za/Branches/Petroleum-Resources/Fuel-Prices", licence: "Public government information (DMPR / CEF). Source: DMPR, https://www.dmpr.gov.za/Terms-Conditions; (c) Department of Mineral and Petroleum Resources; reproduced as published; no commercial use"}
   imf_cpi: {page: "https://data.imf.org/en/datasets/IMF.STA:CPI", licence: "Source: International Monetary Fund, Consumer Price Index (CPI), https://data.imf.org/en/datasets/IMF.STA:CPI; IMF terms for statistical data; underlying data: Stats SA headline CPI (all urban areas)"}
   oecd_cpi: {page: "https://data-explorer.oecd.org/", licence: "CC BY 4.0 (OECD); underlying data: Statistics South Africa"}
