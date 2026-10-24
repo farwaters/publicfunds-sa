@@ -77,3 +77,10 @@
 - Checks after the merges: pytest with THUSA_ROOT unset 166 passed, 60 skipped after #22, #24 and #26, and 196 passed, 61 skipped after #25 and #27; `scripts/dashboard_check.py` problems []; no file under `public-data/` changed in any merge; PDF fingerprint 80bc13d78db54047 over 581 rows and combined fingerprint b7f3d278d8c12246 over 588 rows (data copy; the December 2025 workbook fetched into the copy only).
 - Not done: no nightly run, no publish, no change to `public-data/`. The first nightly after these merges must fetch the December 2025 workbook; verify it with the PROD checklist in the CHG-2026-027 RFC (7 rows for 2025-12, `counts.fuel_rows` 658) and report immediately if it fails.
 - The gate locks again after the merge of #27. Further changes need their own RFC and GO.
+
+## 2026-10-24 11:07 SAST: PR #28 (this CAB record) and PR #23 (CHG-2026-025) to PROD
+- Environment: PROD (main).
+- Owner's GO, quoted (24 Oct 2026 11:07 SAST): "GO on 28 and 23". It covers merging PR #28 and PR #23 only, in that order, and nothing else.
+- Scope: PR #28 is this docs-only record; PR #23 is CHG-2026-025 (head e4d8d88, docs only: the RFC and a change-log row).
+- Rollback: `git revert -m 1 <merge commit>` of each PR; the merge commits and the snapshot tags are in the git history.
+- The gate locks again after the merge of #23. Further changes need their own RFC and GO.
