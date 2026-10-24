@@ -523,6 +523,11 @@ async function vTools(sub, params) {
     fuelOut.replaceChildren(...kids);
   }
   [fdate, fgrade, fpaid].forEach(x => x.addEventListener("input", fcalc));
+  /* notes (CSI-051, CHG-2026-030): fuel.about, and the known errors it points to (ids named in fuel.about, plus ids named in the known gap of those ids) */
+  const fuelAbout = [].concat(fuel.about || []), keIds = t => String(t).match(/KE-\d+/g) || [];
+  const keNamed = new Set(fuelAbout.flatMap(keIds)), keSeen = new Set(keNamed);
+  (man.known_gaps || []).forEach(g => { if (keNamed.has(g.id)) keIds(g.text).forEach(i => keSeen.add(i)); });
+  const fuelKnown = (man.known_errors || []).filter(k => keSeen.has(k.id));
   /* per capita */
   setView("Tools", el("p", {class: "lead"}, "Quick checks for taxpayers. Each result shows where its numbers come from."),
     el("section", {class: "card", "aria-labelledby": "t-inf"}, el("h2", {id: "t-inf", style: "margin-top:0"}, "Inflation adjuster"),
@@ -532,9 +537,13 @@ async function vTools(sub, params) {
     el("section", {class: "card", style: "margin-top:.8rem", "aria-labelledby": "t-fuel"}, el("h2", {id: "t-fuel", style: "margin-top:0"}, "Fuel price checker"),
       el("p", {class: "small muted"}, "Was a fuel price per litre in line with the official price on a given date? Official prices from the Department of Mineral and Petroleum Resources. Useful for checking fuel claims and invoices."),
       el("div", {class: "tools"}, el("label", {for: "fuel-date"}, "Date", fdate), el("label", {for: "fuel-grade"}, "Fuel", fgrade), el("label", {for: "fuel-paid"}, "Price paid (R/litre, optional)", fpaid)), fuelOut,
+      ...(fuelKnown.length ? [el("div", {id: "fuel-known"}, el("h3", {}, "Known issues with these prices"),
+        el("ul", {class: "small"}, fuelKnown.map(k => el("li", {}, el("b", {}, k.id), " ", k.symptom))),
+        el("p", {class: "small muted"}, "From our known-error database. ", el("a", {href: "#/sources"}, "All known errors"), "."))] : []),
       el("details", {}, el("summary", {}, "All loaded official prices"), table("Official fuel prices (R/litre)", [{label: "Month", value: r => `${r[0]}-${String(r[1]).padStart(2, "0")}`},
         {label: "Fuel", value: r => (fuel.grades.find(g => g.id === r[2]) || {}).label}, {label: "R/litre", num: 1, value: r => num(r[3] / 100), csvValue: r => (r[3] / 100).toFixed(3), csv: "rand_per_litre"},
-        {label: "Source", render: r => srcLink(pr, r[4]), csvValue: r => srcUrl(pr, r[4]), csv: "source_url"}], fuel.rows, "fuel-prices.csv"))),
+        {label: "Source", render: r => srcLink(pr, r[4]), csvValue: r => srcUrl(pr, r[4]), csv: "source_url"}], fuel.rows, "fuel-prices.csv")),
+      ...(fuelAbout.length ? [el("details", {id: "fuel-about"}, el("summary", {}, "How to read these prices"), el("ul", {class: "small"}, fuelAbout.map(t => el("li", {}, t))))] : [])),
     el("section", {class: "card", style: "margin-top:.8rem", "aria-labelledby": "t-cmp"}, el("h2", {id: "t-cmp", style: "margin-top:0"}, "Compare two municipalities"),
       el("p", {}, el("a", {href: "#/tools/compare"}, "Open the comparison →"))),
     el("section", {class: "card", style: "margin-top:.8rem", "aria-labelledby": "t-pc"}, el("h2", {id: "t-pc", style: "margin-top:0"}, "Per resident / per household"),
