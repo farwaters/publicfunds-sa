@@ -363,9 +363,10 @@ def _col_letter(i: int) -> str:
 
 def fuel_regulations_xlsx_rows(blob: bytes, name: str = "") -> list[dict]:
     """CHG-2026-027: the 7 history grades for one month from a DMPR '<Month>-<Year>-Fuel-Regulations.xlsx' workbook
-    (cells only; the document properties are never read). Inland = zone 9C (Gauteng), coast = zone 1A.
+    (cells only; the document properties are never read). Zone 9C is labelled GAUTENG in the workbook (the inland
+    reference); 1A is the coast reference zone (the workbook does not label it 'coast'; the mapping is proven by data, see CHG-2026-027).
     Petrol: 'ACTUAL PUMP PRICE' (whole cents, as in the history table) from the 93 RON, the 95 RON lead replacement
-    (coast) and the 95 RON unleaded (inland) sections of sheet 'Petrol'. Diesel 0.05% sulphur and illuminating
+    (zone 1A, history grade petrol_95_coast) and the 95 RON unleaded (zone 9C, petrol_95_inland) sections of sheet 'Petrol'. Diesel 0.05% sulphur and illuminating
     paraffin: the 'RTL Wholesale Price' column of sheets 'Diesel' and 'Illuminating Paraffin'. Fails closed
     (ValueError, no rows) when a sheet, section heading, effective date, price column, zone row or numeric value is
     missing, ambiguous or implausible, or when the effective month disagrees with the file name."""

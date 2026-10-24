@@ -72,8 +72,9 @@ def run_fuel_history(store: RawStore, fetcher: Fetcher, res: IngestResult) -> No
 # the current-year DOCX covers 2026 only), so 2025-12 is read from DMPR's own 'December-2025-Fuel-Regulations.xlsx'
 # (DMPR Petrol Price Archive page; the page's link goes through a broken /uat1/ path, the normal /Portals/ path is
 # the public file). Only gap months are listed here: other months stay with the history PDFs. Source type: DMPR
-# fuel regulations xlsx (government public information; DMPR Terms & Conditions: free reproduction if accurate and
-# the source URL and copyright status are acknowledged).
+# fuel regulations xlsx (government public information). DMPR Terms & Conditions (dmpr.gov.za/Terms-Conditions): free
+# reproduction if accurate, not misleading, not for financial or commercial gain, source URL and copyright acknowledged.
+# Zone 9C is labelled GAUTENG in the workbook (inland reference); 1A is the coast reference (not labelled 'coast').
 _XLSX = ("https://www.dmpr.gov.za/Portals/0/Resources/Fuel%20Prices%20Adjustments/Fuel%20Prices%20Per%20Zone/"
          "{y}/{m}%20{y}/{m}-{y}-Fuel-Regulations.xlsx")
 FUEL_REGULATIONS_XLSX = {"December-2025-Fuel-Regulations.xlsx": _XLSX.format(y=2025, m="December")}
