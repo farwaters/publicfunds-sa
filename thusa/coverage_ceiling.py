@@ -5,7 +5,7 @@ tests/test_unknowns_by_type_constant.py runs both on real and mutated data and c
 scripts/dashboard_check.py uses the same functions for the expected texts, so no check imports from a test module.
 
 DEFINITION (descriptive, no cause): a window year is EMPTY for a data type when no municipality has a fully present ('P') cell
-for it in coverage.json. The highest share a province can reach is (applicable cells outside empty years) / (all applicable cells).
+for it in coverage.json. The most a province can reach with today's data is (applicable cells outside empty years) / (all applicable cells).
 Nothing here says WHY a year is empty (source lag, a failed load, never published): that is not in coverage.json.
 """
 from __future__ import annotations
@@ -13,6 +13,10 @@ from __future__ import annotations
 import math
 import re
 
+# Types for which an empty year is assessed. Tender awards are left out on the reviewers' advice (CHG-2026-033, decision 3): the one
+# empty year the rule found for them (2020/21, 13 partly loaded awards) made a ceiling of ~100% sit next to a share of ~7%.
+# To restore it, add "procurement" here and in the CEILING_TYPES constant of the page block (the parity test fails until both agree).
+CEILING_TYPES = ("budget", "actual_audited", "uifw", "audit_opinion")
 LABEL = {"budget": "budget", "actual_audited": "audited actuals", "uifw": "irregular & wasteful spending",
          "audit_opinion": "audit opinion", "procurement": "tender awards"}
 # CHG-2026-034 (option A): the four types the headline counts ("complete core data"). Tender awards are outside the headline.
@@ -24,6 +28,8 @@ HEADERS = {"budget": "Budget data available (original + adjusted)", "actual_audi
            "uifw": "Irregular & wasteful spending data available", "audit_opinion": "Audit opinion available",
            "procurement": "Tender award data available (with a value)"}
 CAPTION = "Share of municipality-years for which the data is available, per province and data type. This is not how much was spent or lost."
+LEGEND = "Under each percentage, 'x of y' counts municipality-years (one municipality in one financial year), not municipalities."
+SCROLL_HINT = "Swipe or scroll sideways to see all the data types \u2192"      # shown only while the table is wider than its box
 HOW_TO_READ = ("How to read this: a municipality-year counts as available when all the data for that data type and year is in the data "
                "PublicFunds loads, as partly available when only some of it is, and as missing when none was found. A gap is not evidence of "
                "wrongdoing: often the audit is not yet due, or the data is not in the data PublicFunds loads. Tender awards before 2021/22 are "
@@ -48,7 +54,9 @@ def window(cov):
 
 
 def empty_years(cov, dt):
-    """Window year indexes in which no municipality has a fully present cell for `dt`."""
+    """Window year indexes in which no municipality has a fully present cell for `dt` (only for CEILING_TYPES; [] for the others)."""
+    if dt not in CEILING_TYPES:
+        return []
     return [k for k in window(cov) if not any(e["c"][dt][k] == "P" for e in cov["entities"])]
 
 
@@ -131,7 +139,7 @@ def model(cov, mun):
     banner: dict = {}
     for dt in cov["data_types"]:
         emp = empty_years(cov, dt)
-        ceil = {p: ceiling(bp[p][dt]) for p in sorted(bp) if bp[p][dt]["n"]}
+        ceil = {p: ceiling(bp[p][dt]) for p in sorted(bp) if bp[p][dt]["n"]} if dt in CEILING_TYPES else {}
         parts = []
         for k in emp:
             fy = cov["fy_labels"][k]
@@ -139,11 +147,11 @@ def model(cov, mun):
             parts.append(f"no municipality has the {part} for {fy}" if part else f"no municipality has complete data for {fy}")
             banner.setdefault(fy, []).append(("the " + part) if part else LABEL[dt])
         out[dt] = {"empty": [cov["fy_labels"][k] for k in emp], "ceiling": ceil,
-                   "note": (f"Highest possible with the data PublicFunds loads today: {range_text(list(ceil.values()))} "
+                   "note": (f"At most {range_text(list(ceil.values()))} with the data PublicFunds loads today "
                             f"({'; '.join(parts)}).") if emp else None}
-    hp = {p: {dt: (f"(highest possible {dec(ceil_p[dt])}%)" if out[dt]["empty"] and dt in ceil_p else None) for dt in cov["data_types"]}
+    hp = {p: {dt: (f"(at most {dec(ceil_p[dt])}% with the data loaded today)" if out[dt]["empty"] and dt in ceil_p else None) for dt in cov["data_types"]}
           for p, ceil_p in ((p, {dt: out[dt]["ceiling"][p] for dt in cov["data_types"] if p in out[dt]["ceiling"]}) for p in sorted(bp))}
-    out["_text"] = {"headers": dict(HEADERS), "caption": CAPTION, "how_to_read": HOW_TO_READ, "tender_caption": TENDER_CAPTION, "in_cell": hp}
+    out["_text"] = {"headers": dict(HEADERS), "caption": CAPTION, "legend": LEGEND, "scroll_hint": SCROLL_HINT, "how_to_read": HOW_TO_READ, "tender_caption": TENDER_CAPTION, "in_cell": hp}
     out["_banner"] = [f"{fy}: no municipality has complete data for {_join(ts)} in the data PublicFunds loads today."
                       for fy, ts in banner.items()]
     return out

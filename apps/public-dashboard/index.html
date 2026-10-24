@@ -607,16 +607,19 @@ async function vSources() {
    markers and runs it in node against thusa/coverage_ceiling.py on real and mutated data: keep the markers, keep the block self-contained. */
 /* ceiling:begin */
 function ceilingModel(cov, mun) {
+  const CEILING_TYPES = ["budget", "actual_audited", "uifw", "audit_opinion"];   // tender awards are not assessed (see thusa/coverage_ceiling.py)
   const LABEL = {budget: "budget", actual_audited: "audited actuals", uifw: "irregular & wasteful spending", audit_opinion: "audit opinion", procurement: "tender awards"};
   const HEADERS = {budget: "Budget data available (original + adjusted)", actual_audited: "Audited actuals data available", uifw: "Irregular & wasteful spending data available", audit_opinion: "Audit opinion available", procurement: "Tender award data available (with a value)"};
   const CAPTION = "Share of municipality-years for which the data is available, per province and data type. This is not how much was spent or lost.";
   const HOW_TO_READ = "How to read this: a municipality-year counts as available when all the data for that data type and year is in the data PublicFunds loads, as partly available when only some of it is, and as missing when none was found. A gap is not evidence of wrongdoing: often the audit is not yet due, or the data is not in the data PublicFunds loads. Tender awards before 2021/22 are not counted for most municipalities; most counted municipality-years have no award records loaded, and some awards have no value.";
+  const LEGEND = "Under each percentage, 'x of y' counts municipality-years (one municipality in one financial year), not municipalities.";
+  const SCROLL_HINT = "Swipe or scroll sideways to see all the data types \u2192";   // shown only while the table is wider than its box
   const TENDER_CAPTION = "Tender awards: years before 2021/22 are not counted for most municipalities, so N is about four years per municipality, not six. Most counted municipality-years have no award records loaded, and some awards have no value.";
   const h = cov.headline, yIdx = cov.years.map((y, k) => [y, k]).filter(([y]) => y >= h.fye_min && y <= h.fye_max).map(([, k]) => k);
   const dec = x => x.toFixed(1).replace(".", ",");   // decimal comma, as num() shows on this page
   const pct = (a, b) => b ? Math.round(1000 * a / b) / 10 : null;
   const prov = Object.fromEntries(mun.municipalities.map(m => [m.id, m.province]));
-  const emptyYears = dt => yIdx.filter(k => !cov.entities.some(e => e.c[dt][k] === "P"));
+  const emptyYears = dt => CEILING_TYPES.includes(dt) ? yIdx.filter(k => !cov.entities.some(e => e.c[dt][k] === "P")) : [];
   const missingPart = k => {
     const ys = mun.municipalities.map(m => m.years[String(cov.years[k])] || {});
     const nb = ys.filter(y => y.budget).length, na = ys.filter(y => y.adjusted).length;
@@ -637,16 +640,16 @@ function ceilingModel(cov, mun) {
   for (const p of Object.keys(T).sort()) { out.cells[p] = {}; for (const dt of Object.keys(T[p]).sort()) out.cells[p][dt] = {P: T[p][dt].P, n: T[p][dt].n}; }
   for (const dt of cov.data_types) {
     const ek = [...emp[dt]], ceil = {};
-    for (const p of Object.keys(T).sort()) if (T[p][dt].n) ceil[p] = pct(T[p][dt].n - T[p][dt].ne, T[p][dt].n);
+    if (CEILING_TYPES.includes(dt)) for (const p of Object.keys(T).sort()) if (T[p][dt].n) ceil[p] = pct(T[p][dt].n - T[p][dt].ne, T[p][dt].n);
     const parts = ek.map(k => { const fy = cov.fy_labels[k], part = dt === "budget" ? missingPart(k) : null;
       (banner[fy] ||= []).push(part ? "the " + part : LABEL[dt]);
       return part ? `no municipality has the ${part} for ${fy}` : `no municipality has complete data for ${fy}`; });
     out[dt] = {empty: ek.map(k => cov.fy_labels[k]), ceiling: ceil,
-               note: ek.length ? `Highest possible with the data PublicFunds loads today: ${range(Object.values(ceil))} (${parts.join("; ")}).` : null};
+               note: ek.length ? `At most ${range(Object.values(ceil))} with the data PublicFunds loads today (${parts.join("; ")}).` : null};
   }
   const inCell = {};
-  for (const p of Object.keys(T).sort()) { inCell[p] = {}; for (const dt of cov.data_types) inCell[p][dt] = out[dt].empty.length && out[dt].ceiling[p] !== undefined ? `(highest possible ${dec(out[dt].ceiling[p])}%)` : null; }
-  out._text = {headers: HEADERS, caption: CAPTION, how_to_read: HOW_TO_READ, tender_caption: TENDER_CAPTION, in_cell: inCell};
+  for (const p of Object.keys(T).sort()) { inCell[p] = {}; for (const dt of cov.data_types) inCell[p][dt] = out[dt].empty.length && out[dt].ceiling[p] !== undefined ? `(at most ${dec(out[dt].ceiling[p])}% with the data loaded today)` : null; }
+  out._text = {headers: HEADERS, caption: CAPTION, legend: LEGEND, scroll_hint: SCROLL_HINT, how_to_read: HOW_TO_READ, tender_caption: TENDER_CAPTION, in_cell: inCell};
   out._banner = Object.entries(banner).map(([fy, ts]) => `${fy}: no municipality has complete data for ${join(ts)} in the data PublicFunds loads today.`);
   return out;
 }
@@ -718,14 +721,15 @@ async function vUnknowns() {
   const toTrend = e => { e.preventDefault(); const t = $("#trend"), h = $("header");   // the header is sticky and 73-135 px high: land the heading below it
     if (t) { scrollTo({top: t.getBoundingClientRect().top + scrollY - (h ? h.offsetHeight : 0) - 12, behavior: "auto"}); t.focus({preventScroll: true}); } };
   const typeCell = (r, dt) => { const c = r.t[dt]; if (!c || !c.n) return unknown();
-    return el("span", {}, el("span", {class: "pct"}, meter(pct(c.P, c.n))), el("span", {class: "nn"}, `${c.P} of ${c.n}`),
+    return el("span", {}, el("span", {class: "pct"}, meter(pct(c.P, c.n))), el("span", {class: "nn", title: `${c.P} of ${c.n} municipality-years`}, `${c.P} of ${c.n}`),
       R._text.in_cell[r.code][dt] ? el("span", {class: "hp"}, R._text.in_cell[r.code][dt]) : null); };
   const typeCols = cov.data_types.map(dt => ({label: DT_AVAIL[dt] || DT[dt] || dt, dt, num: 1, wrap: 1, marks: R[dt].empty.map(fy => `${fy}: none complete`),
     render: r => typeCell(r, dt), value: r => r.t[dt] ? pct(r.t[dt].P, r.t[dt].n) : null}));
   const csvExtra = cov.data_types.flatMap(dt => [
     {label: `${DT_AVAIL[dt] || dt}: municipality-years available`, csvOnly: 1, value: r => r.t[dt] ? r.t[dt].P : null},
     {label: `${DT_AVAIL[dt] || dt}: municipality-years counted`, csvOnly: 1, value: r => r.t[dt] ? r.t[dt].n : null},
-    {label: `${DT_AVAIL[dt] || dt}: highest possible %`, csvOnly: 1, value: r => R[dt].ceiling[r.code] ?? null}]);
+    {label: `${DT_AVAIL[dt] || dt}: at most % with the data loaded today`, csvOnly: 1, value: r => R[dt].ceiling[r.code] ?? null}]);
+  const hint = el("p", {class: "small muted", id: "by-type-scrollhint", hidden: true}, R._text.scroll_hint);
   const notes = cov.data_types.filter(dt => R[dt].note);
   const gapLines = R._banner;
   setView("Known unknowns, by province",
@@ -742,6 +746,8 @@ async function vUnknowns() {
       rows, "known-unknowns-by-province.csv")),
     el("div", {id: "by-type"},
       el("h2", {}, "By data type"),
+      el("p", {class: "small muted", id: "by-type-legend"}, R._text.legend),
+      hint,
       table(R._text.caption, [
         {label: "Province", value: r => PROVINCES[r.code] || r.code},
         ...typeCols, ...csvExtra],
@@ -766,6 +772,8 @@ async function vUnknowns() {
       ranking, "known-unknowns-by-municipality.csv", {limit: 25}),
     el("div", {class: "card small"}, el("p", {id: "by-type-howto"}, R._text.how_to_read),
       el("p", {}, el("a", {href: "#/coverage"}, "See each municipality on the coverage map →"))));
+  const wrap = $("#by-type .tablewrap");      // show the sideways-scroll hint only while the table is wider than its box (narrow screens)
+  if (wrap && window.ResizeObserver) new ResizeObserver(() => { hint.hidden = !(wrap.scrollWidth > wrap.clientWidth + 1); }).observe(wrap);
 }
 
 /* ---------------------------------------------------------------- what's new (CHG-2026-008) */

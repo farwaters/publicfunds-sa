@@ -13,7 +13,7 @@ thusa/coverage_ceiling.py (window fye_min..fye_max from the headline, cells '-' 
 3. UNEXPLAINED CONSTANT. A data-type column with the same share for every province must be listed in ALLOWED_CONSTANT, pinned to
    its window and exact per-municipality state string. Going red when FYE 2025 arrives is INTENDED.
 4. PUBLIC TEXT. The generated notes and banner AND the static strings (headers, caption, how-to-read card, tender caption) AND the
-   in-cell "(highest possible x%)" text carry no internal ids, jargon, KE-nnn id or the word "published".
+   in-cell "(at most x% with the data loaded today)" text carry no internal ids, jargon, KE-nnn id or the word "published".
 
 node: the parity tests FAIL if node is missing. Opt-out for a machine without node: PF_SKIP_NODE_PARITY=1 (the tests are then reported
 as skipped, with that reason, so the missing check stays visible in the pytest summary).
@@ -37,7 +37,7 @@ PAGE_JS = ROOT / "apps/public-dashboard/index.html"      # the page file; the bl
 
 WINDOW = (2020, 2025)                            # headline fye_min, fye_max today; red on 1 Dec 2026 when FYE 2026 falls due: intended
 # Pinned: FYE of the window years with no fully present cell for the type.
-EXPECTED_EMPTY = {"budget": [2025], "actual_audited": [], "uifw": [2025], "audit_opinion": [2025], "procurement": [2021]}
+EXPECTED_EMPTY = {"budget": [2025], "actual_audited": [], "uifw": [2025], "audit_opinion": [2025], "procurement": []}   # procurement: not assessed (CEILING_TYPES)
 
 ALLOWED_CONSTANT = {
     "uifw": {
@@ -89,6 +89,11 @@ def mutate_year_arrives(cov):
     return _set(cov, "uifw", 2025, "P")
 
 
+def mutate_tender_year_emptied(cov):
+    """Tender awards FYE 2024 lose every row. Tender awards are not assessed (CEILING_TYPES), so no note, banner line or ceiling may appear."""
+    return _set(cov, "procurement", 2024, "m", "not_in_loaded_sources")
+
+
 def mutate_unknown_states_and_unmapped(cov):
     """Cells in state '?' (not applicable to count) in a window year, and an entity with no province (must be ignored)."""
     c = copy.deepcopy(cov)
@@ -98,6 +103,19 @@ def mutate_unknown_states_and_unmapped(cov):
             s = e["c"][dt]
             e["c"][dt] = s[:k] + "?" + s[k + 1:]
     c["entities"].append({"id": "MUN:NOPROVINCE", "c": {dt: "P" * len(c["years"]) for dt in c["data_types"]}, "r": {}})
+    return c
+
+
+def mutate_ceilings_differ_by_province(cov):
+    """Not applicable ('?') cells in 2022 for some municipalities of ONE province: its ceiling differs from the others, so the note must give a range."""
+    c = copy.deepcopy(cov)
+    k = c["years"].index(2022)
+    ec = {m["id"] for m in MUN["municipalities"] if m["province"] == "EC"}
+    for e in c["entities"]:
+        if e["id"] in ec:
+            for dt in ("budget", "uifw"):
+                x = e["c"][dt]
+                e["c"][dt] = x[:k] + "?" + x[k + 1:]
     return c
 
 
@@ -124,7 +142,9 @@ def _page_model(cov, mun):
 @pytest.mark.parametrize("name,mutate", [("real data", lambda c: c), ("validator case: opinion+budget 2022/23 emptied", mutate_validator_case),
                                          ("partial arrival: 200 of 257 UIFW 2024/25", mutate_partial_arrival),
                                          ("UIFW 2024/25 arrives for all", mutate_year_arrives),
-                                         ("'?' cells and an entity with no province", mutate_unknown_states_and_unmapped)])
+                                         ("'?' cells and an entity with no province", mutate_unknown_states_and_unmapped),
+                                         ("tender awards FYE 2024 emptied (not assessed)", mutate_tender_year_emptied),
+                                         ("ceilings differ by province (range in the note)", mutate_ceilings_differ_by_province)])
 def test_page_code_matches_reference(name, mutate):
     cov = mutate(COV)
     assert _page_model(cov, MUN) == model(cov, MUN), name
@@ -134,12 +154,16 @@ def test_page_code_matches_reference(name, mutate):
 def test_reference_behaviour_on_mutations():
     base = model(COV, MUN)
     assert base["uifw"]["empty"] == ["2024/25"] and base["uifw"]["ceiling"]["EC"] == 83.3
-    assert base["uifw"]["note"].startswith("Highest possible with the data PublicFunds loads today: 83,3% (")   # decimal comma, as the page shows
-    assert base["_text"]["in_cell"]["EC"]["uifw"] == "(highest possible 83,3%)"
+    assert base["uifw"]["note"].startswith("At most 83,3% with the data PublicFunds loads today (")   # decimal comma, as the page shows
+    assert base["_text"]["in_cell"]["EC"]["uifw"] == "(at most 83,3% with the data loaded today)"
+    assert base["procurement"] == {"empty": [], "ceiling": {}, "note": None} and not any(base["_text"]["in_cell"][p]["procurement"] for p in base["_text"]["in_cell"])
+    assert not any("tender" in line for line in base["_banner"])       # decision 3: no tender note, marker, banner line or ceiling
     v = model(mutate_validator_case(COV), MUN)
     assert v["audit_opinion"]["empty"] == ["2022/23", "2024/25"] and v["budget"]["empty"] == ["2022/23", "2024/25"]
     assert max(v["audit_opinion"]["ceiling"].values()) == 66.7            # descriptive: the page shows the real gap, with no cause
     assert "no municipality has complete data for 2022/23" in v["audit_opinion"]["note"]
+    t = model(mutate_tender_year_emptied(COV), MUN)       # a tender year with no complete cell is NOT reported (not assessed)
+    assert t["procurement"] == {"empty": [], "ceiling": {}, "note": None} and t["_banner"] == base["_banner"]
     p = model(mutate_partial_arrival(COV), MUN)
     assert p["uifw"]["empty"] == [] and p["uifw"]["note"] is None          # partly loaded year is not "empty": the pin below catches it
     assert model(mutate_year_arrives(COV), MUN)["uifw"]["note"] is None
@@ -219,16 +243,16 @@ def test_allowed_constant_is_pinned_to_window_and_exact_state_pattern():
 # ------------------------------------------------------------------ 4. public text
 def _public_strings(m):
     """Every string the by-type view can show, as produced by the model (the page block is run in node by the parity test, which makes
-    the page strings equal these): notes, banner, headers, caption, how-to-read card, tender caption, in-cell '(highest possible x%)'."""
+    the page strings equal these): notes, banner, headers, caption, legend, how-to-read card, tender caption, in-cell '(at most x% ...)'."""
     t = m["_text"]
     return (m["_banner"] + [m[dt]["note"] for dt in COV["data_types"] if m[dt]["note"]] + list(t["headers"].values())
-            + [t["caption"], t["how_to_read"], t["tender_caption"]] + [x for d in t["in_cell"].values() for x in d.values() if x])
+            + [t["caption"], t["legend"], t["how_to_read"], t["tender_caption"]] + [x for d in t["in_cell"].values() for x in d.values() if x])
 
 
 @pytest.mark.parametrize("mutate", [lambda c: c, mutate_validator_case, mutate_partial_arrival])
 def test_public_text_has_no_internal_jargon_or_published(mutate):
     texts = _public_strings(model(mutate(COV), MUN))
-    assert len(texts) > 10 and any("highest possible" in t for t in texts) and any(t.startswith("How to read") for t in texts)
+    assert len(texts) > 10 and any("at most" in t for t in texts) and any(t.startswith("How to read") for t in texts)
     for t in texts:
         assert not jargon(t), (jargon(t), t)
 
@@ -236,8 +260,13 @@ def test_public_text_has_no_internal_jargon_or_published(mutate):
 def test_the_jargon_check_itself_catches_the_words():
     for bad in ("see KE-006", "not published", "Treasury says", "the uifwexp cube", "eTenders", "Published by AGSA", "components_missing"):
         assert jargon(bad), bad
-    assert not jargon("Highest possible with the data PublicFunds loads today: 83,3% (take-up of data)")
+    assert not jargon("At most 83,3% with the data PublicFunds loads today (take-up of data)")
     assert set(HEADERS) == set(COV["data_types"])
+
+
+def test_legend_gives_the_unit_of_x_of_y():
+    from thusa.coverage_ceiling import LEGEND
+    assert "municipality-years" in LEGEND and "not municipalities" in LEGEND and not jargon(LEGEND)
 
 
 # ------------------------------------------------------------------ 5. CHG-2026-034 (option A): note under the headline, coverage page, report card
