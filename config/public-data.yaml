@@ -27,7 +27,7 @@ known_gaps:
   - id: KE-001
     text: "The eTenders live API often fails; tender data comes from the monthly bulk file plus whatever recent updates the API returned."
   - id: KE-012
-    text: "Fuel prices come from the Department of Mineral and Petroleum Resources' yearly price history tables, from January 2019. A few months are missing because their figures could not be read reliably from the PDF (Nov 2021, Sep 2022, Jan, May, Oct and Dec 2023, Dec 2025); those months show as unknown."
+    text: "Fuel prices come from the Department of Mineral and Petroleum Resources' yearly price history tables. Earlier yearly tables are not at the address DMPR uses for the 2019-2025 tables (HTTP 404), so history starts in January 2019. One month is missing: December 2025 is not in any DMPR history table we could load (the November 2025 table has an empty December row and no December 2025 history table is published at DMPR's address), so it shows as unknown."
 population:
   status: unknown
   reason: "Population and household counts per municipality (Stats SA Census 2022) are not loaded yet: the Stats SA website blocks automated downloads (KE-003)."
