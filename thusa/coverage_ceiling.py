@@ -27,10 +27,11 @@ HEADERS = {"budget": "Budget data available (original + adjusted)", "actual_audi
            "procurement": "Tender award data available (with a value)"}
 CAPTION = "Share of municipality-years for which the data is available, per province and data type. This is not how much was spent or lost."
 LEGEND = "Under each percentage, 'x of y' counts municipality-years (one municipality in one financial year), not municipalities."
+CSV_NOTE = "The headers of the CSV download changed: the irregular & wasteful spending column is now named as data available, and each data type has three extra columns that are only in the CSV (municipality-years available, municipality-years counted, and the 'at most' percentage)."
 SCROLL_HINT = "Swipe or scroll sideways to see all the data types \u2192"      # shown only while the table is wider than its box
 HOW_TO_READ = ("How to read this: a municipality-year counts as available when all the data for that data type and year is in the data "
                "PublicFunds loads, as partly available when only some of it is, and as missing when none was found. A gap is not evidence of "
-               "wrongdoing: often the audit is not yet due, or the data is not in the data PublicFunds loads. Tender awards before 2021/22 are "
+               "wrongdoing. It usually means the data is not in what PublicFunds has loaded. Tender awards before 2021/22 are "
                "not counted for most municipalities; most counted municipality-years have no award records loaded, and some awards have no value.")
 TENDER_CAPTION = ("Tender awards: years before 2021/22 are not counted for most municipalities, so N is about four years per municipality, "
                   "not six. Most counted municipality-years have no award records loaded, and some awards have no value.")
@@ -149,7 +150,7 @@ def model(cov, mun):
                             f"({'; '.join(parts)}).") if emp else None}
     hp = {p: {dt: (f"(at most {dec(ceil_p[dt])}% with the data loaded today)" if out[dt]["empty"] and dt in ceil_p else None) for dt in cov["data_types"]}
           for p, ceil_p in ((p, {dt: out[dt]["ceiling"][p] for dt in cov["data_types"] if p in out[dt]["ceiling"]}) for p in sorted(bp))}
-    out["_text"] = {"headers": dict(HEADERS), "caption": CAPTION, "legend": LEGEND, "scroll_hint": SCROLL_HINT, "how_to_read": HOW_TO_READ, "tender_caption": TENDER_CAPTION, "in_cell": hp}
+    out["_text"] = {"headers": dict(HEADERS), "caption": CAPTION, "legend": LEGEND, "scroll_hint": SCROLL_HINT, "how_to_read": HOW_TO_READ, "csv_note": CSV_NOTE, "tender_caption": TENDER_CAPTION, "in_cell": hp}
     out["_banner"] = [f"{fy}: no municipality has complete data for {_join(ts)} in the data PublicFunds loads today."
                       for fy, ts in banner.items()]
     return out
