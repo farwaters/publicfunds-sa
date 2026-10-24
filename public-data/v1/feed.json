@@ -7,6 +7,13 @@
  "language": "en-ZA",
  "items": [
   {
+   "id": "B20261024T010413Z-094cd4504b4e5bb5",
+   "url": "https://publicfunds.grokforum.site/apps/public-dashboard/#/changes",
+   "title": "New public data: build B20261024T010413Z",
+   "content_text": "+42 fuel price rows (now 651). +18 CPI months (now 223).",
+   "date_published": "2026-10-24T03:04:58+02:00"
+  },
+  {
    "id": "B20261023T010827Z-699040563cca24c3",
    "url": "https://publicfunds.grokforum.site/apps/public-dashboard/#/changes",
    "title": "New public data: build B20261023T010827Z",

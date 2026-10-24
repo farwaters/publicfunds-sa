@@ -2,13 +2,13 @@
  "schema": "publicfunds.public-data/v1",
  "schema_version": "1.0.0",
  "kind": "manifest",
- "generated_at_sast": "2026-10-23T03:09:34+02:00",
+ "generated_at_sast": "2026-10-24T03:05:16+02:00",
  "build": {
-  "id": "B20261023T010827Z",
-  "as_of": "2026-10-23",
-  "code_commit": "7f1fae5",
+  "id": "B20261024T010413Z",
+  "as_of": "2026-10-24",
+  "code_commit": "da29dbc",
   "data_quality": {
-   "pass": 56,
+   "pass": 57,
    "warn": 1,
    "fail": 0
   }
@@ -67,8 +67,8 @@
   },
   {
    "name": "changes.json",
-   "bytes": 3278,
-   "sha256": "475e51743e5bb733dc398644b666cb69883cd7a75046dd89a8b95220cc5b1da7"
+   "bytes": 4047,
+   "sha256": "21538848d053d389bb60f21b9cf7253f42e4efaf70adbe42fcb82ddc45661b87"
   },
   {
    "name": "coverage.json",
@@ -78,12 +78,12 @@
   {
    "name": "departments.json",
    "bytes": 46085,
-   "sha256": "71e4e6a3c1354202dc503e69993724ad5f6874869b55ff255363183789f371a6"
+   "sha256": "1bb4aa7c309117b72d2e5286803fc7919c5d166d8f088747d2140ebf25aee22a"
   },
   {
    "name": "feed.json",
-   "bytes": 1765,
-   "sha256": "67f5901595dbfa677be4968f7fce4ce75491669b01b1617845d85fc2ccdb5006"
+   "bytes": 2085,
+   "sha256": "4c2988049a9771dde35d6e6e0e7038bdb449b9e8714ef19cb3eff1a5bfae9e65"
   },
   {
    "name": "flags.json",
@@ -93,12 +93,12 @@
   {
    "name": "municipalities.json",
    "bytes": 1525551,
-   "sha256": "f83375a10c28c2edf29818f734b87cb25ca1f6a5da80352e2dd0843eaf716329"
+   "sha256": "417e71b85abdae4d896935379a6049063516369f218c9e1fa77d7897f821243f"
   },
   {
    "name": "prices.json",
-   "bytes": 38647,
-   "sha256": "1c3d7ca03278e91e528a420e94abea18a94aebf21862aa3ffdf35038c05c37fd"
+   "bytes": 41440,
+   "sha256": "77e42b642ed682c940dab51c05f7528402c66be68c67abd1c5a12daad72b20c4"
   },
   {
    "name": "tenders-summary.json",
@@ -111,8 +111,8 @@
   "departments": 49,
   "awards": 9551,
   "buyers": 488,
-  "fuel_rows": 609,
-  "cpi_months": 205,
+  "fuel_rows": 651,
+  "cpi_months": 223,
   "flags_confirmed": 0,
   "leads_hidden": 349
  },
@@ -222,7 +222,7 @@
    "page": "https://mfma-2024.agsa.co.za/",
    "licence": null,
    "last_run_status": "unchanged",
-   "last_run_sast": "2026-10-23T03:08:27+02:00",
+   "last_run_sast": "2026-10-24T03:04:13+02:00",
    "last_new_data_sast": "2026-10-20T08:05:11+02:00",
    "last_checked_sast": "2026-10-20T08:05:11+02:00",
    "raw_files": 4,
@@ -264,9 +264,9 @@
    "page": "https://www.dmpr.gov.za/Branches/Petroleum-Resources/Fuel-Prices",
    "licence": "Public government information (DMPR / CEF)",
    "last_run_status": "unchanged",
-   "last_run_sast": "2026-10-23T03:08:26+02:00",
+   "last_run_sast": "2026-10-24T03:04:12+02:00",
    "last_new_data_sast": "2026-10-20T08:05:04+02:00",
-   "last_checked_sast": "2026-10-23T03:08:26+02:00",
+   "last_checked_sast": "2026-10-24T03:04:12+02:00",
    "raw_files": 8,
    "freshness_slo_days": 35,
    "problem": null
@@ -278,12 +278,26 @@
    "page": "https://data.etenders.gov.za/",
    "licence": "CC BY 4.0 (portal) / PDDL (API spec): attribute National Treasury",
    "last_run_status": "partial",
-   "last_run_sast": "2026-10-23T03:08:02+02:00",
-   "last_new_data_sast": "2026-10-23T03:07:24+02:00",
-   "last_checked_sast": "2026-10-23T03:07:24+02:00",
-   "raw_files": 13,
+   "last_run_sast": "2026-10-24T03:02:29+02:00",
+   "last_new_data_sast": "2026-10-24T03:01:52+02:00",
+   "last_checked_sast": "2026-10-24T03:01:52+02:00",
+   "raw_files": 15,
    "freshness_slo_days": 2,
-   "problem": "delta page 2: https://ocds-api.etenders.gov.za/api/OCDSReleases failed after 5 attempts: HTTP 500"
+   "problem": "delta page 3: https://ocds-api.etenders.gov.za/api/OCDSReleases failed after 5 attempts: HTTP 500"
+  },
+  {
+   "id": "imf_cpi",
+   "name": "Stats SA headline CPI (all urban areas) (IMF CPI dataset republication, Dec 2024 = 100)",
+   "publisher": "International Monetary Fund (data from Statistics South Africa)",
+   "page": "https://data.imf.org/en/datasets/IMF.STA:CPI",
+   "licence": "Source: International Monetary Fund, Consumer Price Index (CPI), https://data.imf.org/en/datasets/IMF.STA:CPI; IMF terms for statistical data; underlying data: Stats SA headline CPI (all urban areas)",
+   "last_run_status": "ok",
+   "last_run_sast": "2026-10-24T03:04:13+02:00",
+   "last_new_data_sast": "2026-10-24T03:04:13+02:00",
+   "last_checked_sast": "2026-10-24T03:04:13+02:00",
+   "raw_files": 1,
+   "freshness_slo_days": 120,
+   "problem": null
   },
   {
    "id": "muni_api",
@@ -291,10 +305,10 @@
    "publisher": "National Treasury (maintained by OpenUp)",
    "page": "https://municipalmoney.gov.za/",
    "licence": "Municipal Money terms of use (attribute National Treasury)",
-   "last_run_status": "ok",
-   "last_run_sast": "2026-10-23T03:07:17+02:00",
+   "last_run_status": "unchanged",
+   "last_run_sast": "2026-10-24T03:01:36+02:00",
    "last_new_data_sast": "2026-10-23T03:05:05+02:00",
-   "last_checked_sast": "2026-10-23T03:07:17+02:00",
+   "last_checked_sast": "2026-10-24T03:01:36+02:00",
    "raw_files": 17,
    "freshness_slo_days": 7,
    "problem": null
@@ -306,9 +320,9 @@
    "page": "https://vulekamali.gov.za/datasets/budgeted-and-actual-national-expenditure",
    "licence": "Vulekamali open data (attribute National Treasury)",
    "last_run_status": "unchanged",
-   "last_run_sast": "2026-10-23T03:08:21+02:00",
+   "last_run_sast": "2026-10-24T03:04:09+02:00",
    "last_new_data_sast": "2026-10-19T09:38:04+02:00",
-   "last_checked_sast": "2026-10-23T03:08:21+02:00",
+   "last_checked_sast": "2026-10-24T03:04:09+02:00",
    "raw_files": 1,
    "freshness_slo_days": 10,
    "problem": null
@@ -320,9 +334,9 @@
    "page": "https://data-explorer.oecd.org/",
    "licence": "CC BY 4.0 (OECD); underlying data: Statistics South Africa",
    "last_run_status": "unchanged",
-   "last_run_sast": "2026-10-23T03:08:27+02:00",
+   "last_run_sast": "2026-10-24T03:04:13+02:00",
    "last_new_data_sast": "2026-10-19T20:36:51+02:00",
-   "last_checked_sast": "2026-10-23T03:08:27+02:00",
+   "last_checked_sast": "2026-10-24T03:04:13+02:00",
    "raw_files": 1,
    "freshness_slo_days": 400,
    "problem": null
@@ -334,7 +348,7 @@
    "page": "https://data.etenders.gov.za/",
    "licence": "National Treasury OCPO",
    "last_run_status": "awaiting_manual_drop",
-   "last_run_sast": "2026-10-23T03:08:04+02:00",
+   "last_run_sast": "2026-10-24T03:02:32+02:00",
    "last_new_data_sast": null,
    "last_checked_sast": null,
    "raw_files": 0,
@@ -348,9 +362,9 @@
    "page": "https://ocpo.treasury.gov.za/",
    "licence": "Public register (National Treasury); used only to count leads, never published here",
    "last_run_status": "unchanged",
-   "last_run_sast": "2026-10-23T03:08:04+02:00",
+   "last_run_sast": "2026-10-24T03:02:32+02:00",
    "last_new_data_sast": "2026-10-19T09:37:48+02:00",
-   "last_checked_sast": "2026-10-23T03:08:04+02:00",
+   "last_checked_sast": "2026-10-24T03:02:32+02:00",
    "raw_files": 1,
    "freshness_slo_days": 8,
    "problem": null
@@ -399,7 +413,7 @@
   },
   {
    "id": "KE-003",
-   "text": "Statistics South Africa's website blocks automated downloads, so inflation (CPI) comes from the OECD's copy of the Stats SA index, which can lag by months; population figures are not loaded yet."
+   "text": "Statistics South Africa's website blocks automated downloads, so inflation (CPI) comes from the IMF's republication of Stats SA headline CPI (all urban areas); the OECD copy is used only as a fallback. Values from 2025-01 match Stats SA P0141. Earlier values are the IMF's linked back-series (OECD 2015-base series scaled) and can differ from Stats SA's rebased figures by about 0.1-0.2 index points. Population figures are not loaded yet."
   },
   {
    "id": "KE-001",
@@ -457,7 +471,7 @@
   },
   {
    "id": "KE-012",
-   "symptom": "Price benchmarks are partial: DMPR's current page has the \"History of Fuel Prices\" table for the current year only; earlier years come from DMPR's yearly Fuel-Price-History PDFs (2019–2025 loaded, CHG-2026-009; 2015–2018 not at that path; 9 months unreadable from the PDF text and…"
+   "symptom": "Price benchmarks are partial: DMPR's current page has the \"History of Fuel Prices\" table for the current year only; earlier years come from DMPR's yearly Fuel-Price-History PDFs (2019–2025 loaded, CHG-2026-009; 2015–2018 not at that path; 1 month left unknown: 2025-12, not in the…"
   },
   {
    "id": "KE-013",
