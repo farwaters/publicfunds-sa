@@ -42,7 +42,7 @@ Needs the owner's quoted merge GO for CHG-2026-030 only. The page is static: aft
 Yes. No file under `public-data/` or `data/` is touched; the diff is `index.html`, `scripts/dashboard_check.py`, one test file and records.
 
 ## Tests
-Run: new `tests/test_fuel_notes.py` (static checks on `vTools` plus a node-free Python re-implementation check of the id-selection rule against `public-data/v1` and against the export of a data copy); `uv run pytest -q` with `THUSA_ROOT` unset; the same with a data copy; `scripts/dashboard_check.py` with axe-core (15 pages x 2 viewports, `problems: []`); screenshots under `/workspace/previews/chg-2026-030/` (live data and the post-nightly export of a data copy).
+Run: new `tests/test_fuel_notes.py` (static checks on `vTools`; the id-selection lines are cut out of the page verbatim and run in node against fixture cases and against `public-data/v1`, compared with a Python reference; skipped if node is missing); `uv run pytest -q` with `THUSA_ROOT` unset; the same with a data copy; `scripts/dashboard_check.py` with axe-core (15 pages x 2 viewports, `problems: []`); screenshots under `/workspace/previews/chg-2026-030/` (live data and the post-nightly export of a data copy).
 
 ## POPIA review
 PASS (to be confirmed by popia-review). Rendering of already-published, non-personal text (fuel notes and known-error descriptions). No personal information, IDs, contacts, accounts, credentials or supplier names; no new data collected; no third-party request; no cookies or storage.
