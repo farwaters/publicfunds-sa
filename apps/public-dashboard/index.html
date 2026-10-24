@@ -706,14 +706,14 @@ async function vUnknowns() {
   const notes = cov.data_types.filter(dt => R[dt].note);
   const gapLines = R._banner;
   setView("Known unknowns, by province",
-    el("p", {class: "lead"}, `What share of the data a taxpayer should be able to see is actually published, for each province's municipalities. Financial years ${fyLabel(h.fye_min)} to ${fyLabel(h.fye_max)} (years whose audits are due). Lowest first: the biggest blind spots are at the top.`),
+    el("p", {class: "lead"}, `What share of the data a taxpayer should be able to see is available in the data PublicFunds loads, for each province's municipalities. Financial years ${fyLabel(h.fye_min)} to ${fyLabel(h.fye_max)} (years whose audits are due). Lowest first: the biggest blind spots are at the top.`),
     gapLines.length ? el("div", {class: "card gapnote", id: "by-type-banner", role: "note"}, gapLines.map(l => el("p", {}, el("b", {}, l))),
       el("p", {class: "small"}, el("a", {class: "to-trend", href: "#/unknowns", onclick: toTrend}, "Share per financial year, in the trend table below ↓"))) : null,
-    el("div", {class: "wide-last"}, table("Published data per province (all five data types together)", [
+    el("div", {class: "wide-last"}, table("Data available per province (all five data types together)", [
       {label: "Province", render: r => PROVINCES[r.code] || r.code, value: r => PROVINCES[r.code] || r.code},
       {label: "Municipalities", num: 1, value: r => r.munis.size},
-      {label: "Fully published", num: 1, render: r => meter(r.known), value: r => r.known},
-      {label: "Partly published", num: 1, value: r => r.tot.p},
+      {label: "Fully available", num: 1, render: r => meter(r.known), value: r => r.known},
+      {label: "Partly available", num: 1, value: r => r.tot.p},
       {label: "Missing", num: 1, value: r => r.tot.m},
       {label: "Most common reason for a gap", render: r => r.top ? `${REASON[r.top[0]] || r.top[0]} (${r.top[1]})` : unknown("none"), value: r => r.top ? r.top[0] : ""}],
       rows, "known-unknowns-by-province.csv")),
@@ -726,18 +726,18 @@ async function vUnknowns() {
       notes.length ? el("ul", {class: "small", id: "by-type-notes"}, notes.map(dt => el("li", {"data-dt": dt}, R[dt].note))) : null,
       cov.data_types.includes("procurement") ? el("p", {class: "small muted", id: "by-type-tender"}, R._text.tender_caption) : null),
     el("h2", {id: "trend", tabindex: "-1"}, "Trend over time (CSI-028)"),
-    table("Share of municipality data items fully published, per financial year and data type", [
+    table("Share of municipality data items fully available, per financial year and data type", [
       {label: "Financial year", value: r => r.fy},
       {label: "All types", num: 1, render: r => meter(r.all), value: r => r.all},
       ...cov.data_types.map(dt => ({label: DT_AVAIL[dt] || DT[dt] || dt, num: 1, wrap: 1, render: r => meter(r.t[dt]), value: r => r.t[dt]}))],
       trend, "known-unknowns-by-year.csv"),
     el("h2", {}, "Municipalities with the most missing data (CSI-028)"),
-    table("Municipalities ranked by share of data items fully published, lowest first", [
+    table("Municipalities ranked by share of data items fully available, lowest first", [
       {label: "Municipality", render: r => el("a", {href: `#/m/${r.id}`}, r.name), value: r => r.name},
       {label: "Code", csvOnly: 1, value: r => r.code},
       {label: "Province", value: r => PROVINCES[r.province] || r.province},
-      {label: "Fully published", num: 1, render: r => meter(r.known), value: r => r.known},
-      {label: "Partly published", num: 1, value: r => r.p},
+      {label: "Fully available", num: 1, render: r => meter(r.known), value: r => r.known},
+      {label: "Partly available", num: 1, value: r => r.p},
       {label: "Missing", num: 1, value: r => r.m},
       {label: "Data items", num: 1, value: r => r.n}],
       ranking, "known-unknowns-by-municipality.csv", {limit: 25}),
@@ -826,7 +826,7 @@ function vGlossary() {
     el("h2", {}, "Why you only see reviewed and confirmed flags"),
     el("p", {}, "Automated checks find many leads that turn out to be data errors. Publishing them unchecked could wrongly harm people and organisations. So a flag appears on this site only after people have reviewed it and confirmed that the data pattern is real, and only while the evidence has not changed since. A flag that names a supplier or person needs two different reviewers. The checks D13, D6, D16 and D17 are used only for internal review and are never published. A confirmed flag means the pattern is real, not that anyone acted unlawfully."),
     el("h2", {}, "A blank means unknown"),
-    el("p", {}, "When a figure is missing from the source, we show it as ", unknown(), " or leave it blank. We never fill in a zero. A gap is not evidence of wrongdoing: often the audit is not due yet or the source has not published it. ", el("a", {href: "#/unknowns"}, "See the known unknowns"), "."),
+    el("p", {}, "When a figure is missing from the source, we show it as ", unknown(), " or leave it blank. We never fill in a zero. A gap is not evidence of wrongdoing: often the audit is not due yet, or the data is not in the data PublicFunds loads. ", el("a", {href: "#/unknowns"}, "See the known unknowns"), "."),
     el("p", {}, el("a", {href: "#/sources"}, "All sources and the method →")));
 }
 
@@ -849,22 +849,22 @@ async function vCard(id) {
   const flags = cardFlags(f, id);
   const g = text => el("a", {href: "#/glossary"}, text);
   const row = (label, value, note) => el("div", {class: "card kpi"}, el("b", {}, value), el("span", {}, label), note ? el("p", {class: "small muted", style: "margin:.3rem 0 0"}, note) : null);
-  const amt = c => c == null ? unknown("blank: not published (unknown, not zero)") : rand(c);
+  const amt = c => c == null ? unknown("blank: not available (unknown, not zero)") : rand(c);
   const card = el("section", {class: "card reportcard", "aria-labelledby": "rc-h"},
     el("h2", {id: "rc-h", style: "margin-top:0"}, `Report card: ${m.long_name || m.name}`),
     el("p", {class: "small muted"}, "Official published figures side by side. There is no overall grade or score: we do not combine these into one number."),
     el("div", {class: "grid"},
-      row(["Latest audit opinion", la ? ` (${fyLabel(la.y)})` : ""], la ? opinionChip(la.d.audit.code, mun.audit_opinions) : unknown("not published"),
+      row(["Latest audit opinion", la ? ` (${fyLabel(la.y)})` : ""], la ? opinionChip(la.d.audit.code, mun.audit_opinions) : unknown("not available"),
         [la ? ["As published by National Treasury from the Auditor-General's report · ", srcLink(mun, la.d.audit.src), " · "] : "", g("what audit opinions mean"),
          ". The Auditor-General's own annexure figures are not yet published on this site."]),
-      row([g("Irregular expenditure"), lu ? ` (${fyLabel(lu.y)})` : ""], lu ? amt(lu.d.uifw.irregular) : unknown("not published"),
+      row([g("Irregular expenditure"), lu ? ` (${fyLabel(lu.y)})` : ""], lu ? amt(lu.d.uifw.irregular) : unknown("not available"),
         lu ? ["Fruitless & wasteful: ", amt(lu.d.uifw.fruitless_wasteful), " · Unauthorised: ", amt(lu.d.uifw.unauthorised), " · ", srcLink(mun, lu.d.uifw.src),
           ". Irregular means a rule was not followed, not that money was stolen."] : null),
-      row("data items published (known unknowns)", covE ? `${comp.n.P} of ${comp.total}` : unknown(),
+      row("data items available (known unknowns)", covE ? `${comp.n.P} of ${comp.total}` : unknown(),
         covE ? [`${comp.n.p} partial, ${comp.n.m} missing, financial years ${cov.fy_labels[0]} to ${cov.fy_labels[cov.fy_labels.length - 1]}. `, el("a", {href: "#/unknowns"}, "Known unknowns")] : null),
       row(["confirmed, published ", g("flags")], String(flags.length),
         "Only flags people reviewed and confirmed. Automated leads that are not confirmed are never shown or counted here. A confirmed flag is not a finding of wrongdoing.")),
-    el("p", {class: "small"}, el("b", {}, "A blank means unknown, never zero. "), "If a figure says unknown or not published, the source has not published it (or we have not loaded it). It is not evidence of a good or bad result."),
+    el("p", {class: "small"}, el("b", {}, "A blank means unknown, never zero. "), "If a figure says unknown or not available, it is not in the data PublicFunds loads today. It is not evidence of a good or bad result."),
     el("p", {class: "small muted"}, "PublicFunds SA · publicfunds.grokforum.site"));
   const copy = el("button", {class: "btn-csv", onclick: async e => { try { await navigator.clipboard.writeText(location.href); e.target.textContent = "Link copied"; } catch (x) { e.target.textContent = "Copy the address bar to share"; } }}, "Copy link to this card");
   setView(`${m.name}: report card`,
