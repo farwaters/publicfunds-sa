@@ -39,6 +39,6 @@ PASS by me (PublicFunds, the author), which is not an independent review. Proces
 ## Review
 Four checks and popia-review by someone other than the author before merge. Merge needs the owner's quoted GO for CHG-2026-031.
 
-Result: docs-only DEV change; awaiting review. No merge GO. `uv run pytest -q`, `THUSA_ROOT` unset: 196 passed, 61 skipped (unchanged from main 6abd695). 13 files changed, all under `itil/` (re-counted with `git diff --stat origin/main` after the review fixes; an earlier version of this line said 12); no `public-data/`, code, data or config touched.
+Result: merged as PR #30 (merged head bc53503, merge commit 6f1b992, 2026-10-24 16:07 SAST, tag snapshot-2026-10-24-1607, tree ffde1297b5786f53ab8bfbcef2a9b2a193e8517d); `uv run pytest -q`, `THUSA_ROOT` unset: 196 passed, 61 skipped; docs only under `itil/`, no `public-data/` change. The owner's GO and the checks are recorded after the fact in `changes/CAB-DECISION.md` (section "PRs #30, #32 and #33 to PROD (recorded after the merges)"). The header table above and the review lines are left as drafted.
 
 Review: Validator and Scout passed with should-fix items at 7b1a2aa, and re-checked PASS at c2166ab; re-check of the latest follow-up commit requested (see Change). `uv run pytest -q` re-run after the fixes: 196 passed, 61 skipped.
