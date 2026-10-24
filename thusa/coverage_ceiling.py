@@ -19,6 +19,8 @@ import re
 CEILING_TYPES = ("budget", "actual_audited", "uifw", "audit_opinion")
 LABEL = {"budget": "budget", "actual_audited": "audited actuals", "uifw": "irregular & wasteful spending",
          "audit_opinion": "audit opinion", "procurement": "tender awards"}
+# CHG-2026-034 (option A): the four types the headline counts ("complete core data"). Tender awards are outside the headline.
+CORE = ("budget", "actual_audited", "uifw", "audit_opinion")
 FORBIDDEN_PUBLIC_WORDS = ("KE-", "cube", "MFMA", "eTenders", "Treasury", "AGSA", "uifwexp", "components_missing", "not_in_loaded", "publish")
 
 # Static strings the by-type view shows (the page copy is in the ceiling:begin..end block; parity-tested, jargon-tested).
@@ -154,3 +156,64 @@ def model(cov, mun):
     out["_banner"] = [f"{fy}: no municipality has complete data for {_join(ts)} in the data PublicFunds loads today."
                       for fy, ts in banner.items()]
     return out
+
+
+def core_gap_lines(cov):
+    """CHG-2026-034 (option A): one line per headline-window year in which no municipality has complete data for at least one of
+    the four core types (CORE), for the home headline, the coverage page and the report card. Descriptive, no cause. The count is the
+    headline's own `by_year` entry (complete of applicable); when that entry is absent the clause is left out. The headline itself,
+    its window and its computation are not touched: the year stays counted as a gap."""
+    by_year = {y["fye"]: y for y in cov["headline"].get("by_year", [])}
+    emp = {dt: set(empty_years(cov, dt)) for dt in CORE if dt in cov["data_types"]}
+    lines = []
+    for k in window(cov):
+        types = [LABEL[dt] for dt in emp if k in emp[dt]]
+        if not types:
+            continue
+        y = by_year.get(cov["years"][k])
+        so = f", so {y['complete']} of {y['applicable']} municipalities have complete core data for that year" if y else ""
+        lines.append(f"{cov['fy_labels'][k]}: no municipality has complete data for {_join(types)} in the data PublicFunds loads today"
+                     f"{so}. The headline counts the year as a gap.")
+    return lines
+
+
+def _comma(x):
+    """Decimal comma, as the by-type table shows (en-ZA)."""
+    return x.replace(".", ",")
+
+
+def _tenths(c, a):
+    """c / a as a percentage with one decimal, rounded half up with integer arithmetic (same in Python and the page)."""
+    return f"{(2000 * c + a) // (2 * a) / 10:.1f}"
+
+
+def _span(labels):
+    return labels[0] if len(labels) == 1 else f"{labels[0]} to {labels[-1]}"
+
+
+def headline_context_lines(cov):
+    """Beside the home headline (CHG-2026-034, option A), computed from coverage.json only; the headline, its window and its computation are
+    not touched. Only when a window year is a gap year (core_gap_lines): the same measure over the window's other years, and, while the
+    next year is not yet counted (all_core_due false), a labelled prediction for the day it enters. It stops by itself when the data changes."""
+    h = cov["headline"]
+    by_year = {y["fye"]: y for y in h.get("by_year", [])}
+    gap = {k for dt in CORE if dt in cov["data_types"] for k in empty_years(cov, dt)}
+    win = window(cov)
+    gaps = [k for k in win if k in gap]
+    rest = [k for k in win if k not in gap]
+    if not gaps or not rest or any(cov["years"][k] not in by_year for k in win):
+        return []
+    labels = lambda ks: [cov["fy_labels"][k] for k in ks]
+    c = sum(by_year[cov["years"][k]]["complete"] for k in rest)
+    a = sum(by_year[cov["years"][k]]["applicable"] for k in rest)
+    alone = _span(labels(rest)) if rest == list(range(rest[0], rest[-1] + 1)) else _join(labels(rest))
+    lines = [f"Includes {_join(labels(gaps))}, for which no municipality has complete data in what PublicFunds has loaded. "
+             f"{alone} alone: {_comma(_tenths(c, a))}% ({c} of {a} municipality-years)."]
+    nxt = by_year.get(h["fye_max"] + 1)
+    if nxt and nxt.get("all_core_due") is False:
+        hc, ha = h["complete"], h["applicable"] + nxt["applicable"]
+        lines.append(f"Prediction, not a result: from the first data update on or after 1 December {nxt['fye']}, the year {nxt['fy']} counts in "
+                     f"the headline. If it then looks like {cov['fy_labels'][gaps[-1]]} does today (no municipality with complete data), "
+                     f"the headline would fall to about {_comma(_tenths(hc, ha))}% ({hc} of {ha} municipality-years), because {nxt['fy']} would "
+                     f"count as a gap, not because anything got worse, if nothing else changes.")
+    return lines

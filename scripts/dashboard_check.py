@@ -21,7 +21,7 @@ from playwright.sync_api import sync_playwright
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))      # thusa.coverage_ceiling, wherever the script is started from
-from thusa.coverage_ceiling import by_province, model, province_order  # noqa: E402
+from thusa.coverage_ceiling import by_province, core_gap_lines, headline_context_lines, model, province_order  # noqa: E402
 PAGES = [("home", "#/"), ("coverage", "#/coverage"), ("municipalities", "#/municipalities"),
          ("municipality", "#/m/MUN:BUF"), ("departments", "#/departments"), ("department", None),
          ("tenders", "#/tenders"), ("flags", "#/flags"), ("tools", "#/tools"), ("compare", "#/tools/compare?a=MUN:BUF&b=MUN:NMA&y=2024"),
@@ -37,9 +37,9 @@ PROVINCES = {"EC": "Eastern Cape", "FS": "Free State", "GT": "Gauteng", "KZN": "
              "NC": "Northern Cape", "NW": "North West", "WC": "Western Cape"}          # mirror of PROVINCES in index.html
 ROUTES = [r"^#?/?$", r"^#/coverage$", r"^#/municipalities$", r"^#/m/.+$", r"^#/departments$", r"^#/d/.+$", r"^#/tenders$", r"^#/flags$",
           r"^#/tools(?:/\w+)?$", r"^#/sources$", r"^#/unknowns$", r"^#/changes$", r"^#/glossary$"]   # mirror of `routes` in index.html
-# "published" strings that still exist elsewhere in the #/unknowns view (state wording not changed by CHG-2026-033); anything else with "publish" fails.
-PUBLISHED_ELSEWHERE_IN_VIEW = ("Fully published", "Partly published", "actually published", "Published data per province",
-                       "fully published, per financial year", "fully published, lowest first")
+# CHG-2026-034: state wording on the report card and the glossary says "not available", not "not published". "published" stays where it is
+# about an official source or this site's own release (attribution, "Data published <date>", "confirmed, published flags").
+BANNED_STATE_WORDING = ("not published", "has not published", "has not been published", "blank: not published", "data items published")
 MIN_OPACITY = 0.9
 MIN_CONTRAST = 3.0          # text colour against its effective background; real text on this page is >= 4.5 (axe checks that), so 3 only catches hidden text
 MIN_FONT_PX = 8             # anything smaller is not readable text (font-size:0 and the like)
@@ -336,17 +336,119 @@ def check_by_type(page, vname, app, problems, cov, mun):
     except Exception as exc:
         say(f"caption visibility could not be checked ({type(exc).__name__})")
 
-    # 6. the word "publish" anywhere in the view, except the strings that CHG-2026-033 leaves alone (PUBLISHED_ELSEWHERE_IN_VIEW)
+    # 6. the word "publish" anywhere in the #/unknowns view (CHG-2026-034 changed the last state wording there: nothing is left to allow)
     try:
         view = page.locator("#view")
         whole = re.sub(r"\s+", " ", view.inner_text(timeout=3000) if view.count() else page.locator("body").inner_text(timeout=3000))
-        rest = whole
-        for ok in PUBLISHED_ELSEWHERE_IN_VIEW:
-            rest = rest.replace(ok, "")
-        for m in re.finditer(r"publish", rest, re.I):
-            say(f"the word 'publish' appears outside the known remaining strings: ...{rest[max(0, m.start() - 40):m.end() + 40]}...")
+        for m in re.finditer(r"publish", whole, re.I):
+            say(f"the word 'publish' appears in the view: ...{whole[max(0, m.start() - 40):m.end() + 40]}...")
     except Exception as exc:
         say(f"page text could not be scanned for 'published' ({type(exc).__name__})")
+
+
+def check_gap_lines(page, vname, app, problems, cov):
+    """CHG-2026-034 (option A): the note under the headline (home), on the coverage page and on the report card equals core_gap_lines(coverage.json);
+    the headline itself is still there and unchanged; the report card and glossary no longer say 'not published'."""
+    base = app.split("#")[0]
+    want = core_gap_lines(cov)
+    want_ctx = headline_context_lines(cov)
+    h = cov["headline"]
+
+    def say(where, msg):
+        problems.append(f"{vname} gap-lines/{where}: {msg}")
+
+    for where, hash_ in (("home", "#/"), ("coverage", "#/coverage"), ("report-card", "#/m/MUN:BUF/card")):
+        page.goto(base + hash_)
+        page.wait_for_selector('#view[aria-busy="false"]', timeout=30000)
+        box = page.locator("#gap-lines")
+        if not want:
+            if box.count():
+                say(where, "a gap note is shown although no core type has an empty year")
+        elif box.count() != 1:
+            say(where, f"expected 1 gap note, found {box.count()}")
+        elif not box.is_visible():
+            say(where, "gap note present but not visible")
+        else:
+            got = [re.sub(r"\s+", " ", t).strip() for t in box.locator("p > b").all_inner_texts()]
+            if got != want:
+                say(where, f"gap lines read {got!r}, expected {want!r}")
+            # the note must be READABLE, not only present: effective opacity (ancestors included), non-transparent colour that differs from the
+            # effective background (white on white), font size > 0, a real box; and it never uses the word 'publish' (nor do its context lines)
+            readable(box, f"gap note ({where})", lambda m, w=where: say(w, m))
+            whole = re.sub(r"\s+", " ", box.inner_text(timeout=2000))
+            if re.search(r"publish", whole, re.I):
+                say(where, f"the word 'publish' appears in the gap note: {whole!r}")
+            ctx = [re.sub(r"\s+", " ", t).strip() for t in box.locator('p[data-note="context"]').all_inner_texts()]
+            if ctx != (want_ctx if where == "home" else []):
+                say(where, f"headline context lines read {ctx!r}, expected {(want_ctx if where == 'home' else [])!r}")
+            if where == "home":
+                kpi = page.locator(".kpi").first
+                kt = re.sub(r"\s+", " ", kpi.inner_text())
+                for need in (f"{h['complete_pct']}%", f"{h['complete']} of {h['applicable']} municipality-years"):
+                    if need not in kt:
+                        say(where, f"the headline card no longer shows {need!r}: {kt!r}")
+                kb, bb = kpi.bounding_box(), box.bounding_box()
+                if kb and bb and bb["y"] - (kb["y"] + kb["height"]) > 80:
+                    say(where, "the gap note is not next to the headline card")
+            if where == "coverage":
+                fl = dict(zip(cov["years"], cov["fy_labels"]))
+                sent = page.locator('#view p.small.muted:has-text("Headline:")')
+                want_sent = (f"Headline: {h['complete_pct']}% of municipality-years from {fl[h['fye_min']]} to {fl[h['fye_max']]} have every core data type "
+                             f"(budget, audited actuals, irregular & wasteful spending, audit opinion).")
+                if sent.count() != 1:
+                    say(where, f"expected 1 headline sentence, found {sent.count()}")
+                else:
+                    readable(sent, "coverage headline sentence", lambda m: say("coverage", m))
+                    got_s = re.sub(r"\s+", " ", sent.inner_text(timeout=2000)).strip()
+                    if got_s != want_sent:
+                        say(where, f"headline sentence reads {got_s!r}, expected {want_sent!r}")
+            if where != "report-card" and not page.locator('#gap-lines a[href="#/unknowns"]').count():
+                say(where, "gap note has no link to #/unknowns")
+        if where == "report-card":
+            txt = re.sub(r"\s+", " ", page.locator("#view").inner_text(timeout=3000))
+            for bad in BANNED_STATE_WORDING:
+                if bad in txt:
+                    say(where, f"state wording {bad!r} is still on the report card")
+    # home KPI: the tender count says what it counts, not that the source "published" it
+    page.goto(base + "#/")
+    page.wait_for_selector('#view[aria-busy="false"]', timeout=30000)
+    kpis = [re.sub(r"\s+", " ", t).strip() for t in page.locator(".kpi span").all_inner_texts()]
+    if sum(1 for t in kpis if re.fullmatch(r"tender award records", t)) != 1 or any("published" in t for t in kpis if "tender" in t):
+        say("home", f"the tender KPI label must read exactly 'tender award records' (no 'published'): {kpis!r}")
+    # coverage map, tender awards: every 'not applicable' cell with the old reason now says what it means
+    page.goto(base + "#/coverage?dt=procurement")
+    page.wait_for_selector('#view[aria-busy="false"]', timeout=30000)
+    titles = page.locator("table.heat td").evaluate_all("els => els.map(e => e.title)")
+    new, old = "tender award records are not counted for this year", "was not publishing"
+    n_new = sum(1 for t in titles if t.endswith(": " + new))
+    n_exp = sum(1 for e in cov["entities"] for r in e["r"]["procurement"] if r not in ("0", 0) and cov["reasons"][int(r) - 1] == "source_not_publishing_yet")
+    if n_new != n_exp or any(old in t for t in titles):
+        say("coverage", f"{n_new} tender cells say {new!r}, expected {n_exp} (from coverage.json); old wording present: {any(old in t for t in titles)}")
+    # #/unknowns: the lead sentence
+    page.goto(base + "#/unknowns")
+    page.wait_for_selector('#view[aria-busy="false"]', timeout=30000)
+    lead = page.locator("#view p.lead")
+    fl = {y: l for y, l in zip(cov["years"], cov["fy_labels"])}
+    want_lead = (f"For each province, how much of the expected data PublicFunds has for its municipalities, over the financial years "
+                 f"{fl[h['fye_min']]} to {fl[h['fye_max']]} (the years whose audits are due). Lowest first, so the biggest blind spots are at the top.")
+    if lead.count() != 1:
+        say("unknowns", f"expected 1 lead sentence, found {lead.count()}")
+    else:
+        readable(lead, "unknowns lead", lambda m: say("unknowns", m))
+        got = re.sub(r"\s+", " ", lead.inner_text(timeout=2000)).strip()
+        if got != want_lead:
+            say("unknowns", f"lead reads {got!r}, expected {want_lead!r}")
+    page.goto(base + "#/glossary")
+    page.wait_for_selector('#view[aria-busy="false"]', timeout=30000)
+    txt = re.sub(r"\s+", " ", page.locator("#view").inner_text(timeout=3000))
+    for bad in BANNED_STATE_WORDING + ("has not published it",):
+        if bad in txt:
+            say("glossary", f"state wording {bad!r} is still in the glossary")
+    for bad in ("not due yet", "not yet due"):
+        if bad in txt:
+            say("glossary", f"{bad!r} is still in the glossary: the 2024/25 audits are due")
+    if "A gap is not evidence of wrongdoing. It usually means the data is not in what PublicFunds has loaded." not in txt:
+        say("glossary", "the glossary no longer carries the how-to-read sentence about a gap")
 
 
 class Quiet(http.server.SimpleHTTPRequestHandler):
@@ -405,6 +507,7 @@ def main() -> int:
                 page.screenshot(path=str(f), full_page=vname == "desktop" and name in ("home", "flags", "tools", "unknowns", "changes"))
                 shots.append(str(f))
             check_by_type(page, vname, app, problems, cov, mun)      # CHG-2026-033: "By data type" table, banner, notes, order, text
+            check_gap_lines(page, vname, app, problems, cov)        # CHG-2026-034: note under the headline, coverage page, report card; wording
             # tools: inflation + fuel checker produce results; CSV download works
             page.goto(app.split("#")[0] + "#/tools")
             page.wait_for_selector('#view[aria-busy="false"]')
