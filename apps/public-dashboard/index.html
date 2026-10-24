@@ -165,13 +165,13 @@ function downloadCSV(name, columns, rows) {
 }
 function table(caption, allColumns, rows, csvName, opts = {}) {
   const limit = opts.limit || 500, shown = rows.slice(0, limit), columns = allColumns.filter(c => !c.csvOnly);
-  const t = el("table", {}, el("caption", {class: "small muted", style: "text-align:left;padding:.4rem .6rem"}, caption),
+  const t = el("table", {}, opts.captionAbove ? null : el("caption", {class: "small muted", style: "text-align:left;padding:.4rem .6rem"}, caption),
     el("thead", {}, el("tr", {}, columns.map(c => el("th", {scope: "col", class: [c.num ? "num" : "", c.wrap ? "wrap-h" : ""].join(" ").trim() || null, "data-dt": c.dt}, c.label, (c.marks || []).map(m => el("span", {class: "ymark"}, m)))))),
     el("tbody", {}, shown.map(r => el("tr", opts.rowAttrs ? opts.rowAttrs(r) : {}, columns.map(c => el("td", {class: c.num ? "num" : null, "data-dt": c.dt}, c.render ? c.render(r) : (c.value ? c.value(r) : r[c.key]) ?? unknown()))))));
   const tools = el("div", {class: "tools"},
     csvName ? el("button", {class: "btn-csv", onclick: () => downloadCSV(csvName, allColumns, rows)}, `Download CSV (${rows.length} rows)`) : null,
     rows.length > limit ? el("span", {class: "small muted"}, `Showing ${limit} of ${rows.length}; the CSV has all rows.`) : null);
-  return el("div", {}, el("div", {class: "tablewrap", tabindex: "0", role: "region", "aria-label": caption}, t), tools);
+  return el("div", {}, opts.captionAbove ? el("p", {class: "small muted", id: opts.captionAbove}, caption) : null, el("div", {class: "tablewrap", tabindex: "0", role: "region", "aria-label": caption}, t), tools);   // captionAbove: the caption is a paragraph above the scrolling box, so it is never clipped on a phone
 }
 /* small accessible SVG charts (the table next to each chart carries the same numbers) */
 function chart(title, labels, series, opts = {}) {
@@ -611,8 +611,9 @@ function ceilingModel(cov, mun) {
   const LABEL = {budget: "budget", actual_audited: "audited actuals", uifw: "irregular & wasteful spending", audit_opinion: "audit opinion", procurement: "tender awards"};
   const HEADERS = {budget: "Budget data available (original + adjusted)", actual_audited: "Audited actuals data available", uifw: "Irregular & wasteful spending data available", audit_opinion: "Audit opinion available", procurement: "Tender award data available (with a value)"};
   const CAPTION = "Share of municipality-years for which the data is available, per province and data type. This is not how much was spent or lost.";
-  const HOW_TO_READ = "How to read this: a municipality-year counts as available when all the data for that data type and year is in the data PublicFunds loads, as partly available when only some of it is, and as missing when none was found. A gap is not evidence of wrongdoing: often the audit is not yet due, or the data is not in the data PublicFunds loads. Tender awards before 2021/22 are not counted for most municipalities; most counted municipality-years have no award records loaded, and some awards have no value.";
+  const HOW_TO_READ = "How to read this: a municipality-year counts as available when all the data for that data type and year is in the data PublicFunds loads, as partly available when only some of it is, and as missing when none was found. A gap is not evidence of wrongdoing. It usually means the data is not in what PublicFunds has loaded. Tender awards before 2021/22 are not counted for most municipalities; most counted municipality-years have no award records loaded, and some awards have no value.";
   const LEGEND = "Under each percentage, 'x of y' counts municipality-years (one municipality in one financial year), not municipalities.";
+  const CSV_NOTE = "The headers of the CSV download changed: the irregular & wasteful spending column is now named as data available, and each data type has three extra columns that are only in the CSV (municipality-years available, municipality-years counted, and the 'at most' percentage).";
   const SCROLL_HINT = "Swipe or scroll sideways to see all the data types \u2192";   // shown only while the table is wider than its box
   const TENDER_CAPTION = "Tender awards: years before 2021/22 are not counted for most municipalities, so N is about four years per municipality, not six. Most counted municipality-years have no award records loaded, and some awards have no value.";
   const h = cov.headline, yIdx = cov.years.map((y, k) => [y, k]).filter(([y]) => y >= h.fye_min && y <= h.fye_max).map(([, k]) => k);
@@ -649,7 +650,7 @@ function ceilingModel(cov, mun) {
   }
   const inCell = {};
   for (const p of Object.keys(T).sort()) { inCell[p] = {}; for (const dt of cov.data_types) inCell[p][dt] = out[dt].empty.length && out[dt].ceiling[p] !== undefined ? `(at most ${dec(out[dt].ceiling[p])}% with the data loaded today)` : null; }
-  out._text = {headers: HEADERS, caption: CAPTION, legend: LEGEND, scroll_hint: SCROLL_HINT, how_to_read: HOW_TO_READ, tender_caption: TENDER_CAPTION, in_cell: inCell};
+  out._text = {headers: HEADERS, caption: CAPTION, legend: LEGEND, scroll_hint: SCROLL_HINT, how_to_read: HOW_TO_READ, csv_note: CSV_NOTE, tender_caption: TENDER_CAPTION, in_cell: inCell};
   out._banner = Object.entries(banner).map(([fy, ts]) => `${fy}: no municipality has complete data for ${join(ts)} in the data PublicFunds loads today.`);
   return out;
 }
@@ -776,7 +777,8 @@ async function vUnknowns() {
       table(R._text.caption, [
         {label: "Province", value: r => PROVINCES[r.code] || r.code},
         ...typeCols, ...csvExtra],
-        rows, "known-unknowns-by-type.csv", {rowAttrs: r => ({"data-prov": r.code})}),
+        rows, "known-unknowns-by-type.csv", {rowAttrs: r => ({"data-prov": r.code}), captionAbove: "by-type-caption"}),
+      el("p", {class: "small muted", id: "by-type-csvnote"}, R._text.csv_note),
       notes.length ? el("ul", {class: "small", id: "by-type-notes"}, notes.map(dt => el("li", {"data-dt": dt}, R[dt].note))) : null,
       cov.data_types.includes("procurement") ? el("p", {class: "small muted", id: "by-type-tender"}, R._text.tender_caption) : null),
     el("h2", {id: "trend", tabindex: "-1"}, "Trend over time (CSI-028)"),

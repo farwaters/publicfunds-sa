@@ -108,4 +108,4 @@ PASS. No personal information, IDs, contacts, accounts or credentials in the ski
 ## Review
 Four checks (expert, shadow, charter, drift) and popia-review by someone other than the author. Merging this PR needs a separate owner GO.
 
-Result: skill change applied; awaiting review.
+Result: skill change applied (owner GO 2026-10-24 08:17 SAST); this record merged as PR #23 (merge commit 6abd695, 2026-10-24 11:09 SAST; docs only: the RFC and a change-log row) on the owner's GO "GO on 28 and 23" (11:07 SAST) quoted in `changes/CAB-DECISION.md` (section "PR #28 (this CAB record) and PR #23")

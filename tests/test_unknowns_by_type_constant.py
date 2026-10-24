@@ -86,6 +86,19 @@ def mutate_partial_arrival(cov, n=200):
     return _set(cov, "uifw", 2025, "P", None, only=set(idx))
 
 
+def mutate_year_before_window(cov):
+    """A year BEFORE the headline window (FYE 2019, every cell missing) is added in front. The committed data starts exactly at fye_min, so
+    without this case dropping the lower bound of the window would go unnoticed: the year must not count anywhere."""
+    c = copy.deepcopy(cov)
+    c["years"].insert(0, c["years"][0] - 1)
+    c["fy_labels"].insert(0, f"{c['years'][0] - 1}/{str(c['years'][0])[2:]}")
+    for e in c["entities"]:
+        for dt in c["data_types"]:
+            e["c"][dt] = "m" + e["c"][dt]
+            e["r"][dt] = "0" + e["r"][dt]
+    return c
+
+
 def mutate_year_arrives(cov):
     return _set(cov, "uifw", 2025, "P")
 
@@ -143,6 +156,7 @@ def _page_model(cov, mun):
 @pytest.mark.parametrize("name,mutate", [("real data", lambda c: c), ("validator case: opinion+budget 2022/23 emptied", mutate_validator_case),
                                          ("partial arrival: 200 of 257 UIFW 2024/25", mutate_partial_arrival),
                                          ("UIFW 2024/25 arrives for all", mutate_year_arrives),
+                                         ("a year before the window (lower bound of the window)", mutate_year_before_window),
                                          ("'?' cells and an entity with no province", mutate_unknown_states_and_unmapped),
                                          ("tender awards FYE 2024 emptied (not assessed)", mutate_tender_year_emptied),
                                          ("ceilings differ by province (range in the note)", mutate_ceilings_differ_by_province)])
@@ -247,7 +261,7 @@ def _public_strings(m):
     the page strings equal these): notes, banner, headers, caption, legend, how-to-read card, tender caption, in-cell '(at most x% ...)'."""
     t = m["_text"]
     return (m["_banner"] + [m[dt]["note"] for dt in COV["data_types"] if m[dt]["note"]] + list(t["headers"].values())
-            + [t["caption"], t["legend"], t["how_to_read"], t["tender_caption"]] + [x for d in t["in_cell"].values() for x in d.values() if x])
+            + [t["caption"], t["legend"], t["how_to_read"], t["csv_note"], t["tender_caption"]] + [x for d in t["in_cell"].values() for x in d.values() if x])
 
 
 @pytest.mark.parametrize("mutate", [lambda c: c, mutate_validator_case, mutate_partial_arrival])
@@ -422,3 +436,31 @@ def test_home_tender_kpi_and_unknowns_lead_in_the_page_source():
     assert lead.startswith("For each province, how much of the expected data PublicFunds has for its municipalities, over the financial years ")
     assert lead.endswith("(the years whose audits are due). Lowest first, so the biggest blind spots are at the top.")
     assert not jargon(re.sub(r"\$\{[^}]*\}", "2019/20", lead)) and "taxpayer should be able" not in page
+
+
+def test_how_to_read_does_not_contradict_the_lead_and_says_a_gap_is_not_wrongdoing():
+    """The lead says the years shown are those whose audits are due, so the how-to-read card must not say the audit may not be due yet."""
+    t = model(COV, MUN)["_text"]["how_to_read"]
+    assert "A gap is not evidence of wrongdoing. It usually means the data is not in what PublicFunds has loaded." in t
+    assert "not yet due" not in t and "not due yet" not in t
+    page = PAGE_JS.read_text()
+    assert "often the audit is not yet due" not in page and t in page
+
+
+def test_csv_note_says_the_headers_changed():
+    t = model(COV, MUN)["_text"]["csv_note"]
+    assert "headers of the CSV download changed" in t and "irregular & wasteful spending" in t and "extra columns" in t
+    assert t in PAGE_JS.read_text()
+
+
+def test_the_caption_is_a_paragraph_above_the_scrolling_box_not_inside_it():
+    """On a 390 px screen a <caption> inside the sideways-scrolling table is clipped; the page puts the caption in a <p> above the box."""
+    page = PAGE_JS.read_text()
+    assert 'captionAbove: "by-type-caption"' in page
+    assert "opts.captionAbove ? null : el(" in page and 'id: opts.captionAbove}, caption)' in page
+
+
+def test_a_year_before_the_window_changes_nothing():
+    """The reference ignores a year before fye_min: same cells, notes and banner as without it. (The page block is held equal by the parity case.)"""
+    assert model(mutate_year_before_window(COV), MUN) == model(COV, MUN)
+    assert mutate_year_before_window(COV)["years"][0] == COV["years"][0] - 1

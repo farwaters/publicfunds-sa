@@ -46,7 +46,8 @@ MIN_FONT_PX = 8             # anything smaller is not readable text (font-size:0
 MIN_BOX_PX = 8
 # Runs in the page: for the element and every descendant that holds its own text, the effective opacity (own x every ancestor), the
 # computed text colour with its alpha, the effective background (blended up the ancestors, white when none is opaque), the font size
-# and the box. Hidden-text tricks (transparent or background-coloured text, font-size:0, opacity on a container, a zero-size box) show here.
+# and the box. Hidden-text tricks (transparent or background-coloured text, font-size:0, opacity on a container, a zero-size box, text pushed off the
+# page, text-indent, clip-path, filter:opacity, a hidden-overflow container that clips the text) show here.
 READABILITY_JS = """root => {
   const rgba = c => { const m = c.match(/rgba?\\(([^)]*)\\)/); if (!m) return [0, 0, 0, 0]; const v = m[1].split(/[ ,\\/]+/).filter(Boolean).map(Number); return [v[0], v[1], v[2], v.length > 3 ? v[3] : 1]; };
   const bgOf = el => { const layers = []; for (let e = el; e; e = e.parentElement) { const c = rgba(getComputedStyle(e).backgroundColor); if (c[3] > 0) layers.push(c); if (c[3] === 1) break; }
@@ -58,8 +59,21 @@ READABILITY_JS = """root => {
     const cs = getComputedStyle(el), r = el.getBoundingClientRect(), fg = rgba(cs.color), bg = bgOf(el);
     let o = 1; for (let e = el; e; e = e.parentElement) o *= parseFloat(getComputedStyle(e).opacity);
     const eff = [0, 1, 2].map(i => fg[i] * fg[3] + bg[i] * (1 - fg[3])), l1 = lum(eff), l2 = lum(bg);
+    const hide = [];
+    if (parseFloat(cs.textIndent) <= -100) hide.push('text-indent ' + cs.textIndent);
+    if (r.right + scrollX <= 0 || r.bottom + scrollY <= 0) hide.push('positioned off the page');
+    for (let a = el; a; a = a.parentElement) {
+      const ac = getComputedStyle(a);
+      if (ac.clipPath && ac.clipPath !== 'none') hide.push('clip-path ' + ac.clipPath + ' on <' + a.tagName.toLowerCase() + '>');
+      const fm = /opacity\\(\\s*([0-9.]+)(%?)/.exec(ac.filter || ''); if (fm && parseFloat(fm[1]) / (fm[2] ? 100 : 1) < 0.9) hide.push('filter ' + ac.filter + ' on <' + a.tagName.toLowerCase() + '>');
+      if (/inset\\(|rect\\(/.test(ac.clip || '') ) hide.push('clip ' + ac.clip + ' on <' + a.tagName.toLowerCase() + '>');
+      if (ac.overflowX === 'hidden' || ac.overflowX === 'clip' || ac.overflowY === 'hidden' || ac.overflowY === 'clip') {   // scroll containers (auto/scroll) are not a clip
+        const ar = a.getBoundingClientRect(), ix = Math.max(0, Math.min(r.right, ar.right) - Math.max(r.left, ar.left)), iy = Math.max(0, Math.min(r.bottom, ar.bottom) - Math.max(r.top, ar.top));
+        if (r.width * r.height > 0 && ix * iy < 0.5 * r.width * r.height) hide.push('clipped by <' + a.tagName.toLowerCase() + '> (overflow hidden)');
+      }
+    }
     out.push({tag: el.tagName.toLowerCase() + (el.id ? '#' + el.id : ''), opacity: o, alpha: fg[3], contrast: (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05),
-              font: parseFloat(cs.fontSize), w: r.width, h: r.height, vis: cs.visibility, disp: cs.display});
+              font: parseFloat(cs.fontSize), w: r.width, h: r.height, vis: cs.visibility, disp: cs.display, hide});
   }
   return out; }"""
 
@@ -88,6 +102,7 @@ def readable(loc, what, say):
             why.append(f"box {it['w']:.0f}x{it['h']:.0f}px")
         if it["vis"] != "visible" or it["disp"] == "none":
             why.append(f"visibility {it['vis']}, display {it['disp']}")
+        why.extend(sorted(set(it.get("hide", []))))
         if why:
             say(f"{what}: text in <{it['tag']}> is not readable: " + "; ".join(why))
 
@@ -304,12 +319,22 @@ def check_by_type(page, vname, app, problems, cov, mun):
             say(f"unexpected note for {dt}")
 
     # 5. static strings: caption, how-to-read card, tender caption exactly as the model (which is jargon-tested in pytest)
-    for what, loc, exp in (("caption", table.locator("caption"), tx["caption"]), ("legend (unit of x of y)", page.locator("#by-type-legend"), tx["legend"]),
+    for what, loc, exp in (("caption", page.locator("#by-type-caption"), tx["caption"]), ("csv note", page.locator("#by-type-csvnote"), tx["csv_note"]), ("legend (unit of x of y)", page.locator("#by-type-legend"), tx["legend"]),
                            ("how-to-read card", page.locator("#by-type-howto"), tx["how_to_read"]),
                            ("tender caption", page.locator("#by-type-tender"), tx["tender_caption"])):
         got = text(loc, what)
         if got is not None and got != exp:
             say(f"{what} reads {got!r}, expected {exp!r}")
+
+    # 5b. the caption is fully visible: a paragraph above the scrolling box (never inside it) and no wider than the screen (it was clipped at 390 px)
+    try:
+        cap = page.locator("#by-type-caption")
+        if cap.count() == 1:
+            ok = cap.evaluate("e => !e.closest('.tablewrap') && e.getBoundingClientRect().left >= 0 && e.getBoundingClientRect().right <= innerWidth + 1 && e.scrollWidth <= e.clientWidth + 1")
+            if not ok:
+                say("the caption is inside the scrolling box, wider than the screen or clipped (it must be fully visible)")
+    except Exception as exc:
+        say(f"caption visibility could not be checked ({type(exc).__name__})")
 
     # 6. the word "publish" anywhere in the #/unknowns view (CHG-2026-034 changed the last state wording there: nothing is left to allow)
     try:
