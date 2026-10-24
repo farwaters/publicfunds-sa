@@ -65,8 +65,8 @@ READABILITY_JS = """root => {
     for (let a = el; a; a = a.parentElement) {
       const ac = getComputedStyle(a);
       if (ac.clipPath && ac.clipPath !== 'none') hide.push('clip-path ' + ac.clipPath + ' on <' + a.tagName.toLowerCase() + '>');
-      const fm = /opacity\(\s*([0-9.]+)(%?)/.exec(ac.filter || ''); if (fm && parseFloat(fm[1]) / (fm[2] ? 100 : 1) < 0.9) hide.push('filter ' + ac.filter + ' on <' + a.tagName.toLowerCase() + '>');
-      if (/inset\(|rect\(/.test(ac.clip || '') ) hide.push('clip ' + ac.clip + ' on <' + a.tagName.toLowerCase() + '>');
+      const fm = /opacity\\(\\s*([0-9.]+)(%?)/.exec(ac.filter || ''); if (fm && parseFloat(fm[1]) / (fm[2] ? 100 : 1) < 0.9) hide.push('filter ' + ac.filter + ' on <' + a.tagName.toLowerCase() + '>');
+      if (/inset\\(|rect\\(/.test(ac.clip || '') ) hide.push('clip ' + ac.clip + ' on <' + a.tagName.toLowerCase() + '>');
       if (ac.overflowX === 'hidden' || ac.overflowX === 'clip' || ac.overflowY === 'hidden' || ac.overflowY === 'clip') {   // scroll containers (auto/scroll) are not a clip
         const ar = a.getBoundingClientRect(), ix = Math.max(0, Math.min(r.right, ar.right) - Math.max(r.left, ar.left)), iy = Math.max(0, Math.min(r.bottom, ar.bottom) - Math.max(r.top, ar.top));
         if (r.width * r.height > 0 && ix * iy < 0.5 * r.width * r.height) hide.push('clipped by <' + a.tagName.toLowerCase() + '> (overflow hidden)');
