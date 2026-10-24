@@ -37,8 +37,8 @@ def git(cwd, *args, check=True):
     return r
 
 
-def row(n, text="x"):
-    return f"| CHG-2026-{n:03d} | 2026-10-24 | Normal | {text} | branch b{n} | PR open |"
+def row(n, text="x", year=2026):
+    return f"| CHG-{year}-{n:03d} | 2026-10-24 | Normal | {text} | branch b{n} | PR open |"
 
 
 HEAD = ["# Change log", "", "| id | date | type | what | where | status |", "|---|---|---|---|---|---|"]
@@ -259,3 +259,51 @@ def test_the_unconflicted_other_file_is_untouched(tmp_path):
     assert resolve(repo).returncode == 0
     assert (repo / "other.txt").read_text() == "unrelated\n"
     assert git(repo, "diff", "--name-only", "main", "HEAD").stdout.decode().split() == [CL]
+
+
+# Ids of another year: neither the resolver nor the documented greps may assume "CHG-2026-".
+def test_ids_of_another_year_are_merged_and_placed_by_id(tmp_path):
+    ours = log([row(1), row(2, "old wording"), row(1, "ours 2027", 2027)], rows_after=[row(3)])
+    theirs = log([row(1), row(2, "old wording"), row(9, "theirs 2026"), row(2, "theirs 2027", 2027)], rows_after=[row(3)])
+    repo = make_repo(tmp_path, BASE, ours, theirs)
+    assert resolve(repo).returncode == 0
+    text = (repo / CL).read_text(encoding="utf-8")
+    ids = [l.split(" |")[0][2:] for l in rows_of(text)]
+    assert sorted(ids) == sorted(["CHG-2026-001", "CHG-2026-002", "CHG-2026-003", "CHG-2026-009", "CHG-2027-001", "CHG-2027-002"]), ids
+    assert ids.index("CHG-2026-009") < ids.index("CHG-2027-001"), "a new 2026 row goes before the first larger id, a 2027 one"
+    assert row(1, "ours 2027", 2027) in text and row(2, "theirs 2027", 2027) in text and row(9, "theirs 2026") in text
+    assert text.endswith("\n") and "<<<<<<<" not in text
+
+
+def test_documented_checks_work_for_ids_of_another_year(tmp_path):
+    """The three checks of the merge notes that need no refs (duplicate ids, rows ending ' |', conflict markers) print nothing
+    for a result that has 2026 and 2027 ids, and they do print for a file that has a duplicate 2027 id."""
+    text = RFC.read_text(encoding="utf-8")
+    block = re.findall(r"```\n(.*?)\n```", text[text.index("**Checks after each merge**"):], flags=re.S)[0]
+    greps = "\n".join(l.split("   #")[0] for l in block.split("\n") if l.startswith("grep"))
+    assert greps.count("grep") >= 4 and "CHG-2026" not in greps
+    ours = log([row(1), row(2, "old wording"), row(1, "ours 2027", 2027)], rows_after=[row(3)])
+    theirs = log([row(1), row(2, "old wording"), row(2, "theirs 2027", 2027)], rows_after=[row(3)])
+    repo = make_repo(tmp_path, BASE, ours, theirs)
+    assert resolve(repo).returncode == 0
+    run = lambda: subprocess.run(["bash", "-c", "CL=" + CL + "\n" + greps], cwd=repo, capture_output=True, text=True)
+    assert run().stdout == "", run().stdout
+    (repo / CL).write_text((repo / CL).read_text(encoding="utf-8") + row(1, "again", 2027) + "\n", encoding="utf-8")
+    assert "CHG-2027-001" in run().stdout
+
+
+def test_duplicate_id_of_another_year_is_a_clean_message(tmp_path):
+    ours = log([row(1), row(2, "old wording"), row(1, "a", 2027), row(1, "b", 2027)], rows_after=[row(3)])
+    theirs = log([row(1), row(2, "old wording"), row(5, "theirs")], rows_after=[row(3)])
+    repo = make_repo(tmp_path, BASE, ours, theirs)
+    r = resolve(repo)
+    assert r.returncode == 1 and "our side has the id CHG-2027-001 twice: resolve by hand" in r.stderr.decode()
+    assert "Traceback" not in r.stderr.decode() and b"<<<<<<<" in (repo / CL).read_bytes()
+
+
+def test_both_sides_changing_a_row_of_another_year_stops(tmp_path):
+    base = log([row(1), row(2, "old wording"), row(1, "old", 2027)], rows_after=[row(3)])
+    ours = log([row(1), row(2, "old wording"), row(1, "ours", 2027)], rows_after=[row(3)])
+    theirs = log([row(1), row(2, "old wording"), row(1, "theirs", 2027)], rows_after=[row(3)])
+    repo = make_repo(tmp_path, base, ours, theirs)
+    assert_stopped(repo, head(repo), (repo / CL).read_bytes(), "both sides changed row CHG-2027-001: resolve by hand")
