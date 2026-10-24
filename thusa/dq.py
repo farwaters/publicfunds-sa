@@ -4,6 +4,7 @@ Each check returns a failure count; 0 = pass. Severity 'error' fails the build/t
 """
 from __future__ import annotations
 
+from collections.abc import Iterable, Mapping
 from pathlib import Path
 
 from thusa.raw import sha256_file
@@ -13,6 +14,40 @@ CURATED_LINEAGE_TABLES = ["gov_body", "muni_fin_line", "muni_total", "nat_budget
 MIN_ROWS = {"curated.gov_body": 250, "curated.muni_fin_line": 50_000, "curated.nat_budget_line": 50,
             "curated.uifw_line": 1_000, "curated.audit_outcome": 1_000, "curated.award": 1_000,
             "curated.ocds_release": 10_000, "curated.restriction": 100, "marts.coverage_cell": 1_000}
+
+# CHG-2026-035: months of curated.fuel_price that are known to be absent between the first and the last month present.
+# Each entry is (year, month) -> "KE id: reason". EMPTY on purpose: no month is missing from 2019-01 to the latest month
+# (KE-012, CHG-2026-027 recovered 2025-12). Pre-2019 history is outside the range, so it is not a gap here. Months
+# whose DMPR monthly workbook returns HTTP 404 (2023-02, 2023-06) are present in the series from the history PDFs,
+# so they are not gaps either. Adding an entry needs an RFC row that names the known error and the source.
+FUEL_KNOWN_GAPS: dict[tuple[int, int], str] = {}
+
+
+def month_gaps(months: Iterable[tuple[int, int]], known: Mapping[tuple[int, int], str]) -> dict:
+    """Pure: the months missing between the first and the last (year, month) present, split into expected (in
+    `known`) and new (not in `known`). `stale_known` lists `known` months that are present after all (remove them)."""
+    present = set()
+    for y, m in months:
+        if not (isinstance(y, int) and isinstance(m, int) and 1 <= m <= 12):
+            raise ValueError(f"not a (year, month): {(y, m)!r}")
+        present.add((y, m))
+    if not present:
+        return {"first": None, "last": None, "present": 0, "missing": [], "expected": [], "new": [], "stale_known": []}
+    first, last = min(present), max(present)
+    missing, y, m = [], *first
+    while (y, m) < last:
+        if (y, m) not in present:
+            missing.append((y, m))
+        y, m = (y + 1, 1) if m == 12 else (y, m + 1)
+    return {"first": first, "last": last, "present": len(present), "missing": missing,
+            "expected": [g for g in missing if g in known], "new": [g for g in missing if g not in known],
+            "stale_known": sorted(g for g in known if g in present)}
+
+
+def fuel_continuity(con, known: Mapping[tuple[int, int], str] | None = None) -> dict:
+    """Read-only month-continuity check of curated.fuel_price (CHG-2026-035)."""
+    rows = con.execute("SELECT DISTINCT year, month FROM curated.fuel_price").fetchall()
+    return month_gaps([(int(y), int(m)) for y, m in rows], FUEL_KNOWN_GAPS if known is None else known)
 
 
 def checks(min_rows: dict | None = None) -> list[tuple[str, str, str]]:
@@ -98,6 +133,14 @@ def run(con, build_id: str, min_rows: dict | None = None, raw_root: Path | None 
         except Exception as exc:  # a broken check is a failure, never a silent pass
             failures, status = -1, f"error: {exc}"
         results.append({"test_name": name, "severity": sev, "status": status, "failures": failures})
+    # CHG-2026-035: a NEW fuel month gap is reported (warn), never a build failure; known gaps (none today) are not counted.
+    try:
+        c = fuel_continuity(con)
+        failures = len(c["new"]) + len(c["stale_known"])
+        status = "pass" if failures == 0 else "warn"
+    except Exception as exc:  # a broken check is a failure, never a silent pass
+        failures, status = -1, f"error: {exc}"
+    results.append({"test_name": "fuel_month_continuity_info", "severity": "warn", "status": status, "failures": failures})
     if raw_root is not None:  # checksum of every referenced raw file still matches
         bad = 0
         for path, sha in con.execute("SELECT path, sha256 FROM ops.raw_file").fetchall():
