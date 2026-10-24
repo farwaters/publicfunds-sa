@@ -273,6 +273,21 @@ def test_expect_local_wait_rechecks_age_and_files_on_the_manifest_fetched_after_
     assert "build B9" in res["site.manifest"][1]
 
 
+def test_expect_local_wait_compares_the_git_host_with_the_manifest_fetched_after_the_wait(site, tmp_path):
+    # The git host already has build B9; the site serves B1 at first and B9 after the wait. The comparison must use the
+    # post-wait manifest (same build, OK); with the pre-wait manifest it would say the git host differs (WARN).
+    raw = Site().healthy()
+    raw.set_manifest(build="B9")
+    site.set_manifest(build="B1")
+    threading.Timer(0.3, lambda: site.set_manifest(build="B9")).start()
+    try:
+        res = run(site.url, raw_url=raw.url + cl.MANIFEST_PATH, expect_local=_local(tmp_path, "B9"), wait=5, poll=0.1)
+    finally:
+        raw.srv.shutdown(); raw.srv.server_close()
+    assert res["local.build"][0] == cl.OK
+    assert res["raw.manifest"][0] == cl.OK and "same build" in res["raw.manifest"][1]
+
+
 def test_expect_local_wait_that_never_succeeds_still_reports_age_and_files(site, tmp_path):
     site.set_manifest(build="B1", age_hours=60)
     res = run(site.url, expect_local=_local(tmp_path, "B9"), wait=0.3, poll=0.1)
