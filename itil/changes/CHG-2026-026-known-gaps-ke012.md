@@ -77,4 +77,4 @@ PASS. Wording, URLs paths and statistics only; no personal information, IDs, con
 Four checks (expert, shadow, charter, drift) and popia-review by someone other than the author before any merge. Merge needs the owner's quoted GO.
 PRs #22 and #23 also append a line at the end of `itil/registers/change-log.md`; this line is separate, expect a trivial conflict on whichever merges second.
 
-Result: DEV build succeeded; awaiting review.
+Result: DEV build succeeded; merged as PR #24 (merge commit f6ea633, 2026-10-24 10:41 SAST) on the owner's GO quoted in `changes/CAB-DECISION.md` (section "PRs #22, #24, #26, #25 and #27 to PROD, in sequence"); Validator and Scout PASS at head d95a862 as recorded there. PROD: not yet published. The data files and public text change only at the next nightly publish; at 11:22 SAST on 24 Oct 2026, main was 6abd695 and the last data commit was 15c55e7 (2026-10-24 03:05 SAST, before this merge). This "not yet published" line describes the state before the nightly publish of 25 Oct 2026 and will be updated by a later docs record.
