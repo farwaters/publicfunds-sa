@@ -127,3 +127,9 @@ Run all of these in a shell on the box from the repo root. Each step writes an a
 - **Local preview**: see `apps/public-dashboard/README.md`; `uv run --group screenshots python scripts/dashboard_check.py`.
 - **Takedown** (wrong or harmful content): revert the offending `public-data/` commit and push (owner approval), or unpublish the app in Grok Build; open a P2 incident (P1 if personal data), and if personal data was exposed follow the security incident steps for RSK-021 (history and forks keep it).
 
+## RB-12 Live site and data-age check (CHG-2026-032, SLO-PD-1)
+- **Run** (read-only, standard library only, writes nothing): `python3 scripts/check_live.py`. Checks that the home page and dashboard answer, the manifest is valid and no older than 48 h (SLO-PD-1; WARN above 30 h), and three sample data files match the manifest checksums.
+- **After a publish** (the nightly): `python3 scripts/check_live.py --expect-local public-data/v1/manifest.json --raw-url https://raw.githubusercontent.com/farwaters/publicfunds-sa/main/public-data/v1/manifest.json --wait 600`. Also confirms the site serves the build just pushed (waits up to 10 minutes for Pages) and agrees with the git host.
+- **Exit code**: 0 = OK or WARN only; 1 = at least one `[BREACH]` line. `--json` prints the same as JSON. Flags: `--site`, `--max-age-hours`, `--warn-age-hours`, `--sample-files`, `--retries`, `--retry-delay`, `--poll`.
+- **On a BREACH**: report it as a breach with the output, never as success. Do not re-run the publish blindly. Stale data: check the last refresh report, RB-11 and the data-quality gate (RSK-024). Site down or files mismatched: check GitHub Pages status and the last Pages build; takedown steps are in RB-11. Open a P2 incident if the site shows wrong data.
+- **Not covered**: an external uptime check from another network every 5 minutes (D-08) is still open; this script runs from the box when called.

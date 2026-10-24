@@ -22,10 +22,10 @@ New `scripts/check_live.py` (Python standard library only, so no dependency or l
 |---|---|---|
 | `site.home` | `<site>/` answers HTTP 200 | BREACH |
 | `site.app` | `<site>/apps/public-dashboard/` answers 200 and the page contains "PublicFunds" | BREACH |
-| `site.manifest` | `<site>/public-data/v1/manifest.json` answers 200, parses as JSON, has a `generated_at_sast` with a UTC offset, and its age is at most `--max-age-hours` (default 48, SLO-PD-1) | BREACH (a timestamp more than 5 minutes in the future is also a BREACH: the clock or the file is wrong) |
-| `site.age.warn` | age is at most `--warn-age-hours` (default 30: one missed nightly shows before the SLO is breached) | WARN |
+| `site.manifest` | `<site>/public-data/v1/manifest.json` answers 200 and parses as a JSON object | BREACH |
+| `site.age` | `generated_at_sast` has a UTC offset and the age is at most `--max-age-hours` (default 48, SLO-PD-1) | BREACH; a timestamp more than 5 minutes in the future is also a BREACH (the clock or the file is wrong); WARN when over `--warn-age-hours` (default 30: one missed nightly shows before the SLO is breached) |
 | `site.files` | 3 sample files named in the manifest (default `municipalities.json,departments.json,prices.json`) are served with the byte count and sha256 the manifest states | BREACH |
-| `raw.manifest` | only with `--raw-url`: the same manifest from the git host (the SLO's measuring point) has the same `build.id` as the site | WARN (site behind or ahead of git: Pages lag or a failed Pages build); BREACH if the raw manifest itself is unreachable or older than the SLO |
+| `raw.manifest`, `raw.age` | only with `--raw-url`: the same manifest from the git host (the SLO's measuring point) is reachable, within the SLO age, and has the same `build.id` as the site | WARN if the build differs (site behind or ahead of git: Pages lag or a failed Pages build); BREACH if the raw manifest is unreachable or older than the SLO |
 | `local.build` | only with `--expect-local <manifest.json>`: the site serves that file's `build.id`; polled every `--poll` seconds (default 30) for up to `--wait` seconds (default 0) so Pages has time to deploy | BREACH after the wait |
 
 Each request is tried 3 times (`--retries`, 5 s apart) with a 20 s timeout before it counts as failed, so one network blip is not a breach. Output: one `[OK]`/`[WARN]`/`[BREACH]` line per check, then `RESULT: OK` / `RESULT: WARN (n)` / `RESULT: BREACH (n)`; `--json` prints the same as JSON; times are shown in SAST. Exit code 0 = OK or WARN only, 1 = at least one BREACH. The default site is the production host; every URL is an argument, so tests and previews use a local server.
@@ -43,7 +43,7 @@ The nightly routine lives in the live skill file (`publicfunds-refresh`, outside
 Yes. No data file is touched.
 
 ## Tests
-New `tests/test_check_live.py` runs the script's functions against a local HTTP server that serves fixture manifests (no network): healthy site, stale manifest, 30 to 48 hour warning, future timestamp, 404 manifest, invalid JSON, unreachable host, 500 with retry that then succeeds, checksum mismatch, `--expect-local` match, mismatch with `--wait 0`, a build that appears during the wait, raw/site differing, no `--raw-url`, the SAST display, and the exit codes through `main()`. Also run: `uv run pytest -q` with `THUSA_ROOT` unset and with a data copy; one real run against the production site (read-only, output kept under `/workspace/previews/chg-2026-032/`). Details in "Result".
+New `tests/test_check_live.py` runs the script's functions against a local HTTP server that serves fixture manifests (no network): healthy site, stale manifest, 30 to 48 hour warning, future timestamp, 404 manifest, invalid JSON, unreachable host, 500 with retry that then succeeds, checksum mismatch, `--expect-local` match, mismatch with `--wait 0`, a build that appears during the wait, raw/site differing, no `--raw-url`, the SAST display, and the exit codes through `main()`. Also run: `uv run pytest -q` with `THUSA_ROOT` unset and with a data copy; one real run against the production site (read-only, output kept under `/workspace/previews/chg-2026-032/`). Results below.
 
 ## POPIA review
 PASS (to be confirmed by popia-review). The script reads only public, non-personal files (home page, the data manifest and three public data files) from our own site and the git host, stores nothing, sends no credentials or cookies and no identifying header beyond a fixed User-Agent `publicfunds-check/1`. No personal information, IDs, contacts or accounts in code, tests or this record.
@@ -51,4 +51,11 @@ PASS (to be confirmed by popia-review). The script reads only public, non-person
 ## Review
 Four checks (expert, shadow, charter, drift) and popia-review by someone other than the author before any merge. Merge needs the owner's quoted GO for CHG-2026-032; using the script in the nightly needs a second, separate GO.
 
-Result: pending.
+## Result (2026-10-24, SAST)
+Built and tested in DEV only (fresh clone of origin/main 6abd695, own uv venv). The change has not been merged, nothing in PROD is changed, and nothing calls the script.
+- `uv run pytest`: 217 passed, 61 skipped (main was 196 passed, 61 skipped; +21 new). With a data copy (ingest `dmpr_fuel`, `thusa build`): 277 passed, 1 skipped (main 256 passed, 1 skipped).
+- Mutation check: loosening the SLO threshold in the script makes 4 of the new tests fail.
+- One real read-only run against the production site (`/workspace/previews/chg-2026-032/healthy-live.txt`): all checks OK, data 8.4 h old (generated 2026-10-24 03:05 SAST), build `B20261024T010413Z` identical on the site, the git host and the local manifest; three sample files match their checksums. A forced-threshold run and an unreachable-host run (`breach-demo.txt`) show the BREACH lines and exit code 1.
+- Nothing visible changes on the site, so there are no UI screenshots; the text output above is the evidence.
+
+Awaiting review; no merge GO.
