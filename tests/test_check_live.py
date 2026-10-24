@@ -679,7 +679,35 @@ def test_every_url_message_is_reachable_and_shown_for_both_flags(capsys):
 def test_huge_integers_are_a_bad_command_line_not_a_traceback(capsys, flag, sign, digits):
     # int("9" * 309) cannot become a float: math.isfinite raised OverflowError (a traceback, exit 1)
     out = _rejected_main([flag, sign + "9" * digits], capsys)
-    assert "at most" in out or "not a number" in out
+    assert "at most" in out and "not a number" not in out  # also above int()'s 4300-digit limit: the same message as any other out-of-range value
+
+
+@pytest.mark.parametrize("flag", ["--wait", "--poll", "--max-age-hours", "--warn-age-hours", "--retries", "--retry-delay"])
+@pytest.mark.parametrize("value", ["1_0", "1__0", "_1", "1_", "1_0.5", "1e1_0", "0x1_0", "+1_0"])
+def test_digit_separators_are_not_a_number(capsys, flag, value):
+    assert "not a number" in _rejected_main([flag, value], capsys)
+
+
+def test_plain_non_numbers_get_the_not_a_number_message(capsys):
+    # the converter's own text must reach the user, not the generic fallback of _Parser.error (which hides a converter that echoes the value)
+    for flag in ("--wait", "--poll", "--max-age-hours", "--warn-age-hours", "--retries", "--retry-delay"):
+        for value in ("abc", "1.5.5", "x1", "1 2"):
+            assert "not a number" in _rejected_main([flag, value], capsys)
+
+
+def test_num_converter_rejects_underscores_and_ranges_long_integers():
+    import argparse
+    for integer in (True, False):
+        conv = cl._num(0, 10, integer=integer)
+        with pytest.raises(argparse.ArgumentTypeError, match="not a number"):
+            conv("1_0")
+        assert conv("1") == 1
+    conv = cl._num(0, 10, integer=True)
+    for v in ("9" * 4300, "9" * 4301, "-" + "9" * 5000):
+        with pytest.raises(argparse.ArgumentTypeError, match="at most"):
+            conv(v)
+    with pytest.raises(argparse.ArgumentTypeError, match="not a number"):
+        conv("9" * 5000 + "x")
 
 
 def test_num_converter_raises_only_argument_type_errors_for_huge_integers():

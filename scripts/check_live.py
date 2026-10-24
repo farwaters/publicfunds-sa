@@ -334,13 +334,20 @@ def _url_arg(value: str) -> str:
 
 
 def _num(lo: float, hi: float, *, lo_open: bool = False, integer: bool = False):
+    def out_of_range():
+        return argparse.ArgumentTypeError(f"must be {'greater than' if lo_open else 'at least'} {lo:g} and at most {hi:g}")
+
     def conv(value: str):
+        if "_" in value:  # int("1_0") and float("1_0") accept digit separators; a flag value should not
+            raise argparse.ArgumentTypeError("not a number")
         try:
             x = int(value) if integer else float(value)
         except ValueError:
+            if integer and re.fullmatch(r"[+-]?[0-9]+", value):  # more digits than int() will read: a number, and out of range
+                raise out_of_range() from None
             raise argparse.ArgumentTypeError("not a number") from None
         if (not integer and not math.isfinite(x)) or x < lo or x > hi or (lo_open and x == lo):
-            raise argparse.ArgumentTypeError(f"must be {'greater than' if lo_open else 'at least'} {lo:g} and at most {hi:g}")
+            raise out_of_range()
         return x
     return conv
 
