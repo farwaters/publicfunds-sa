@@ -358,7 +358,8 @@ def prices(con, refs: SourceRefs) -> dict:
                                "unknown.",
                                "Diesel and illuminating paraffin are not regulated at the pump, so retail prices can "
                                "differ from these official figures.",
-                               "Only months published in the loaded DMPR history table are included (KE-012)."],
+                               "Months come from the loaded DMPR history tables; December 2025 comes from DMPR's December 2025 Fuel "
+                               "Regulations workbook (KE-012)."],
                      "columns": ["year", "month", "grade", "cents_per_litre", "src"],
                      "rows": [[r["year"], r["month"], r["grade"], float(r["cents_per_litre"]),
                                refs.ref(r["source_sha256"], used)] for r in fuel],
