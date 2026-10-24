@@ -42,4 +42,4 @@ official DMPR grade headings and prices.
 ## Review
 Four checks (expert, shadow, charter, drift) and popia-review by someone other than the author before any merge. Merge needs the owner's quoted GO.
 
-Result: DEV build succeeded; merged as PR #19 (merge commit d54e362, 2026-10-23 17:52 SAST) on the owner's GO quoted in `changes/CAB-DECISION.md` (section "PR #19"); Validator, Scout and popia-review PASS as recorded there.. PROD: live since the nightly publish of 2026-10-24 03:05 SAST (data commit 15c55e7); checked in `public-data/v1` on origin/main: grade label "Leaded Replacement Petrol (LRP) 95, coast".
+Result: DEV build succeeded; merged as PR #19 (merge commit d54e362, 2026-10-23 17:52 SAST) on the owner's GO quoted in `changes/CAB-DECISION.md` (section "PR #19"); Validator, Scout and popia-review PASS as recorded there. PROD: live since the nightly publish of 2026-10-24 03:05 SAST (data commit 15c55e7); checked in `public-data/v1` on origin/main: grade label "Leaded Replacement Petrol (LRP) 95, coast".

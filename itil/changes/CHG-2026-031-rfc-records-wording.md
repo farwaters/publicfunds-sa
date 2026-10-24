@@ -11,17 +11,18 @@
 
 ## Problem
 1. Eleven merged RFCs (CHG-2026-019 to -029, PRs #17-#27) still end with "Result: ... awaiting review", although each was reviewed and merged (the CAB record has the GO, the checks and the merge commit).
-2. CHG-2026-028 says Scout's "81 of 83" could not be reproduced. It can: 2019-01 to 2025-11 is 83 months (7 x 12 - 1), minus the two 404 months (2023-02, 2023-06) is 81 workbooks; with 2025-12 it is 84 months and 82 workbooks. The record should say that all 82 workbooks were opened and compared (Validator's sweep) and that the two numbers are two ranges.
+2. CHG-2026-028 says Scout's "81 of 83" could not be reproduced. It can: 2019-01 to 2025-11 is 83 months (7 x 12 - 1), minus the two 404 months (2023-02, 2023-06) is 81 workbooks; with 2025-12 it is 84 months and 82 workbooks. The record should say that 82 workbooks were opened (Validator's and Scout's independent sweeps), that 81 could be compared with the history PDFs, that 2025-12 has no PDF counterpart, and that the two numbers are two ranges.
 3. CHG-2026-027's "Merge and PROD preconditions" do not name #22 and #26, although #27 (merged together with #25) names KE-014 and KE-015, which exist only in those PRs.
 4. "A GO for #22-#26 or #28 does not cover this change" (CHG-2026-027) read literally excludes the PRs the owner did approve in the sequence. It should say "any other PR".
 
 ## Change
 Text only, one line each unless stated:
-- `Result:` line of each of the 11 RFCs: merge facts only, each checked against `changes/CAB-DECISION.md` and `gh pr view` (PR number, merge commit, merge time in SAST, where the GO and checks are quoted). PROD state only where verified: CHG-2026-019 to -023 are live (the 2026-10-24 03:05 SAST data refresh, commit 15c55e7: the recovered months and the three grade labels are in `public-data/v1` on origin/main); CHG-2026-024 to -029 are merged but **not yet published** (origin/main is still 6abd695 at 2026-10-24 11:22 SAST; the next nightly publishes them). CHG-2026-025's Result keeps "skill change applied" and adds the merge of the record (docs only).
-- CHG-2026-028: the coverage paragraph (item 2 above). The statement "all 82 workbooks were opened and compared" is the Validator's report; **I did not repeat the 82-workbook sweep** and the paragraph says so. The arithmetic (83 months, two 404, 81) is mine and was checked.
+- `Result:` line of each of the 11 RFCs: merge facts only, each checked against `changes/CAB-DECISION.md` and `gh pr view` (PR number, merge commit, merge time in SAST, where the GO and checks are quoted). PROD state only where verified: CHG-2026-019 to -023 are live (the 2026-10-24 03:05 SAST data refresh, commit 15c55e7: the recovered months and the three grade labels are in `public-data/v1` on origin/main); CHG-2026-024 to -029 are merged but **not yet published** (at 11:22 SAST on 24 Oct 2026, main was 6abd695; these lines describe the state before the nightly publish of 25 Oct 2026 and a later docs record will update them). CHG-2026-025's Result keeps "skill change applied" and adds the merge of the record (docs only).
+- CHG-2026-028: the coverage paragraph (item 2 above). The sweep results (82 workbooks opened, 81 compared with the history PDFs, 2025-12 without a PDF counterpart, same 82 x 200 and 2 x 404 in Scout's sweep) are the Validator's and Scout's reports; **I did not repeat the sweeps** and the paragraph says so. The arithmetic (83 months, two 404, 81) is mine and was checked.
 - CHG-2026-027: precondition (i) now names #22 and #26 and the reason (item 3); the GO sentence says "any other PR".
 - CHG-2026-029: the same GO sentence (it said "A GO for #22 to #28 does not cover this change"); same defect, same fix. This was not on Scout's list; drop it from the PR if the owner prefers the minimum.
-- `itil/registers/change-log.md`: one row.
+- `itil/registers/change-log.md`: one row for this change, and the Status cell of CHG-2026-024 to -029 (they still read "Pending review" / "Awaiting review" / "PR open") now says Merged with the PR number and date, matching the Result lines.
+- After the Validator and Scout PASS at head 7b1a2aa, their should-fix items were applied in one follow-up commit: coverage wording in CHG-2026-028, the stray ".." in CHG-2026-019 to -023, the dated "main was 6abd695" wording, the CHG-2026-027 merge-commit sentence (7e2127c is the merge on main; 832bf5c is a merge inside #27's branch), the change-log status cells and the trailing ` |` of this row.
 
 ## Not changed
 Any code, data, config, `public-data/`, `STATUS.md`, other RFC text. The "Owner GO: none" lines in the header tables of the merged RFCs are left as written (they record the state when the RFC was drafted; the CAB record holds the GOs). Not touched: the live skill file, `/workspace/publicfunds`, the nightly.
@@ -38,4 +39,6 @@ PASS. Process records only; no personal information, IDs, contacts, accounts or 
 ## Review
 Four checks and popia-review by someone other than the author before merge. Merge needs the owner's quoted GO for CHG-2026-031.
 
-Result: docs-only DEV change; awaiting review. No merge GO. `uv run pytest -q`, `THUSA_ROOT` unset: 196 passed, 61 skipped (unchanged from main 6abd695). 12 files changed, all under `itil/`; no `public-data/`, code, data or config touched.
+Result: docs-only DEV change; awaiting review. No merge GO. `uv run pytest -q`, `THUSA_ROOT` unset: 196 passed, 61 skipped (unchanged from main 6abd695). 13 files changed, all under `itil/` (re-counted with `git diff --stat origin/main` after the review fixes; an earlier version of this line said 12); no `public-data/`, code, data or config touched.
+
+Review: Validator and Scout PASSED at head 7b1a2aa with small should-fix items; applied in one follow-up commit (see Change). `uv run pytest -q` re-run after the fixes: 196 passed, 61 skipped.
