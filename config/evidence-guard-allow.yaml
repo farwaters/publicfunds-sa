@@ -1,0 +1,14 @@
+# CHG-2026-040: evidence-guard allow list. EMPTY on purpose.
+#
+# The nightly publish is blocked when a data type + financial year that had at least one fully present municipality in the
+# previously published coverage.json has none in the new one. An entry below says that this particular loss is expected, so
+# the guard does not block it. Every entry needs ALL of these keys:
+#   data_type: one of budget, actual_audited, uifw, audit_opinion, procurement
+#   year:      the financial year as in coverage.json "years" (2023 = 2022/23)
+#   reason:    why the data is legitimately gone (the known error, RFC or source notice that says so)
+#   date:      the day the entry was added, YYYY-MM-DD
+# Example (do not uncomment without an RFC row and the owner's GO):
+#   - {data_type: audit_opinion, year: 2023, reason: "KE-nnn: source withdrew the 2022/23 opinions", date: "2026-11-02"}
+# An entry that is no longer needed (the type and year has a fully present municipality again) is reported as a warning: remove it.
+# A malformed entry stops the publish (fail closed).
+allow: []
