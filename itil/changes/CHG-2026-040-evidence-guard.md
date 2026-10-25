@@ -73,7 +73,7 @@ The CHG-2026-033 review (X1) emptied 100 of the 247 fully present audit-opinion 
 ## How to revert
 `git revert -m 1 <merge commit>`. The next nightly then has no guard; nothing else changes. Before a merge: close the PR.
 
-## popia-review verdict: PASS (author's scan (not independent); independent review still required)
+## popia-review verdict: PASS (author's scan, not independent; independent review still required)
 Allow-entry `reason` text is committed and public and must hold no personal information; this is enforced only by the comment in `config/evidence-guard-allow.yaml` and this RFC, not by code. The `UnsafeExport` message may include an absolute path; it goes only to the gitignored `data/` logs and `data/publish-data.json`.
 
 Diff scan: aggregate counts, data type names, years, municipality codes (public, in the pinned fixture), RFC and CSI identifiers only. No ID, passport, phone, email, address, account number, plate, location, credential or key; no persons or suppliers.
@@ -101,7 +101,8 @@ Recorded **as reported to the author (PublicFunds)**; this repository holds no i
 - Validator, `3b91a78`: expert PASS; charter CONDITIONAL (missing sign-off and independent checks).
 - Scout, `4f8ee75`: shadow/drift PASS; data-sense PASS with should-fixes; POPIA PASS.
 - Scout, `3b91a78`: shadow/drift PASS; data-sense PASS; POPIA PASS.
-- Both reviewers found one wrong attribution in `3b91a78` (the owner was said to have chosen option A); this commit corrects it. **No review covers the final head of this commit, and there is no owner GO.**
+- Validator flagged, and Scout asked for attribution of, the statement that the owner chose option A as unsourced; it was corrected to the author's choice with the owner to confirm. (Scout asked that the owner decision be attributed "as reported by PublicFunds, not independently verified".)
+- **Only Validator's delta check at `3536d9a` (records only, code unchanged from `3b91a78`) covers that head; Scout's passes cover `3b91a78`; no review covers the head of this latest commit; no owner GO.**
 - A reviewer PASS is not an owner GO. Four checks (expert, shadow, charter, drift) and popia-review by someone other than the author are still needed on the final head before any merge.
 
-Result: Open PR #39, not merged; no owner GO; reviewers have not seen the final head.
+Result: Open PR #39, not merged; no owner GO; no review covers the head of the latest commit.
