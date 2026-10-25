@@ -3,8 +3,8 @@
 | Field | Value |
 |---|---|
 | Requested by / date (SAST) | Owner via Cavus backlog, 2026-10-24. No GO to merge is given |
-| Environment | DEV only. Branch `chg-2026-035-fuel-continuity` from origin/main `6abd695` (pre-change commit; PR open, not merged, nothing pushed to main). The check reaches PROD only through the nightly after a merge GO that quotes CHG-2026-035 |
-| Type | **Normal** (code in `thusa/dq.py`, which runs inside every build; owner to confirm the tier: the DQ gate guards the publish, so Normal-high is arguable, which is why the new check is warn-only and cannot fail a build) |
+| Environment | DEV only. Branch `chg-2026-035-fuel-continuity` from origin/main `6abd695` (pre-change commit; PR open, not merged, nothing pushed to main). The check reaches PROD only through the nightly after a merge GO that quotes CHG-2026-035. **25 Oct 2026 (SAST):** main `d1ece5d` merged into the branch (merge commit, no rebase); only `itil/registers/change-log.md` conflicted and was resolved by the id-keyed resolver of CHG-2026-032 (038 rows, ids unique) |
+| Type | **Normal** (code in `thusa/dq.py`, which runs inside every build; owner to confirm the tier: the DQ gate guards the publish, so Normal-high is arguable, which is why a gap is warn-only. A gap cannot fail a build; if the check itself errors it reports `error: ...`, which the build counts as a failure like any broken check (exit 2, publish blocked), see Risk) |
 | CIs affected | `thusa/dq.py` (new `FUEL_KNOWN_GAPS`, `month_gaps`, `fuel_continuity`, one extra result in `run()`), `scripts/fuel_continuity.py` (new), `tests/test_fuel_continuity.py` (new), this record, `itil/registers/change-log.md` |
 | Linked records | KE-012 (fuel history), KE-014, KE-015, CHG-2026-019, -022, -027, -028; DQ checks `unique:fuel_price`, `fuel_price_plausible`, `cpi_fresh_imf_info` (the existing warn-only pattern) |
 | Rollback | Close the PR unmerged. If merged: `git revert -m 1 <merge commit>` (git is the rollback; no .bkp files). Nothing is stored: the check writes only its row in `ops.dq_result`, rebuilt every night |
@@ -25,7 +25,7 @@ A month that silently drops out of `curated.fuel_price` (a parser change, a PDF 
 |---|---|---|
 | Months before 2019-01 | No | Outside the range (first to last month present); KE-012 says history starts 2019-01, 2015-2018 HTTP 404 at the DMPR path |
 | 2023-02, 2023-06 | No | The series has these months; only the DMPR monthly **workbook** is HTTP 404 (CHG-2026-028, checked 2026-10-24) |
-| 2025-12 | No | Recovered by CHG-2026-027 (xlsx). Until the next nightly after that merge the live warehouse still lacks it, and the check **correctly reports it as a NEW gap**; after the nightly it is present |
+| 2025-12 | No | Recovered by CHG-2026-027 (xlsx). Until the next nightly after that merge the live warehouse still lacks it, and the check **correctly reported it as a NEW gap** (24 Oct); after the 25 Oct nightly it is present and the check passes with the empty whitelist (see Tests) |
 | The PDF-versus-xlsx value differences (KE-014, KE-015, CHG-2026-028) | No | Values, not months |
 
 An entry would be `(year, month): "KE-nnn: reason"`. Adding one needs an RFC row naming the known error and its source, and an edit to `test_repository_allow_list_is_pinned_empty`. A whitelisted month that turns up present is reported as a stale entry (also a warning).
@@ -42,13 +42,15 @@ An entry would be `(year, month): "KE-nnn: reason"`. Adding one needs an RFC row
 - The build's printed summary shows only the number of warnings, not their names; naming them is a follow-up. The CLI above gives the detail.
 
 ## Risk
-- Build gate: the extra result is warn-only; the build's `fail` list takes only statuses other than `pass` and `warn`, so a gap cannot fail a build. The only way it fails a build is if the check itself errors (table missing or unreadable), the same rule as every check. `curated.fuel_price` always exists in a build.
+- Build gate (checked again 25 Oct 2026 against `thusa/build.py`, `thusa/cli.py`, `thusa/publish_data.py`): the extra result is warn-only; the build's `fail` list takes only statuses other than `pass` and `warn`, so a gap cannot fail a build. The only way it fails a build is if the check itself errors (table missing or unreadable), the same rule as every check. `dq.run` catches the exception, so a crash in the check does not abort the build process, but the status `error: ...` is not `pass` or `warn`, so the build's `fail` list takes it, the CLI returns exit 2 and `publish_data` refuses to publish (`UnsafeExport`). A gap: not in the `fail` list (measured on an in-memory warehouse, 25 Oct). A missing table: in the `fail` list. `curated.fuel_price` always exists in a build.
 - Public effect: the published manifest `build.data_quality` counts (pass, warn, fail) include this result: **pass +1 if there is no gap, warn +1 if there is** (at the next nightly, the first nightly after this merge would show warn +1 only if 2025-12 is still missing). Nothing else in `public-data/` changes. `public-data/` is not edited by hand.
 - False alarms: a real DMPR skipped month would warn until an RFC whitelists it with a source. Intended.
 - POPIA / licence: national fuel prices only, month numbers only. No personal information, identifiers or suppliers.
 
 ## Tests (evidence)
 - New `tests/test_fuel_continuity.py`: 29 tests (pure function: no gap, one gap, year boundary, January and December gaps, expected vs new, allow-list is the argument and not a constant, stale entry, known month outside range, range ends are the data, empty and single month, duplicates, invalid month raises; the repository whitelist is pinned empty; warehouse read; `run()` severity warn and status warn/pass/error; not part of `checks()`; synthetic build includes it and does not fail; CLI report, exit codes, expected-versus-new split, read-only open).
+- **25 Oct 2026 (SAST), after merging main `d1ece5d`: main is 585 passed, 61 skipped; this branch is 614 passed, 61 skipped (+29 new tests, +0 skipped).** The 225 / 196 figures below are for the earlier base `6abd695` and are history.
+- **Live data, 25 Oct 2026 (SAST)**, `scripts/fuel_continuity.py --warehouse` on a copy of the nightly warehouse built 03:12 that day (empty whitelist): `fuel months: 2019-01 to 2026-10, 94 present, 0 missing` / `fuel continuity: OK` / exit 0 (658 rows, 7 in 2025-12). The 24 Oct result below (`NEW gap: 2025-12`) is history: 2025-12 has since been recovered.
 - Full suite, this worktree first on PYTHONPATH, `THUSA_ROOT` unset: **main 6abd695: 196 passed, 61 skipped; branch: 225 passed, 61 skipped** (+29 new, +0 skipped; the 61 skipped are the warehouse tests, no warehouse is built in a worktree).
 - Run on a copy of the live-nightly warehouse (read-only CLI, then `dq.run` on the copy): `fuel months: 2019-01 to 2026-10, 93 present, 1 missing` / `NEW gap: 2025-12` / exit 1; `dq.run` result `fuel_month_continuity_info warn failures 1`. That is the expected live state before the 25 Oct nightly.
 
