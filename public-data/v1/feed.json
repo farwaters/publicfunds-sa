@@ -7,6 +7,13 @@
  "language": "en-ZA",
  "items": [
   {
+   "id": "B20261025T011220Z-bda30094fd18d2d5",
+   "url": "https://publicfunds.grokforum.site/apps/public-dashboard/#/changes",
+   "title": "New public data: build B20261025T011220Z",
+   "content_text": "+7 fuel price rows (now 658).",
+   "date_published": "2026-10-25T03:13:15+02:00"
+  },
+  {
    "id": "B20261024T010413Z-094cd4504b4e5bb5",
    "url": "https://publicfunds.grokforum.site/apps/public-dashboard/#/changes",
    "title": "New public data: build B20261024T010413Z",
