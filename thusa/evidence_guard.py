@@ -3,10 +3,13 @@
 DEFINITION. For a data type and a financial year, the evidence count is the number of municipalities whose cell is 'P' (fully
 present) in coverage.json. The guard compares the candidate (about to be published) with the previously published file:
 
-  FAIL (blocks the publish)  a data type + year whose previous count was >= 1 and whose candidate count is 0, unless the allow
-                             list has an entry for it. Nothing else fails.
-  WARN (never blocks)        the count fell by more than WARN_DROP_SHARE of the previous count (previous count >= WARN_MIN_PREVIOUS).
-  NOTE                       no previous file (first run): the guard passes and says so.
+  FAIL (blocks the publish)  a data type + year whose previous count was >= BLOCK_MIN_PREVIOUS and whose candidate count is 0,
+                             unless the allow list has an entry for it. Nothing else fails. There is NO percentage FAIL: a fall
+                             such as 247 -> 1 passes the block rule and only warns, and the lower count is the next baseline.
+  WARN (never blocks)        the count fell by more than WARN_DROP_SHARE of the previous count (previous count >= WARN_MIN_PREVIOUS),
+                             or a count of 1 to BLOCK_MIN_PREVIOUS - 1 fell to 0.
+  NOTE                       no previous file (first run): the guard passes and says so; the previous file has other data types,
+                             years or schema than the candidate: said, not silent.
 
 It looks at counts only. It does not say why data is gone, and it never reads names, amounts or flags (POPIA: aggregate counts).
 """
@@ -18,14 +21,21 @@ from datetime import date
 
 # WARN threshold: a fall of MORE than this share of the previous count of fully present municipalities is reported. Default 10%.
 # Basis (25 Oct 2026): there is no night-to-night history to measure (coverage.json was committed once, on 19 Oct, and the eight
-# later nightly exports left it unchanged; the six builds in changes.json all show 75.7%), so the nearest measure is the spread between neighbouring
-# financial years of the published file, for counts of 20 or more: falls of 0% to 2.4% for budget, audited actuals and UIFW, and
-# 9.0% for audit opinion (256 -> 233, 2019/20 to 2020/21, which then rises 9.4% the next year).
-# 10% sits just above that spread (an expected change is not a warning) and well below the X1 scratch case (100 of 247 emptied = 40.5%).
+# later nightly exports left it unchanged; the six builds in changes.json all show 75.7%), so the nearest measure is the spread between
+# neighbouring financial years of the published file, for counts of 20 or more: falls of 0% to 2.4% for budget, audited actuals and
+# UIFW, 3.1% for audit opinion 2021/22 -> 2022/23 (255 -> 247) and 9.0% for audit opinion 2019/20 -> 2020/21 (256 -> 233, which
+# then rises 9.4%). 10% sits just above that spread (an expected change is not a
+# warning) and well below the X1 scratch case (100 of 247 emptied = 40.5%).
 WARN_DROP_SHARE = 0.10
 # A small count moves in whole cells (tender awards 2019/20 has 1 fully present municipality, 2021/22 has 3), so a share of it means
 # little: the drop warning is only for previous counts of at least this many municipalities.
 WARN_MIN_PREVIOUS = 20
+# BLOCK threshold: the publish is blocked only when the previous count was at least this many fully present municipalities. Below it
+# a fall to none is a WARN. Reason: tender awards (procurement) 2019/20 has 1 and 2021/22 has 3 fully present municipalities, and a
+# procurement 'P' needs at least 90% of the matched awards valued (100_coverage.sql), so one unvalued award or one alias re-match
+# could flip a lone 'P' and block the nightly on correct data. 5 is above both and below every other guarded pair (the next smallest
+# is 11 in procurement 2022/23); it is a judgement, the owner decides.
+BLOCK_MIN_PREVIOUS = 5
 
 DATA_TYPES = ("budget", "actual_audited", "uifw", "audit_opinion", "procurement")
 _DATE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
@@ -52,6 +62,19 @@ def present_counts(cov: Mapping) -> dict[tuple[str, int], int]:
     return counts
 
 
+def allow_entries(doc) -> list:
+    """The `allow` list of the parsed allow file. The file must be a mapping with an `allow` key whose value is a list (an empty list
+    is fine). A missing key (for example the misspelling `allows:`), `allow:` with nothing after it, a bare list or an empty file raise
+    EvidenceGuardError, so a typo cannot silently switch the allow list off or hide an entry."""
+    if not isinstance(doc, Mapping):
+        raise EvidenceGuardError(f"allow file must be a mapping with an 'allow' list, not {type(doc).__name__}")
+    if "allow" not in doc:
+        raise EvidenceGuardError(f"allow file has no 'allow' key (found: {sorted(map(str, doc))}); write 'allow: []' for no entries")
+    if not isinstance(doc["allow"], list):
+        raise EvidenceGuardError(f"'allow' must be a list ('allow: []' for no entries), not {type(doc['allow']).__name__}")
+    return doc["allow"]
+
+
 def check_allow(allow: Iterable[Mapping] | None) -> dict[tuple[str, int], str]:
     """Validate the allow list: {(data_type, year): reason}. Every entry needs data_type, year, reason and an ISO date."""
     out: dict[tuple[str, int], str] = {}
@@ -76,33 +99,54 @@ def check_allow(allow: Iterable[Mapping] | None) -> dict[tuple[str, int], str]:
     return out
 
 
+def differences(previous: Mapping, candidate: Mapping) -> list[str]:
+    """Visible notes when the previous file and the candidate do not describe the same data types, years or schema. Counts of a
+    pair missing from the candidate still block (counted as zero); this only makes the difference visible."""
+    notes = []
+    for key, label in (("data_types", "data types"), ("years", "years")):
+        before, after = list(previous.get(key) or []), list(candidate.get(key) or [])
+        if gone := [x for x in before if x not in after]:
+            notes.append(f"note: {label} in the previous file but not in the candidate: {gone}")
+        if new := [x for x in after if x not in before]:
+            notes.append(f"note: {label} in the candidate but not in the previous file: {new}")
+    if previous.get("schema") != candidate.get("schema"):
+        notes.append(f"note: schema differs (previous {previous.get('schema')!r}, candidate {candidate.get('schema')!r})")
+    return notes
+
+
 def evidence_guard(previous: Mapping | None, candidate: Mapping, allow: Iterable[Mapping] | None = None,
-                   warn_share: float = WARN_DROP_SHARE, min_previous: int = WARN_MIN_PREVIOUS) -> dict:
+                   warn_share: float = WARN_DROP_SHARE, min_previous: int = WARN_MIN_PREVIOUS,
+                   block_min: int = BLOCK_MIN_PREVIOUS) -> dict:
     """Compare the candidate coverage with the previously published one. Returns
-    {"status": "pass"|"fail", "empty": [...], "allowed": [...], "stale_allow": [...], "drops": [...], "notes": [...]},
-    each list item a dict of aggregate counts. status is "fail" only when `empty` is not empty."""
+    {"status": "pass"|"fail", "empty": [...], "allowed": [...], "stale_allow": [...], "drops": [...], "small_empty": [...],
+    "notes": [...]}, each list item a dict of aggregate counts. status is "fail" only when `empty` is not empty. `previous` is None
+    only for the first run (no file); the caller must not pass None for a file that exists but is not a coverage document."""
     allowed = check_allow(allow)
     cand = present_counts(candidate)
     if previous is None:
-        return {"status": "pass", "empty": [], "allowed": [], "drops": [], "stale_allow": [],
+        return {"status": "pass", "empty": [], "allowed": [], "drops": [], "small_empty": [], "stale_allow": [],
                 "notes": ["no previous published coverage.json (first run): evidence guard skipped"]}
     prev = present_counts(previous)
-    empty, ok, drops = [], [], []
+    empty, ok, drops, small = [], [], [], []
     for (t, y), before in sorted(prev.items(), key=lambda kv: (kv[0][1], kv[0][0])):
         after = cand.get((t, y), 0)
         item = {"data_type": t, "year": y, "before": before, "after": after}
         if before >= 1 and after == 0:
             if (t, y) in allowed:
                 ok.append(item | {"reason": allowed[(t, y)]})
-            else:
+            elif before >= block_min:
                 empty.append(item)
+            else:
+                small.append(item)
         elif before >= min_previous and (before - after) / before > warn_share:
             drops.append(item | {"share": round((before - after) / before, 3)})
     stale = [{"data_type": t, "year": y, "reason": r, "after": cand.get((t, y), 0)}
              for (t, y), r in sorted(allowed.items()) if cand.get((t, y), 0) >= 1]
     notes = [f"BLOCK: {d['data_type']} {d['year']}: {d['before']} fully present municipalities before, 0 now" for d in empty]
     notes += [f"allowed: {d['data_type']} {d['year']}: {d['before']} before, 0 now ({d['reason']})" for d in ok]
+    notes += [f"warn: {d['data_type']} {d['year']}: {d['before']} -> 0 (fewer than {block_min} before, so not blocked)" for d in small]
     notes += [f"warn: {d['data_type']} {d['year']}: {d['before']} -> {d['after']} ({d['share']:.1%} fewer)" for d in drops]
     notes += [f"warn: allow entry {d['data_type']} {d['year']} is no longer needed ({d['after']} present again): remove it" for d in stale]
-    return {"status": "fail" if empty else "pass", "empty": empty, "allowed": ok, "drops": drops, "stale_allow": stale,
-            "notes": notes}
+    notes = differences(previous, candidate) + notes
+    return {"status": "fail" if empty else "pass", "empty": empty, "allowed": ok, "drops": drops, "small_empty": small,
+            "stale_allow": stale, "notes": notes}

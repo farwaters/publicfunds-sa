@@ -451,15 +451,21 @@ def manifest(con, cfg: dict, files: dict[str, bytes], counts: dict, cov_headline
 
 def _evidence_guard(out_dir: Path, cov: dict) -> dict:
     """CHG-2026-040 (CSI-053): compare the candidate coverage with the coverage.json currently in `out_dir` (the previously
-    published file, read before it is overwritten). A fully empty data type + year that had data blocks the export; a missing
-    previous file passes with a note; an unreadable previous file or allow list blocks (fail closed)."""
-    from thusa.evidence_guard import EvidenceGuardError, evidence_guard
+    published file, read before it is overwritten). A fully empty data type + year that had data blocks the export; only a file that
+    does not exist is a first run (note, pass). EVERYTHING else that goes wrong inside the guard (an unreadable, non-object or
+    malformed previous file, a malformed or missing allow file, broken YAML, any unexpected exception) is an UnsafeExport that
+    writes nothing (fail closed): the guard never ends in a traceback and never silently passes."""
+    from thusa.evidence_guard import EvidenceGuardError, allow_entries, evidence_guard
     prev_path = Path(out_dir) / "coverage.json"
     try:
-        previous = json.loads(prev_path.read_text()) if prev_path.exists() else None
-        result = evidence_guard(previous, cov, load_yaml("evidence-guard-allow.yaml").get("allow"))
-    except (OSError, ValueError, KeyError, TypeError, AttributeError) as exc:    # EvidenceGuardError and JSONDecodeError are ValueErrors
-        raise UnsafeExport(f"evidence guard could not run (nothing was written): {exc}") from exc
+        previous = None
+        if prev_path.exists():
+            previous = json.loads(prev_path.read_text(encoding="utf-8"))
+            if not isinstance(previous, dict):          # null, [], 0, "text": the file exists, so this is NOT a first run
+                raise EvidenceGuardError(f"previous coverage.json is not a JSON object (it is {type(previous).__name__})")
+        result = evidence_guard(previous, cov, allow_entries(load_yaml("evidence-guard-allow.yaml")))
+    except Exception as exc:    # noqa: BLE001 - deliberate: fail closed on anything (yaml.YAMLError, JSONDecodeError, OSError, ...)
+        raise UnsafeExport(f"evidence guard could not run (nothing was written): {type(exc).__name__}: {exc}") from exc
     for note in result["notes"]:
         print(f"evidence guard: {note}", file=sys.stderr)
     if result["status"] == "fail":
