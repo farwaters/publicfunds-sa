@@ -169,6 +169,46 @@ def test_synthetic_build_has_the_check_and_it_does_not_fail_the_build(synth_root
     assert sev == "warn" and st in ("pass", "warn")
 
 
+def test_dq_run_malformed_months_become_error_status():
+    # NULL month: int(None) raises TypeError; month 13: month_gaps raises ValueError. Both fail closed (status "error").
+    for bad in (None, 13):
+        con = _con([])
+        con.execute("INSERT INTO curated.fuel_price VALUES (2019, ?, 'a')", [bad])
+        r = _result(con)
+        assert r["severity"] == "warn" and r["status"].startswith("error") and r["failures"] == -1, bad
+
+
+def test_dq_run_empty_fuel_table_passes_silently():
+    # 0 months is not a gap here; only the existing min-rows checks guard an empty table.
+    r = _result(_con([]))
+    assert r["status"] == "pass" and r["failures"] == 0
+
+
+def test_a_crash_in_the_check_lands_in_the_build_fail_list_and_blocks_the_publish(tmp_path, monkeypatch):
+    # fail-closed by design: a broken check is a failure like every other broken check (build.py takes any status
+    # that is not pass or warn), the build is not releasable, and the publish export refuses to run
+    from datetime import date
+
+    from tests.conftest import SMALL
+    from tests.synth import build_raw
+    from thusa import publish_data as pdx
+    from thusa.build import build
+    from thusa.settings import get_paths
+
+    def boom(con, known=None):
+        raise RuntimeError("simulated crash in the fuel check")
+
+    monkeypatch.setattr(dq, "fuel_continuity", boom)
+    build_raw(tmp_path)
+    summary = build(get_paths(tmp_path), as_of=date(2026, 10, 19), fye_min=2023, fye_max=2026, min_rows=SMALL,
+                    secret=b"test-secret")
+    fails = [r["test_name"] for r in summary["dq"]["fail"]]
+    assert fails == ["fuel_month_continuity_info"]
+    assert summary["dq"]["fail"][0]["status"].startswith("error")
+    with pytest.raises(pdx.UnsafeExport, match="quality gate"):
+        pdx.export(get_paths(tmp_path), tmp_path / "out")
+
+
 # --- CLI report --------------------------------------------------------------------------------------------------
 def _wh(tmp_path, months):
     p = tmp_path / "wh.duckdb"
