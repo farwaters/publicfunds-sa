@@ -464,6 +464,20 @@ class Quiet(http.server.SimpleHTTPRequestHandler):
         pass
 
 
+def fuel_known_ids() -> set[str]:
+    """Known-error ids the fuel card must show: ids named in prices.fuel.about, plus those named in the known gap of such an id."""
+    pub = ROOT / "public-data" / "v1"
+    fuel_about = json.loads((pub / "prices.json").read_text())["fuel"].get("about") or []
+    man = json.loads((pub / "manifest.json").read_text())
+    ids = lambda t: set(re.findall(r"KE-\d+", str(t)))
+    named = set().union(*(ids(t) for t in fuel_about)) if fuel_about else set()
+    seen = set(named)
+    for g in man.get("known_gaps") or []:
+        if g["id"] in named:
+            seen |= ids(g["text"])
+    return {k["id"] for k in man.get("known_errors") or []} & seen
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--port", type=int, default=0, help="0 = any free port")
@@ -515,6 +529,10 @@ def main() -> int:
             page.select_option("#fuel-grade", "petrol_95_inland")
             page.fill("#fuel-paid", "30.50")
             checks[f"{vname}_fuel"] = page.locator("#t-fuel").locator("xpath=..").locator(".result").inner_text()
+            known = fuel_known_ids()      # CHG-2026-030: the fuel card must show the known errors that fuel.about points to
+            have = page.locator("#fuel-known").inner_text() if page.locator("#fuel-known").count() else ""
+            checks[f"{vname}_fuel_known"] = have
+            problems += [f"{vname} tools: fuel known issue {i} not shown" for i in sorted(known) if i not in have]
             checks[f"{vname}_inflation"] = page.locator("#t-inf").locator("xpath=..").locator(".result").inner_text()
             page.click("details summary")
             with page.expect_download() as dl:
