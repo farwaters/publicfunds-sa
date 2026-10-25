@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| Requested by / date (SAST) | Owner's delegate (PublicFunds), 2026-10-24 21:43, after the merges of #35 and #31. **Owner GO for this change (CHG-2026-037): none yet. No merge GO is given** |
+| Requested by / date (SAST) | Owner's delegate (PublicFunds), 2026-10-24 21:43, after the merges of #35 and #31. **Merged as PR #36, merge `a6f08bd` (tag `snapshot-2026-10-25-0844`), on the owner GO "GP om #36" (25 Oct 2026 08:42 SAST, quoted verbatim, recorded by PublicFunds, read as "GO on #36", not independently verified by reviewers); it named #36 and its head, not CHG-2026-037** |
 | Environment | DEV for build; the merge to main is PROD and needs a GO naming CHG-2026-037. Docs only: nothing is built, run or published; PROD is affected only by the merge itself (markdown under `itil/` and `changes/`) |
 | Type | Standard (`itil/change-enablement.md`: "docs/copy") |
 | CIs affected | `changes/CAB-DECISION.md` (one new section, two wording fixes), `itil/registers/change-log.md` (status cells of CHG-2026-032 and -036, one new row), `itil/registers/csi-register.md` (CSI-036 row), the `Result:` line of `itil/changes/CHG-2026-032-live-site-check.md` and `CHG-2026-036-cab-records.md`, one wording fix in `CHG-2026-036-cab-records.md`, this record |
@@ -37,4 +37,4 @@ Author review, independent re-check requested. Process records only; no personal
 ## Review
 Four checks and popia-review by someone other than the author before merge. Merge needs the owner's quoted GO naming CHG-2026-037. None has been given.
 
-Result: Draft, not reviewed, no GO.
+Result: Merged as PR #36, merge `a6f08bd` (GitHub mergedAt 25 Oct 2026 08:44:02 SAST), tag `snapshot-2026-10-25-0844`; see `changes/CAB-DECISION.md`.
