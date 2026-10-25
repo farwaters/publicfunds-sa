@@ -17,6 +17,7 @@ import hashlib
 import json
 import os
 import re
+import sys
 from collections import defaultdict
 from datetime import datetime, timezone
 from pathlib import Path
@@ -448,6 +449,31 @@ def manifest(con, cfg: dict, files: dict[str, bytes], counts: dict, cov_headline
                              "48 hours (itil/sla-slo.md, SLO-PD-1)."}
 
 
+def _evidence_guard(out_dir: Path, cov: dict) -> dict:
+    """CHG-2026-040 (CSI-053): compare the candidate coverage with the coverage.json currently in `out_dir` (the previously
+    published file, read before it is overwritten). A fully empty data type + year that had data blocks the export; only a file that
+    does not exist is a first run (note, pass). EVERYTHING else that goes wrong inside the guard (an unreadable, non-object or
+    malformed previous file, a malformed or missing allow file, broken YAML, any unexpected exception) is an UnsafeExport that
+    writes nothing (fail closed): the guard never ends in a traceback and never silently passes."""
+    from thusa.evidence_guard import EvidenceGuardError, allow_entries, evidence_guard
+    prev_path = Path(out_dir) / "coverage.json"
+    try:
+        previous = None
+        if prev_path.exists():
+            previous = json.loads(prev_path.read_text(encoding="utf-8"))
+            if not isinstance(previous, dict):          # null, [], 0, "text": the file exists, so this is NOT a first run
+                raise EvidenceGuardError(f"previous coverage.json is not a JSON object (it is {type(previous).__name__})")
+        result = evidence_guard(previous, cov, allow_entries(load_yaml("evidence-guard-allow.yaml")))
+    except Exception as exc:    # noqa: BLE001 - deliberate: fail closed on anything (yaml.YAMLError, JSONDecodeError, OSError, ...)
+        raise UnsafeExport(f"evidence guard could not run (nothing was written): {type(exc).__name__}: {exc}") from exc
+    for note in result["notes"]:
+        print(f"evidence guard: {note}", file=sys.stderr)
+    if result["status"] == "fail":
+        raise UnsafeExport("evidence guard: " + "; ".join(n for n in result["notes"] if n.startswith("BLOCK"))
+                           + " (published files left as they are; see itil/changes/CHG-2026-040-evidence-guard.md)")
+    return result
+
+
 def export(paths: Paths, out_dir: Path | None = None) -> dict:
     cfg = load_yaml("public-data.yaml")
     out_dir = Path(out_dir or REPO_ROOT / "public-data" / "v1")
@@ -462,6 +488,7 @@ def export(paths: Paths, out_dir: Path | None = None) -> dict:
         withheld = {r[0] for r in con.execute("SELECT name_key FROM curated.restriction WHERE is_person AND name_key IS NOT NULL").fetchall()}
         banned = {r[0].lower() for r in con.execute("SELECT name FROM curated.restriction WHERE is_person AND name IS NOT NULL").fetchall()}
         mun, dep, cov = municipalities(con, refs), departments(con, refs), coverage(con)
+        guard = _evidence_guard(out_dir, cov)      # CHG-2026-040: before anything is written; a fail leaves the published files as they are
         tsum, award_files = tenders(con, refs, withheld)
         fl, pr = flags(paths, con), prices(con, refs)
         payloads = {"municipalities.json": mun, "departments.json": dep, "coverage.json": cov,
@@ -502,7 +529,7 @@ def export(paths: Paths, out_dir: Path | None = None) -> dict:
         _atomic_write(out_dir / n, b)
     _atomic_write(out_dir / "manifest.json", blobs["manifest.json"])
     return {"out": str(out_dir), "files": {n: len(b) for n, b in sorted(blobs.items())}, "total_bytes": total,
-            "counts": counts}
+            "counts": counts, "evidence_guard": {k: guard[k] for k in ("status", "notes")}}
 
 
 META_FILES = {"manifest.json", "changes.json", "feed.json"}
