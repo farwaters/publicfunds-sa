@@ -7,6 +7,13 @@
  "language": "en-ZA",
  "items": [
   {
+   "id": "B20261026T010921Z-cacdc4da16a75974",
+   "url": "https://publicfunds.grokforum.site/apps/public-dashboard/#/changes",
+   "title": "New public data: build B20261026T010921Z",
+   "content_text": "+2 CPI months (now 225).",
+   "date_published": "2026-10-26T03:10:05+02:00"
+  },
+  {
    "id": "B20261025T011220Z-bda30094fd18d2d5",
    "url": "https://publicfunds.grokforum.site/apps/public-dashboard/#/changes",
    "title": "New public data: build B20261025T011220Z",
