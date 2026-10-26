@@ -21,5 +21,10 @@ description: Daily data refresh for PublicFunds (Thusa) - ingest all sources, re
      pre-authorised **only** when you run it from the daily refresh routine the user approved. Otherwise, ask first.
    - Never push anything else. Never force-push.
    - If it exits 4 (other changes, wrong branch, main moved), stop and report.
+   - It prints one stdout line starting `evidence_guard:` (CHG-2026-040 guard; CHG-2026-041 line): `pass`, `warn (N notes)` (then up to 3 note lines), `BLOCKED (exit 3 ...)`, `not the cause (exit 3 ...)` or `UNKNOWN (...)`.
+     **Report that line to the owner in the nightly report whenever it is anything other than `pass`**, with its note lines. Treat `UNKNOWN` as "guard not checked", never as pass.
+   - **If it exits 3, report it to the owner** (do not retry, do not edit data): the export was refused and **nothing was published**; the files in `public-data/` are left as they are and nothing was committed or pushed.
+     Quote the `evidence_guard:` line (`BLOCKED` = the evidence guard refused; `not the cause` = the quality gate or the safety scan refused, read `data/publish-data.json` and `data/publish-data.log`).
+     `scripts/check_live.py` warns at 30 h of data age and breaches at 48 h (RB-12), so a repeated exit 3 must reach the owner before then.
 5. Check `curl -s http://127.0.0.1:8765/healthz`. If it is not ok, run `scripts/review-app.sh restart`. A broken audit chain is a security incident: stop and tell the user.
 6. Never confirm or reject flags here. Reviews happen only in **publicfunds-review**, on the user's instruction.
