@@ -2,11 +2,11 @@
  "schema": "publicfunds.public-data/v1",
  "schema_version": "1.0.0",
  "kind": "manifest",
- "generated_at_sast": "2026-10-28T03:07:10+02:00",
+ "generated_at_sast": "2026-10-29T03:09:58+02:00",
  "build": {
-  "id": "B20261028T010605Z",
-  "as_of": "2026-10-28",
-  "code_commit": "9745c24",
+  "id": "B20261029T010857Z",
+  "as_of": "2026-10-29",
+  "code_commit": "1e343b9",
   "data_quality": {
    "pass": 58,
    "warn": 1,
@@ -67,8 +67,8 @@
   },
   {
    "name": "changes.json",
-   "bytes": 6955,
-   "sha256": "ff0d4ab3ed4cfe8c2f35428e1d5bb7a102dda6baba7b0e42394aece4069aae9b"
+   "bytes": 7699,
+   "sha256": "6fa343db3c53fb253f5330306b2d6b79cd3d4c5a0ff3d1c4aad6933b282c825f"
   },
   {
    "name": "coverage.json",
@@ -78,12 +78,12 @@
   {
    "name": "departments.json",
    "bytes": 46085,
-   "sha256": "8ae95f24d9f61fe82a35f482573f04231b3eb10a17c8316f7ad5b9d91e58150c"
+   "sha256": "e76f961d72d36bc7e0457146c29e6b8347075a7c0ad24c723bf8bc171ac6ab75"
   },
   {
    "name": "feed.json",
-   "bytes": 3362,
-   "sha256": "18ef70d7f5ae0926f3e1fca63658aae3850a34d21d9d84ed83bc8e84d699b13f"
+   "bytes": 3710,
+   "sha256": "224528270368c9eb6e21dc71a17aeb30e81d440cc6d209e1f16d6fd4c4c658aa"
   },
   {
    "name": "flags.json",
@@ -93,12 +93,12 @@
   {
    "name": "municipalities.json",
    "bytes": 1525551,
-   "sha256": "4d3245697caeebc04a913e6af1bea86117e3af14682d716224a9971776e70fe1"
+   "sha256": "286453cba77c95308559cb151cd8d058b219ff28db1e0c8a43feb1a2050505d1"
   },
   {
    "name": "prices.json",
    "bytes": 42175,
-   "sha256": "48ed6253be7d097b887174635e9a9df84b4afeecbf2d39a6c7ba03a025c6acc3"
+   "sha256": "5d4de387bc36b201fd2827d6877a20dd5b7a85123e2774b24237aabf7de15e6f"
   },
   {
    "name": "tenders-summary.json",
@@ -222,7 +222,7 @@
    "page": "https://mfma-2024.agsa.co.za/",
    "licence": null,
    "last_run_status": "unchanged",
-   "last_run_sast": "2026-10-28T03:06:05+02:00",
+   "last_run_sast": "2026-10-29T03:08:57+02:00",
    "last_new_data_sast": "2026-10-20T08:05:11+02:00",
    "last_checked_sast": "2026-10-20T08:05:11+02:00",
    "raw_files": 4,
@@ -264,9 +264,9 @@
    "page": "https://www.dmpr.gov.za/Branches/Petroleum-Resources/Fuel-Prices",
    "licence": "Public government information (DMPR / CEF). Source: DMPR, https://www.dmpr.gov.za/Terms-Conditions; (c) Department of Mineral and Petroleum Resources; reproduced as published; no commercial use",
    "last_run_status": "unchanged",
-   "last_run_sast": "2026-10-28T03:06:04+02:00",
+   "last_run_sast": "2026-10-29T03:08:56+02:00",
    "last_new_data_sast": "2026-10-25T03:12:18+02:00",
-   "last_checked_sast": "2026-10-28T03:06:04+02:00",
+   "last_checked_sast": "2026-10-29T03:08:56+02:00",
    "raw_files": 9,
    "freshness_slo_days": 35,
    "problem": null
@@ -278,12 +278,12 @@
    "page": "https://data.etenders.gov.za/",
    "licence": "CC BY 4.0 (portal) / PDDL (API spec): attribute National Treasury",
    "last_run_status": "partial",
-   "last_run_sast": "2026-10-28T03:04:35+02:00",
-   "last_new_data_sast": "2026-10-28T03:03:59+02:00",
-   "last_checked_sast": "2026-10-28T03:03:59+02:00",
-   "raw_files": 22,
+   "last_run_sast": "2026-10-29T03:07:28+02:00",
+   "last_new_data_sast": "2026-10-29T03:06:52+02:00",
+   "last_checked_sast": "2026-10-29T03:06:52+02:00",
+   "raw_files": 23,
    "freshness_slo_days": 2,
-   "problem": "delta page 3: https://ocds-api.etenders.gov.za/api/OCDSReleases failed after 5 attempts: HTTP 500"
+   "problem": "delta page 2: https://ocds-api.etenders.gov.za/api/OCDSReleases failed after 5 attempts: HTTP 500"
   },
   {
    "id": "imf_cpi",
@@ -292,9 +292,9 @@
    "page": "https://data.imf.org/en/datasets/IMF.STA:CPI",
    "licence": "Source: International Monetary Fund, Consumer Price Index (CPI), https://data.imf.org/en/datasets/IMF.STA:CPI; IMF terms for statistical data; underlying data: Stats SA headline CPI (all urban areas)",
    "last_run_status": "ok",
-   "last_run_sast": "2026-10-28T03:06:05+02:00",
-   "last_new_data_sast": "2026-10-28T03:06:05+02:00",
-   "last_checked_sast": "2026-10-28T03:06:05+02:00",
+   "last_run_sast": "2026-10-29T03:08:57+02:00",
+   "last_new_data_sast": "2026-10-29T03:08:57+02:00",
+   "last_checked_sast": "2026-10-29T03:08:57+02:00",
    "raw_files": 1,
    "freshness_slo_days": 120,
    "problem": null
@@ -306,9 +306,9 @@
    "page": "https://municipalmoney.gov.za/",
    "licence": "Municipal Money terms of use (attribute National Treasury)",
    "last_run_status": "unchanged",
-   "last_run_sast": "2026-10-28T03:03:38+02:00",
+   "last_run_sast": "2026-10-29T03:06:45+02:00",
    "last_new_data_sast": "2026-10-23T03:05:05+02:00",
-   "last_checked_sast": "2026-10-28T03:03:38+02:00",
+   "last_checked_sast": "2026-10-29T03:06:45+02:00",
    "raw_files": 17,
    "freshness_slo_days": 7,
    "problem": null
@@ -320,9 +320,9 @@
    "page": "https://vulekamali.gov.za/datasets/budgeted-and-actual-national-expenditure",
    "licence": "Vulekamali open data (attribute National Treasury)",
    "last_run_status": "unchanged",
-   "last_run_sast": "2026-10-28T03:06:01+02:00",
+   "last_run_sast": "2026-10-29T03:08:53+02:00",
    "last_new_data_sast": "2026-10-19T09:38:04+02:00",
-   "last_checked_sast": "2026-10-28T03:06:01+02:00",
+   "last_checked_sast": "2026-10-29T03:08:53+02:00",
    "raw_files": 1,
    "freshness_slo_days": 10,
    "problem": null
@@ -334,9 +334,9 @@
    "page": "https://data-explorer.oecd.org/",
    "licence": "CC BY 4.0 (OECD); underlying data: Statistics South Africa",
    "last_run_status": "unchanged",
-   "last_run_sast": "2026-10-28T03:06:05+02:00",
+   "last_run_sast": "2026-10-29T03:08:57+02:00",
    "last_new_data_sast": "2026-10-19T20:36:51+02:00",
-   "last_checked_sast": "2026-10-28T03:06:05+02:00",
+   "last_checked_sast": "2026-10-29T03:08:57+02:00",
    "raw_files": 1,
    "freshness_slo_days": 400,
    "problem": null
@@ -348,7 +348,7 @@
    "page": "https://data.etenders.gov.za/",
    "licence": "National Treasury OCPO",
    "last_run_status": "awaiting_manual_drop",
-   "last_run_sast": "2026-10-28T03:04:37+02:00",
+   "last_run_sast": "2026-10-29T03:07:30+02:00",
    "last_new_data_sast": null,
    "last_checked_sast": null,
    "raw_files": 0,
@@ -362,9 +362,9 @@
    "page": "https://ocpo.treasury.gov.za/",
    "licence": "Public register (National Treasury); used only to count leads, never published here",
    "last_run_status": "unchanged",
-   "last_run_sast": "2026-10-28T03:04:37+02:00",
+   "last_run_sast": "2026-10-29T03:07:30+02:00",
    "last_new_data_sast": "2026-10-19T09:37:48+02:00",
-   "last_checked_sast": "2026-10-28T03:04:37+02:00",
+   "last_checked_sast": "2026-10-29T03:07:30+02:00",
    "raw_files": 1,
    "freshness_slo_days": 8,
    "problem": null

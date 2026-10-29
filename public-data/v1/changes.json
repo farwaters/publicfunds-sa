@@ -4,6 +4,39 @@
  "about": "One entry per published build whose data changed, newest first. count_changes compare with the previous published build; counts are totals in that build. Re-publishing identical data adds no entry.",
  "entries": [
   {
+   "build_id": "B20261029T010857Z",
+   "published_sast": "2026-10-29T03:09:40+02:00",
+   "data_hash": "efbccd94e2b55a16",
+   "summary": [
+    "Figures updated or corrected in: departments.json, municipalities.json, prices.json."
+   ],
+   "count_changes": {},
+   "counts": {
+    "municipalities": 292,
+    "departments": 49,
+    "awards": 9551,
+    "buyers": 488,
+    "fuel_rows": 658,
+    "cpi_months": 225,
+    "flags_confirmed": 0,
+    "leads_hidden": 349
+   },
+   "coverage_pct": 75.7,
+   "coverage_pct_before": 75.7,
+   "files_changed": [
+    "departments.json",
+    "municipalities.json",
+    "prices.json"
+   ],
+   "files_added": [],
+   "files_removed": [],
+   "data_quality": {
+    "pass": 58,
+    "warn": 1,
+    "fail": 0
+   }
+  },
+  {
    "build_id": "B20261028T010605Z",
    "published_sast": "2026-10-28T03:06:56+02:00",
    "data_hash": "d3e2d172f8952c1a",
