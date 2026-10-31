@@ -144,11 +144,11 @@ Diff scan: aggregate counts, data type names, years, RFC and CSI identifiers, an
 If the owner approves, the "Commit approved" cell must name the final head, and any later commit needs re-approval.
 
 ## Review
-**No review of this change exists yet.** Results may be added later only as reported to the author (PublicFunds), each for an exact commit. A reviewer PASS is not an owner GO.
+**Validator and Scout reviewed this change, as reported to the author (PublicFunds)** (not stored in the repository). A reviewer PASS is not an owner GO.
 
 **Fix round (26 Oct 2026, SAST), on review findings as reported to the author (PublicFunds) for head `57208e9`** (conditional results; not an owner GO, and not a pass for the fix commit): (1) the exit-3 label no longer claims to know the cause; (2) M07 is reachable (empty or invalid JSON) and is tested; (3) M18 is reachable (a crashed report helper) and the script prints `UNKNOWN (report helper failed)`; a missing line must be treated as UNKNOWN; (4) any note makes the line `pass (N notes)`, so only a bare `pass` is quiet; (5) note text is sanitised and capped; (6) Appendix B says "any non-zero status", and A/B are stated to change routine behaviour and need separate owner approval; (7) the change-log row no longer splits on `||`; (8) the box path is gone from this RFC, the full mutant list is in it, and the non-pf JSON error case is tested.
 
-Result: PR #40 open, not merged; no owner GO; no review of the fix commit.
+Result: Merged as PR #40 (merge commit `571d2d5`, 26 Oct 2026, tag `snapshot-2026-10-26-1728`). Appendices A and B were applied outside the repo on 26 Oct 2026 at 17:33 SAST with the owner's approval, as reported to the author (PublicFunds); recorded by CHG-2026-042.
 
 ## Appendix: exact proposed wording (for the owner to apply after a merge; not applied by this change)
 **Appendix A and B change the routine's behaviour:** A adds a `--push` publish step to the live skill (it has no publish step today; the push is pre-authorised only from the daily refresh routine the owner approved) and B adds a new report format. **They are not applied by this change and need the owner's separate approval after the merge.**
