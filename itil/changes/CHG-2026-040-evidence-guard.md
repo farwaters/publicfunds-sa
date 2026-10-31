@@ -105,4 +105,4 @@ Recorded **as reported to the author (PublicFunds)**; this repository holds no i
 - **Only Validator's delta check at `3536d9a` (records only, code unchanged from `3b91a78`) covers that head; Scout's passes cover `3b91a78`; no review covers the head of this latest commit; no owner GO.**
 - A reviewer PASS is not an owner GO. Four checks (expert, shadow, charter, drift) and popia-review by someone other than the author are still needed on the final head before any merge.
 
-Result: Open PR #39, not merged; no owner GO; no review covers the head of the latest commit.
+Result: Merged as PR #39 (merge commit `143c1be`, 2026-10-25, tag `snapshot-2026-10-25-1755`); recorded by CHG-2026-042.
