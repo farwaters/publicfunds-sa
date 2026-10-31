@@ -8,6 +8,8 @@ import sys
 import time
 from pathlib import Path
 
+import hashlib
+
 import duckdb
 import pytest
 
@@ -126,7 +128,7 @@ def test_refuses_while_writer_lock_is_held(state):
                                str(wh)], stdout=subprocess.PIPE, text=True)
     try:
         assert holder.stdout.readline().strip() == "locked"
-        with pytest.raises(bk.BackupError, match="read-only"):
+        with pytest.raises(bk.BackupError, match="writer lock"):
             bk.backup(wh, rv, dest, ps_output="")
         assert not bk.daily_dirs(dest)
         assert not [p for p in dest.iterdir()] if dest.exists() else True
@@ -164,3 +166,83 @@ def test_cli_exit_codes(state, tmp_path):
 def test_backup_dir_is_gitignored():
     r = subprocess.run(["git", "check-ignore", "-q", "publicfunds-backups/2026-10-31/manifest.json"], cwd=ROOT)
     assert r.returncode == 0
+
+
+def folder_state(*dirs):
+    """Every file in the folders (recursive): name, size, mode and sha256. mtimes are left out on purpose:
+    a byte-for-byte check plus the file list is the claim."""
+    out = {}
+    for d in dirs:
+        for p in sorted(Path(d).rglob("*")):
+            st = os.stat(p)
+            out[str(p)] = (st.st_mode, st.st_size, hashlib.sha256(p.read_bytes()).hexdigest() if p.is_file() else None)
+    return out
+
+
+@pytest.mark.parametrize("wal_mode", [False, True])
+def test_source_folders_unchanged(state, wal_mode):
+    """The live case: a WAL-mode db with no -wal/-shm on disk. A read-only open of it creates both files."""
+    wh, rv, dest = state
+    if wal_mode:
+        c = sqlite3.connect(rv)
+        c.execute("PRAGMA journal_mode=WAL")
+        c.close()
+        assert sorted(p.name for p in rv.parent.iterdir()) == ["review.sqlite"]
+    before = folder_state(wh.parent, rv.parent)
+    run_backup(state, day="2026-10-31")
+    assert folder_state(wh.parent, rv.parent) == before
+
+
+def test_wal_mode_uncheckpointed_writes_are_backed_up_and_source_unchanged(state):
+    """A writer keeps the db in WAL mode with un-checkpointed commits (like pf serve). The backup must include
+    them and must not create, change or remove any file next to the db (no new -wal/-shm, no checkpoint)."""
+    wh, rv, dest = state
+    holder = subprocess.Popen([sys.executable, "-c", (
+        "import sqlite3,sys,time\n"
+        "c=sqlite3.connect(sys.argv[1]); c.execute('PRAGMA journal_mode=WAL'); c.execute('PRAGMA wal_autocheckpoint=0')\n"
+        "c.executemany('INSERT INTO decision (flag, verdict) VALUES (?, ?)', [('W%d' % i, 'ok') for i in range(5)])\n"
+        "c.commit(); print('ready', flush=True); time.sleep(60)"), str(rv)], stdout=subprocess.PIPE, text=True)
+    try:
+        assert holder.stdout.readline().strip() == "ready"
+        wal = rv.with_name(rv.name + "-wal")
+        assert wal.exists() and wal.stat().st_size > 0
+        before = folder_state(wh.parent, rv.parent)
+        out = run_backup(state, day="2026-10-31")
+        assert folder_state(wh.parent, rv.parent) == before
+        m = json.loads((out / "manifest.json").read_text())
+        assert m["sqlite_tables"]["decision"] == 7
+        c = sqlite3.connect(out / "review.sqlite")
+        assert c.execute("SELECT count(*) FROM decision WHERE flag LIKE 'W%'").fetchone()[0] == 5
+        c.close()
+        assert not list(out.glob("review.sqlite-*"))
+    finally:
+        holder.kill()
+        holder.wait()
+
+
+def test_reader_does_not_block_backup(state):
+    """pf serve may hold a read-only DuckDB connection; that is not a writer."""
+    wh, rv, dest = state
+    holder = subprocess.Popen([sys.executable, "-c",
+                               "import duckdb,sys,time; c=duckdb.connect(sys.argv[1], read_only=True); print('r',flush=True); time.sleep(60)",
+                               str(wh)], stdout=subprocess.PIPE, text=True)
+    try:
+        assert holder.stdout.readline().strip() == "r"
+        before = folder_state(wh.parent, rv.parent)
+        run_backup(state, day="2026-10-31")
+        assert folder_state(wh.parent, rv.parent) == before
+    finally:
+        holder.kill()
+        holder.wait()
+
+
+def test_snapshot_refuses_a_file_that_keeps_changing(tmp_path, monkeypatch):
+    db = tmp_path / "x.sqlite"
+    db.write_bytes(b"a")
+    into = tmp_path / "snap"
+    into.mkdir()
+    n = iter(range(100))
+    monkeypatch.setattr(bk, "_sig", lambda paths: [next(n)])
+    monkeypatch.setattr(bk.time, "sleep", lambda s: None)
+    with pytest.raises(bk.BackupError, match="kept changing"):
+        bk.snapshot(db, ("-wal",), into, tries=3)

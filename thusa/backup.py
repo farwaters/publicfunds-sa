@@ -1,8 +1,13 @@
 """Nightly state backup and restore check (CHG-2026-044).
 
 Backs up the DuckDB warehouse and the SQLite review database to a dated folder OUTSIDE the repo.
-- SQLite: the online backup API (Connection.backup). This is safe while the review app runs.
-- DuckDB: EXPORT DATABASE (Parquet) over a read-only connection. The backup refuses when a writer is active.
+Nothing opens a live database file. A database open can write side files (SQLite -wal/-shm, DuckDB .wal), so
+the backup first takes a SNAPSHOT: it copies the db file and any existing -wal/.wal file into a private temp dir
+(0700). The copy is retried until the size and mtime of every source file are the same before and after the copy;
+it fails after SNAPSHOT_TRIES. The live folders stay byte-for-byte unchanged.
+- SQLite: the online backup API (Connection.backup) reads the snapshot. SQLite replays the copied WAL, so
+  committed but un-checkpointed writes are in the backup. integrity_check runs on the result.
+- DuckDB: EXPORT DATABASE (Parquet) from the snapshot. The backup refuses when a writer is active.
   A writer is a running `thusa ingest|build|run` process, a `*.building.duckdb` file, or a lock that blocks a
   read-only open. The backup never copies an open database file.
 A manifest records the sha256 of every backup file and the row count of every table.
@@ -20,6 +25,7 @@ import sqlite3
 import subprocess
 import sys
 import tempfile
+import time
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -31,6 +37,38 @@ DEFAULT_DEST = Path("/home/box/publicfunds-backups")
 DEFAULT_KEEP = 14
 DAY_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 WRITER_RE = re.compile(r"(^|[/\s])thusa\s+(ingest|build|run)(\s|$)")
+
+
+SNAPSHOT_TRIES = 5
+
+
+def _sig(paths: list[Path]) -> list:
+    return [(p.name, st.st_size, st.st_mtime_ns, st.st_ino) if (st := _stat(p)) else (p.name, None) for p in paths]
+
+
+def _stat(p: Path):
+    try:
+        return os.stat(p)
+    except FileNotFoundError:
+        return None
+
+
+def snapshot(db: Path, side_suffixes: tuple[str, ...], into: Path, tries: int = SNAPSHOT_TRIES) -> Path:
+    """Copy db and its side files (only those that exist; never -shm) into `into` without opening them as a database.
+    Read-only file reads; the source folder does not change. Retries while a source file changes during the copy."""
+    srcs = [db] + [db.with_name(db.name + s) for s in side_suffixes]
+    for _ in range(tries):
+        before = _sig(srcs)
+        for f in into.iterdir():
+            f.unlink()
+        for src in srcs:
+            if src.exists():
+                shutil.copyfile(src, into / src.name)
+                os.chmod(into / src.name, 0o600)
+        if _sig(srcs) == before:
+            return into / db.name
+        time.sleep(0.2)
+    raise BackupError(f"{db.name} kept changing during {tries} snapshot attempts; backup refused")
 
 
 class BackupError(Exception):
@@ -60,6 +98,21 @@ def active_writers(warehouse: Path, ps_output: str | None = None) -> list[str]:
     if building.exists():
         reasons.append(f"build in progress: {building.name} exists")
     return reasons
+
+
+def _duckdb_locked(path: Path) -> bool:
+    """True when another process holds an fcntl WRITE lock on the DuckDB file. Opens the file O_RDONLY and only
+    queries the lock (F_GETLK); this writes nothing."""
+    import fcntl
+    import struct
+    fd = os.open(path, os.O_RDONLY)
+    try:
+        # Ask for a read lock: only a write lock held by another process conflicts. Readers (pf serve) do not.
+        fmt = "hhqqi4x"
+        res = fcntl.fcntl(fd, fcntl.F_GETLK, struct.pack(fmt, fcntl.F_RDLCK, 0, 0, 0, 0))
+        return struct.unpack(fmt, res)[0] != fcntl.F_UNLCK
+    finally:
+        os.close(fd)
 
 
 def duckdb_counts(con) -> dict[str, int]:
@@ -102,19 +155,27 @@ def backup(warehouse: Path, review_db: Path, dest: Path, keep: int = DEFAULT_KEE
         try:
             manifest = {"created_at_utc": datetime.now(timezone.utc).isoformat(timespec="seconds"),
                         "day": day, "sources": {"duckdb": warehouse.name, "sqlite": review_db.name}}
-            # DuckDB: a read-only open fails while another process holds the write lock.
+            snap = Path(tempfile.mkdtemp(prefix=".snap.", dir=work))
+            os.chmod(snap, 0o700)
+            (snap / "duckdb").mkdir(mode=0o700)
+            (snap / "sqlite").mkdir(mode=0o700)
+            # DuckDB: never open the live file (an open can create a .wal). A writer holds an fcntl lock on it.
+            if _duckdb_locked(warehouse):
+                raise BackupError("the warehouse is locked by another process (writer lock); backup refused")
+            wsnap = snapshot(warehouse, (".wal",), snap / "duckdb")
             try:
-                con = duckdb.connect(str(warehouse), read_only=True)
+                con = duckdb.connect(str(wsnap))
             except duckdb.Error as e:
-                raise BackupError(f"cannot open the warehouse read-only (writer lock?): {e}") from e
+                raise BackupError(f"cannot open the warehouse snapshot: {e}") from e
             try:
                 manifest["duckdb_tables"] = duckdb_counts(con)
                 out = work / "duckdb"
                 con.execute(f"EXPORT DATABASE '{out}' (FORMAT PARQUET)")
             finally:
                 con.close()
-            # SQLite: online backup API, read-only source.
-            src = sqlite3.connect(f"file:{review_db}?mode=ro", uri=True)
+            # SQLite: online backup API from the snapshot (db + -wal). SQLite replays the WAL in the snapshot.
+            rsnap = snapshot(review_db, ("-wal",), snap / "sqlite")
+            src = sqlite3.connect(rsnap)
             try:
                 dst = sqlite3.connect(work / "review.sqlite")
                 try:
@@ -126,6 +187,7 @@ def backup(warehouse: Path, review_db: Path, dest: Path, keep: int = DEFAULT_KEE
                     dst.close()
             finally:
                 src.close()
+            shutil.rmtree(snap)
             manifest["files"] = {str(p.relative_to(work)): sha256(p)
                                  for p in sorted(work.rglob("*")) if p.is_file()}
             (work / "manifest.json").write_text(json.dumps(manifest, indent=2, sort_keys=True))

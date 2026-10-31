@@ -15,9 +15,12 @@ A restore test on 31 Oct 2026 found no backup of `data/thusa.duckdb`. It found n
 ## Change
 1. `thusa/backup.py backup` (wrapper `scripts/backup-state.sh`) makes one dated backup:
    - The folder is `/home/box/publicfunds-backups/YYYY-MM-DD/`. Set `PF_BACKUP_DIR` to change it. The folder is outside the repo.
-   - SQLite: the script uses the online backup API (`Connection.backup`). The source is opened read-only. The script runs `PRAGMA integrity_check` on the copy.
-   - DuckDB: the script opens the file read-only and runs `EXPORT DATABASE ... (FORMAT PARQUET)`. It never copies an open database file.
-   - The script refuses when a writer is active. A writer is a running `thusa ingest`, `thusa build` or `thusa run` process. A writer is also a `*.building.duckdb` file. A lock that blocks the read-only open also stops the backup.
+   - The script never opens a live database file. First it takes a snapshot. It copies the db file and the existing `-wal` (SQLite) or `.wal` (DuckDB) file into a private temp folder (mode 0700). It never copies `-shm`.
+   - The script compares the size, mtime and inode of each source file before and after the copy. If a value changes, the script copies again. After 5 tries it stops with exit code 1.
+   - SQLite: the script runs the online backup API (`Connection.backup`) from the snapshot. SQLite replays the copied WAL. Committed writes that are not checkpointed are in the backup. The script runs `PRAGMA integrity_check` on the copy.
+   - DuckDB: the script opens the snapshot and runs `EXPORT DATABASE ... (FORMAT PARQUET)`.
+   - The script deletes the snapshot before it writes the manifest.
+   - The script refuses when a writer is active. A writer is a running `thusa ingest`, `thusa build` or `thusa run` process. A writer is also a `*.building.duckdb` file. A write lock on the DuckDB file also stops the backup. The script checks the lock with `fcntl(F_GETLK)` on a read-only file descriptor. This call writes nothing. A read-only connection (for example from `pf serve`) is not a writer and does not stop the backup.
    - `manifest.json` records the sha256 of each backup file and the row count of each table.
    - The script writes into a temp folder first. It renames the folder only when all steps pass. A second run on the same day replaces that day's folder.
    - The script keeps 14 daily folders. Set `--keep` or `PF_BACKUP_KEEP` to change the number. It deletes the oldest folders.
@@ -41,16 +44,30 @@ Normal-high. `itil/change-enablement.md` puts "POPIA-relevant handling" in Norma
 - The retention limit deletes copies older than 14 days.
 - The restore check writes only to a temp folder. Python deletes the temp folder after the check.
 
+## Method choice (review round 1)
+Cassian (Build) failed head `8d2e6e92`, as reported to the author (PublicFunds). The read-only SQLite open created `review.sqlite-wal` and `review.sqlite-shm` in the live review folder. The fix weighed two methods:
+- `immutable=1`. SQLite then does not create side files. But SQLite also ignores the `-wal` file and all locks. If `pf serve` writes, or if the WAL holds commits that are not checkpointed, the backup misses those commits. This method is not safe. The fix does not use it.
+- Snapshot, then backup. The script copies the db file and the `-wal` file with plain file reads. Plain reads write nothing. The script checks that no source file changed during the copy. The online backup API then reads the private copy. The copy includes the WAL commits. This method is consistent and writes nothing to the source folder. The fix uses it.
+
+`pf serve` can run during a backup. A write by `pf serve` during the copy changes the size or mtime of `review.sqlite` or `review.sqlite-wal`. The script then copies again. A torn copy that the check does not find fails `integrity_check`. The script then stops with exit code 1.
+
+DuckDB: a read-only open did not create a `.wal` file in a test on 31 Oct 2026. The script does not depend on this result. It opens only the snapshot.
+
 ## Limits
+- The earlier live run of head `8d2e6e92` (31 Oct 2026 19:17 SAST) created an empty `review.sqlite-wal` and a `review.sqlite-shm` in `data/review/`. The files are still there. This change does not delete them. They do not change the data.
+- The size and mtime check finds most changes during the copy. It cannot find a write that keeps the size and the mtime. `integrity_check` is the second check.
 - The backups are on the same box. They do not reduce RSK-006 (single box). The offsite target (CI-050) is still planned.
-- SQLite in WAL mode can create `review.sqlite-wal` and `review.sqlite-shm` next to the source on a read-only open. This is normal SQLite behaviour. The data does not change.
 - The process check reads `ps` output. A writer with a different command line is not found by the process check. The DuckDB lock check and the `*.building.duckdb` check still apply.
 
 ## Testing
-- `tests/test_backup_state.py`: 15 tests. The tests use temp fixtures only. They use no real data.
-- The tests cover: manifest hashes and counts; file modes; restore PASS; FAIL on a changed file; FAIL on a changed count; FAIL with no backup; retention; a same-day rerun; refusal while `thusa run` runs; refusal while a build file exists; refusal while another process holds the DuckDB write lock; a missing source; the process pattern; CLI exit codes; `.gitignore`.
+- `tests/test_backup_state.py`: 20 tests. The tests use temp fixtures only. They use no real data.
+- The tests cover: manifest hashes and counts; file modes; restore PASS; FAIL on a changed file; FAIL on a changed count; FAIL with no backup; retention; a same-day rerun; refusal while `thusa run` runs; refusal while a build file exists; refusal while another process holds the DuckDB write lock; a missing source; source folders unchanged (file list, mode, size and sha256 of every file, before and after) for a normal db and for a WAL-mode db with no side files; a WAL-mode db with commits that are not checkpointed, held open by another process: the folders do not change and the backup has the 5 new rows; a DuckDB reader does not stop the backup; a snapshot of a file that keeps changing fails; the process pattern; CLI exit codes; `.gitignore`.
 - Full suite: `uv run pytest`. The result is in the PR.
-- A read-only run on the live files is described in the PR. It wrote only to a temp folder.
+- Live proof, 31 Oct 2026 19:24 SAST, against `/workspace/publicfunds`. `pf serve` ran. No `thusa` writer ran. The backup went to a temp folder.
+  - Before and after the backup and the restore check, the author recorded `ls -la --time-style=full-iso` of `data/` and `data/review/`. The author also recorded the sha256 of all 176 files under `data/`.
+  - Both records were identical before and after (`cmp`). The file list, sizes, modes and mtimes did not change.
+  - Backup: exit 0. Restore check: PASS.
+  - The author deleted the temp backup after the check.
 
 ## Risk
 Low for published output. The code does not run in any routine until the owner approves the appendices. The main risk is a disk that fills up. Each backup is about 21 MB on 31 Oct 2026. 14 copies use about 300 MB.
