@@ -26,3 +26,5 @@ docs/**/*.html
 .DS_Store
 !apps/public-dashboard/*.html
 !/index.html
+# State backups (CHG-2026-044): never commit. Default location is outside the repo.
+publicfunds-backups/

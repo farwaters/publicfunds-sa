@@ -12,7 +12,7 @@ Value 1–5, Effort 1–5; Priority = Value / Effort (higher first). Reviewed mo
 | CSI-006 | Partner data-sharing with TenderWatch / OCP Cardinal | Landscape §6 | 4 | 3 | 1.3 | Proposed | MoU / shared method |
 | CSI-007 | Add circuit breaker: tighten review when revert/incident rate rises | P2 (gap they noted) | 3 | 2 | 1.5 | Proposed | Auto-switch implemented |
 | CSI-008 | Recruit a second maintainer (bus factor > 1) | P3, RSK-013 | 4 | 3 | 1.3 | Proposed | Second person can release |
-| CSI-009 | Monthly restore test automation | P1/P3 | 4 | 2 | 2.0 | Proposed | 3 consecutive passes |
+| CSI-009 | Monthly restore test automation | P1/P3 | 4 | 2 | 2.0 | In progress (CHG-2026-044, weekly restore check, PR open, not merged) | 3 consecutive passes |
 | CSI-010 | Load pre-2019 municipal income & expenditure (incexp v1) once the cube's members endpoint works; extend the coverage window back to FYE 2012 for UIF&W and audit | KE-005 | 3 | 2 | 1.5 | Proposed | FYE 2012–2019 cells computed |
 | CSI-011 | eTenders delta: page by 1-day windows; alert if the delta stays partial for 3 days | INC-2026-001 | 3 | 1 | 3.0 | Proposed | Delta `ok` 7 days running |
 | CSI-012 | Add provincial BvA + ENE resources from vulekamali dataset pages (provincial departments into coverage) | INC-2026-002 | 4 | 2 | 2.0 | Proposed | Provincial depts in grid |
