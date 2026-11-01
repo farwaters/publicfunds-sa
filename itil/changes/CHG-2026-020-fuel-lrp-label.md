@@ -15,7 +15,7 @@ reviewer-found correctness defect. A wrong label on public official data mislead
 verifiable fix against raw files already on disk, so it goes first; CSI-036/037 stay next.
 
 ## Evidence (raw files in data/raw/dmpr_fuel/, read 2026-10-23)
-- Re-verified 2026-10-23 after validator finding: the October 2026 "History of Fuel Prices" DOCX table XML gives
+- Re-verified 2026-10-23 after a Reviewer A finding: the October 2026 "History of Fuel Prices" DOCX table XML gives
   "Leaded Replacement Petrol" `gridSpan=2` over columns 1 and 2 (Inland 93, Coast 95) and "Unleaded" span 1 over column 3
   (Inland 95) only. The 2019-2025 yearly PDFs (text layout) show the same heading order and are consistent with that
   span. (The first version of this RFC wrongly said LRP covered column 1 only and Unleaded both 95 columns.)
@@ -45,4 +45,4 @@ official DMPR grade headings and prices.
 ## Review
 Four checks (expert, shadow, charter, drift) and popia-review by someone other than the author before any merge. Merge needs the owner's quoted GO.
 
-Result: DEV build succeeded; merged as PR #18 (merge commit ecdac4d, 2026-10-23 17:45 SAST) on the owner's GO quoted in `changes/CAB-DECISION.md` (section "PR #18"); Validator, Scout and popia-review PASS as recorded there. PROD: live since the nightly publish of 2026-10-24 03:05 SAST (data commit 15c55e7); checked in `public-data/v1` on origin/main: grade label "Leaded Replacement Petrol (LRP) 93, inland".
+Result: DEV build succeeded; merged as PR #18 (merge commit ecdac4d, 2026-10-23 17:45 SAST) on the owner's GO quoted in `changes/CAB-DECISION.md` (section "PR #18"); Reviewer A, Reviewer B and popia-review PASS as recorded there. PROD: live since the nightly publish of 2026-10-24 03:05 SAST (data commit 15c55e7); checked in `public-data/v1` on origin/main: grade label "Leaded Replacement Petrol (LRP) 93, inland".

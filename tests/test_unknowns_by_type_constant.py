@@ -75,7 +75,7 @@ def _set(cov, dt, fye, state, reason=None, only=None):
     return c
 
 
-def mutate_validator_case(cov):
+def mutate_reviewer_a_case(cov):
     """Opinion and budget FYE 2023 (2022/23) lose every row: all cells 'm' / not_in_loaded_sources."""
     return _set(_set(cov, "audit_opinion", 2023, "m", "not_in_loaded_sources"), "budget", 2023, "m", "not_in_loaded_sources")
 
@@ -153,7 +153,7 @@ def _page_model(cov, mun):
     return _run_block("ceilingModel(d.cov, d.mun)", {"cov": cov, "mun": mun})
 
 
-@pytest.mark.parametrize("name,mutate", [("real data", lambda c: c), ("validator case: opinion+budget 2022/23 emptied", mutate_validator_case),
+@pytest.mark.parametrize("name,mutate", [("real data", lambda c: c), ("Reviewer A case: opinion+budget 2022/23 emptied", mutate_reviewer_a_case),
                                          ("partial arrival: 200 of 257 UIFW 2024/25", mutate_partial_arrival),
                                          ("UIFW 2024/25 arrives for all", mutate_year_arrives),
                                          ("a year before the window (lower bound of the window)", mutate_year_before_window),
@@ -173,7 +173,7 @@ def test_reference_behaviour_on_mutations():
     assert base["_text"]["in_cell"]["EC"]["uifw"] == "(at most 83,3% with the data loaded today)"
     assert base["procurement"] == {"empty": [], "ceiling": {}, "note": None} and not any(base["_text"]["in_cell"][p]["procurement"] for p in base["_text"]["in_cell"])
     assert not any("tender" in line for line in base["_banner"])       # decision 3: no tender note, marker, banner line or ceiling
-    v = model(mutate_validator_case(COV), MUN)
+    v = model(mutate_reviewer_a_case(COV), MUN)
     assert v["audit_opinion"]["empty"] == ["2022/23", "2024/25"] and v["budget"]["empty"] == ["2022/23", "2024/25"]
     assert max(v["audit_opinion"]["ceiling"].values()) == 66.7            # descriptive: the page shows the real gap, with no cause
     assert "no municipality has complete data for 2022/23" in v["audit_opinion"]["note"]
@@ -198,7 +198,7 @@ def test_empty_years_are_pinned_per_type():
 
 
 @needs_baseline
-@pytest.mark.parametrize("mutate", [mutate_validator_case, mutate_partial_arrival, mutate_year_arrives])
+@pytest.mark.parametrize("mutate", [mutate_reviewer_a_case, mutate_partial_arrival, mutate_year_arrives])
 def test_pin_detects_the_mutations(mutate):
     assert pin_violations(mutate(COV)), "the pin did not notice the mutation"
 
@@ -264,7 +264,7 @@ def _public_strings(m):
             + [t["caption"], t["legend"], t["how_to_read"], t["csv_note"], t["tender_caption"]] + [x for d in t["in_cell"].values() for x in d.values() if x])
 
 
-@pytest.mark.parametrize("mutate", [lambda c: c, mutate_validator_case, mutate_partial_arrival])
+@pytest.mark.parametrize("mutate", [lambda c: c, mutate_reviewer_a_case, mutate_partial_arrival])
 def test_public_text_has_no_internal_jargon_or_published(mutate):
     texts = _public_strings(model(mutate(COV), MUN))
     assert len(texts) > 10 and any("at most" in t for t in texts) and any(t.startswith("How to read") for t in texts)
@@ -303,7 +303,7 @@ def mutate_window_start_emptied(cov):
     return _set(cov, "actual_audited", 2020, "m", "not_in_loaded_sources")
 
 
-GAP_CASES = [("first year of the window emptied", mutate_window_start_emptied), ("real data", lambda c: c), ("validator case: opinion+budget 2022/23 emptied", mutate_validator_case),
+GAP_CASES = [("first year of the window emptied", mutate_window_start_emptied), ("real data", lambda c: c), ("Reviewer A case: opinion+budget 2022/23 emptied", mutate_reviewer_a_case),
              ("partial arrival: 200 of 257 UIFW 2024/25", mutate_partial_arrival), ("UIFW 2024/25 arrives for all", mutate_year_arrives),
              ("all three 2024/25 core types arrive", mutate_all_core_arrive),
              ("audited actuals 2021/22 and tenders 2022/23 emptied", mutate_actuals_and_tenders_emptied),
@@ -320,7 +320,7 @@ def test_gap_lines_page_code_matches_reference(name, mutate):
 @needs_baseline
 def test_gap_lines_on_real_data_and_mutations():
     assert core_gap_lines(COV) == [REAL_GAP_LINE]
-    v = core_gap_lines(mutate_validator_case(COV))
+    v = core_gap_lines(mutate_reviewer_a_case(COV))
     assert [x.split(":")[0] for x in v] == ["2022/23", "2024/25"] and "audit opinion" in v[0] and "budget" in v[0] and "irregular" not in v[0]
     assert core_gap_lines(mutate_all_core_arrive(COV)) == []                      # nothing empty: no note at all
     a = core_gap_lines(mutate_year_arrives(COV))
@@ -384,7 +384,7 @@ def test_headline_context_edge_cases():
     assert headline_context_lines(d) == REAL_CONTEXT[:1]                                 # next year already counted: no prediction
     d = copy.deepcopy(c); d["headline"]["by_year"] = [y for y in d["headline"]["by_year"] if y["fye"] != 2026]
     assert headline_context_lines(d) == REAL_CONTEXT[:1]                                 # no next year in the data: no prediction
-    v = headline_context_lines(mutate_validator_case(c))                                 # 2022/23 and 2024/25 empty: not one block
+    v = headline_context_lines(mutate_reviewer_a_case(c))                                 # 2022/23 and 2024/25 empty: not one block
     assert v[0].startswith("Includes 2022/23 and 2024/25, ") and "2019/20, 2020/21, 2021/22 and 2023/24 alone: " in v[0]
     assert "(" + str(232 + 228 + 240 + 235) + " of " + str(257 * 4) + " municipality-years)" in v[0] and "about" in v[1] and "like 2024/25 does today" in v[1]
     w = headline_context_lines(mutate_window_start_emptied(c))                           # window start empty: the rest is 2020/21 to 2023/24

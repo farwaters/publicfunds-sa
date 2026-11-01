@@ -28,7 +28,7 @@
 ## Data identical before/after
 All raw DMPR files parsed with the parser functions; fingerprint = sha256 of sorted (year, month, grade,
 cents_per_litre, source_locator), first 16 hex: before `2d41afb650c22d16`, 644 rows; after `2d41afb650c22d16`, 644 rows.
-Serialisation: `sha256(json.dumps(sorted([(year, month, grade, cents_per_litre, source_locator)])))`, first 16 hex `2d41afb650c22d16` (Scout reproduced it; `repr()` instead of `json.dumps` gives a different value).
+Serialisation: `sha256(json.dumps(sorted([(year, month, grade, cents_per_litre, source_locator)])))`, first 16 hex `2d41afb650c22d16` (Reviewer B reproduced it; `repr()` instead of `json.dumps` gives a different value).
 
 ## Tests
 - `pytest`: 161 passed, 60 skipped.
@@ -42,4 +42,4 @@ official DMPR grade headings and prices.
 ## Review
 Four checks (expert, shadow, charter, drift) and popia-review by someone other than the author before any merge. Merge needs the owner's quoted GO.
 
-Result: DEV build succeeded; merged as PR #19 (merge commit d54e362, 2026-10-23 17:52 SAST) on the owner's GO quoted in `changes/CAB-DECISION.md` (section "PR #19"); Validator, Scout and popia-review PASS as recorded there. PROD: live since the nightly publish of 2026-10-24 03:05 SAST (data commit 15c55e7); checked in `public-data/v1` on origin/main: grade label "Leaded Replacement Petrol (LRP) 95, coast".
+Result: DEV build succeeded; merged as PR #19 (merge commit d54e362, 2026-10-23 17:52 SAST) on the owner's GO quoted in `changes/CAB-DECISION.md` (section "PR #19"); Reviewer A, Reviewer B and popia-review PASS as recorded there. PROD: live since the nightly publish of 2026-10-24 03:05 SAST (data commit 15c55e7); checked in `public-data/v1` on origin/main: grade label "Leaded Replacement Petrol (LRP) 95, coast".

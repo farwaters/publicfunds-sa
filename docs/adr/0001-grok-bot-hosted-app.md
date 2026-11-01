@@ -1,7 +1,7 @@
 # ADR-0001: Build as a Grok Bot-hosted app (box pipeline + routines + Ops Bot + static public snapshot)
 - Status: Accepted (prototype); **amended by ADR-0009** (distributed as the PublicFunds Bot Grok Bot template; decision (d) external public host superseded)
 - Date: 2026-10-19
-- Deciders: L👀ty McFreely (owner), Grok Bot (proposer)
+- Deciders: The owner, Grok Bot (proposer)
 
 ## Context
 The user wants the prototype, and possibly the whole project, to be a "Grok Bot app". Grok Bot provides persistent Bots on a shared cloud computer with browser, filesystem and terminal, plus skills, scheduled/event routines, connectors/MCP and file storage (https://docs.x.ai/grok-bot/overview, https://docs.x.ai/grok-bot/skills-routines-and-automations). The docs don't describe a first-party way to publicly host a web app from the Bot's computer **[unverified that none exists]**. Grok Build (separate xAI product) publishes apps and dashboards with connectors and GitHub export (https://x.ai/news/grok-build-for-everyone). Community Grok Bot templates deploy via the Vercel connector (https://grokbotsdirectory.com/bots/website-builder-3Zzb23).

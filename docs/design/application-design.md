@@ -1,6 +1,6 @@
 # Thusa — SA Public Expenditure Dashboard: Application Design
 
-*Working name "Thusa" (placeholder; see open decision D-01). Version 0.1 (draft), 19 Oct 2026 SAST. Owner: L👀ty McFreely. Author: Grok Bot.*
+*Working name "Thusa" (placeholder; see open decision D-01). Version 0.1 (draft), 19 Oct 2026 SAST. Owner: the owner (service owner). Author: Grok Bot.*
 *Inputs: [`../../sa_public_funds_landscape.md`](../../sa_public_funds_landscape.md) (landscape & gap analysis, 19 Oct 2026). ITIL artefacts: [`../../itil/`](../../itil/). Decisions: [`../adr/`](../adr/).*
 
 > **Status legend:** **[verified]** confirmed from a cited source on 19 Oct 2026; **[assumption]** a design assumption to be confirmed; **[unverified]** could not be confirmed.
@@ -57,7 +57,7 @@ The box is the system of record. There is no public web host in the MVP.
 | **Sipho — journalist** | Find leads fast and cite them | Search supplier → awards & payments across buyers → restriction status → evidence bundle export | Deep links, CSV export, provenance per row, alert on new data for a watchlist |
 | **Naledi — civil-society analyst** (CW, OUTA, PSAM, IMALI YETHU) | Monitor sectors and advocate | Detector dashboards (e.g. fuel overpricing), coverage gaps, trend charts | Methodology pages, bulk API, reproducible notebooks |
 | **Johan — auditor/oversight** (AGSA, SCOPA researcher, MPAC member) | Triage risk and track consequence | Entity risk profile → IE trend → MI status → recovery gaps | Filters by audit outcome, export to working papers, change history of figures |
-| **Operator — L👀ty + Thusa Ops Bot** | Keep data fresh and correct | Routine runs, DQ failures, incidents, releases | Run logs, DQ dashboards, SLO burn, runbooks |
+| **Operator — the owner + Thusa Ops Bot** | Keep data fresh and correct | Routine runs, DQ failures, incidents, releases | Run logs, DQ dashboards, SLO burn, runbooks |
 
 ---
 
