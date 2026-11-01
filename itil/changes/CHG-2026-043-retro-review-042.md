@@ -14,9 +14,9 @@ PR #41 (CHG-2026-042) is merged. The records still say "PR open, not merged". A 
 
 ## Change
 1. The CHG-2026-042 RFC `Result:` line gives the merge: commit `139e18c`, GitHub mergedAt 31 Oct 2026 18:26:05 SAST, tag `snapshot-2026-10-31-1826`. It quotes the owner chat GO: "merge #41 GO".
-2. A new "Retro review" section in the CHG-2026-042 RFC quotes the note word for word. Source: Cassian (Build), 31 Oct 2026 18:59 SAST, as reported to the author (PublicFunds).
+2. A new "Retro review" section in the CHG-2026-042 RFC quotes the note word for word. Source: Reviewer D, 31 Oct 2026 18:59 SAST, as reported to the author (PublicFunds).
 3. The CHG-2026-042 change-log row gets the same facts.
-4. The records say that Cassian is now the pre-merge reviewer, as reported to the author (PublicFunds).
+4. The records say that Reviewer D is now the pre-merge reviewer, as reported to the author (PublicFunds).
 5. A new change-log row for this change.
 
 The quoted note:

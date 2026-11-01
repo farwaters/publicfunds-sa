@@ -28,3 +28,6 @@ docs/**/*.html
 !/index.html
 # State backups (CHG-2026-044): never commit. Default location is outside the repo.
 publicfunds-backups/
+
+# POPIA name list, plain text, local only (CHG-2026-049)
+.popia-names.local

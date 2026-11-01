@@ -1,6 +1,6 @@
 # South African Public Funds Tracking: Landscape, Coverage & Gap Analysis
 
-*Prepared for L👀ty McFreely, 19 October 2026 (SAST, UTC+2). Research by Grok Bot.*
+*Prepared for the owner, 19 October 2026 (SAST, UTC+2). Research by Grok Bot.*
 
 **Method.** Live web research (WebSearch/WebFetch, X search, direct HTTP checks and a hands-on profile of the eTenders OCDS dataset) on 19 Oct 2026. Every factual claim carries a source URL. Items I could not confirm are marked **[unverified]**. "Liveness" = HTTP check from the research box on 19 Oct 2026. Some government sites (Stats SA, SIU, Public Protector, DMRE legacy site, Vulekamali datastore) blocked or timed out on automated requests. That is noted, but it does **not** mean they are offline for human users.
 

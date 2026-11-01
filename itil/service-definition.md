@@ -8,7 +8,7 @@
 | Description | Free, public dashboard of South African government spending with provenance, coverage gaps ("known unknowns"), red-flag exceptions and benchmarks |
 | Value proposition | Find what any public body spent, with whom, what auditors said, what looks anomalous, and what data is missing, in one place, with sources |
 | Consumers | Taxpayers/residents, journalists, civil-society analysts, oversight staff (personas in design §2) |
-| Service owner | L👀ty McFreely |
+| Service owner | The owner |
 | Operator | Thusa Ops Bot (Grok Bot) under owner supervision |
 | Offering | Web dashboard (read-only, no login); CSV downloads; methodology; corrections channel |
 | Coverage (MVP) | 292 municipalities (Municipal Finance API), national & provincial departments (PPD/OCDS), restricted suppliers, AGSA 2024-25 outcomes, fuel & CPI benchmarks |

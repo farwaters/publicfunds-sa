@@ -5,7 +5,7 @@
 |---|---|
 | **Opportunity / demand** | Taxpayers, journalists, civil society, oversight bodies need one honest view of public spending (landscape report §0) |
 | **Guiding principles** | *Focus on value* (taxpayer-first); *start where you are* (reuse Municipal Money, OCDS, PPD, TenderWatch method); *progress iteratively with feedback* (MVP → phases); *collaborate & promote visibility* (public methodology, corrections log); *think & work holistically* (data + legal + ops); *keep it simple & practical* (DuckDB on one box); *optimise & automate* (routines, CI) |
-| **Governance** | Owner = L👀ty McFreely (service owner, change authority for high-risk changes, Information Officer under POPIA by default). Thusa Ops Bot = operator, never approves its own high-risk changes |
+| **Governance** | Owner = the owner (service owner, change authority for high-risk changes, Information Officer under POPIA by default). Thusa Ops Bot = operator, never approves its own high-risk changes |
 | **Service value chain** | See below |
 | **Practices** | See table below |
 | **Continual improvement** | CSI register reviewed monthly in the release cycle |

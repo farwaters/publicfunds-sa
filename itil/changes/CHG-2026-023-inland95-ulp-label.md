@@ -22,7 +22,7 @@
 ## Change
 - Label `petrol_95_inland`: "Petrol 95, inland" -> "Unleaded Petrol (ULP) 95, inland". Grade id unchanged.
 - One line in `prices.fuel.about` naming the heading, the October 2026 breakdown price (3025.00 c/l) and the
-  unknown, following the CHG-2026-020/021 pattern (wording per validator review of PR #21).
+  unknown, following the CHG-2026-020/021 pattern (wording per Reviewer A review of PR #21).
 - Test asserts the new label. `public-data/` not edited by hand.
 - Out of scope (stays open in CSI-052): the coastal 93 price in the Breakdown that the History table has no column for;
   `fuel.about` is still not rendered on the dashboard (CSI-051).
@@ -50,4 +50,4 @@ official DMPR grade headings.
 ## Review
 Four checks (expert, shadow, charter, drift) and popia-review by someone other than the author before any merge. Merge needs the owner's quoted GO.
 
-Result: DEV build succeeded; merged as PR #21 (merge commit 74456bc, 2026-10-23 19:06 SAST) on the owner's GO quoted in `changes/CAB-DECISION.md` (section "PR #21"); Validator, Scout and popia-review PASS as recorded there. PROD: live since the nightly publish of 2026-10-24 03:05 SAST (data commit 15c55e7); checked in `public-data/v1` on origin/main: grade label "Unleaded Petrol (ULP) 95, inland".
+Result: DEV build succeeded; merged as PR #21 (merge commit 74456bc, 2026-10-23 19:06 SAST) on the owner's GO quoted in `changes/CAB-DECISION.md` (section "PR #21"); Reviewer A, Reviewer B and popia-review PASS as recorded there. PROD: live since the nightly publish of 2026-10-24 03:05 SAST (data commit 15c55e7); checked in `public-data/v1` on origin/main: grade label "Unleaded Petrol (ULP) 95, inland".

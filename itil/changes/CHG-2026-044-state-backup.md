@@ -45,7 +45,7 @@ Normal-high. `itil/change-enablement.md` puts "POPIA-relevant handling" in Norma
 - The restore check writes only to a temp folder. Python deletes the temp folder after the check.
 
 ## Method choice (review round 1)
-Cassian (Build) failed head `8d2e6e92`, as reported to the author (PublicFunds). The read-only SQLite open created `review.sqlite-wal` and `review.sqlite-shm` in the live review folder. The fix weighed two methods:
+Reviewer D failed head `8d2e6e92`, as reported to the author (PublicFunds). The read-only SQLite open created `review.sqlite-wal` and `review.sqlite-shm` in the live review folder. The fix weighed two methods:
 - `immutable=1`. SQLite then does not create side files. But SQLite also ignores the `-wal` file and all locks. If `pf serve` writes, or if the WAL holds commits that are not checkpointed, the backup misses those commits. This method is not safe. The fix does not use it.
 - Snapshot, then backup. The script copies the db file and the `-wal` file with plain file reads. Plain reads write nothing. The script checks that no source file changed during the copy. The online backup API then reads the private copy. The copy includes the WAL commits. This method is consistent and writes nothing to the source folder. The fix uses it.
 
