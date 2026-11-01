@@ -384,9 +384,18 @@ def check_gap_lines(page, vname, app, problems, cov):
             if where == "home":
                 kpi = page.locator(".kpi").first
                 kt = re.sub(r"\s+", " ", kpi.inner_text())
-                for need in (f"{h['complete_pct']}%", f"{h['complete']} of {h['applicable']} municipality-years"):
+                for need in (f"{h['complete_pct']:.1f}".replace(".", ",") + "%", f"{h['complete']} of {h['applicable']} municipality-years"):
                     if need not in kt:
                         say(where, f"the headline card no longer shows {need!r}: {kt!r}")
+                # CHG-2026-047: every decimal on home uses the en-ZA decimal comma (12,5%), never a point
+                # Text that the page shows verbatim from manifest.json (known gaps, source names) is data, not page formatting: it is
+                # left as it is (the owner kept JSON unchanged), so it is cut out before the scan. Example: "P0151.1", "0.1-0.2".
+                home = re.sub(r"\s+", " ", page.locator("#view").inner_text())
+                man = json.loads((ROOT / "public-data/v1/manifest.json").read_text(encoding="utf-8"))
+                for verbatim in [g["text"] for g in man.get("known_gaps", [])] + [s.get("name") or s["id"] for s in man.get("sources", [])]:
+                    home = home.replace(re.sub(r"\s+", " ", verbatim).strip(), " ")
+                for m in re.finditer(r"\d\.\d", home):
+                    say(where, f"decimal point on home: ...{home[max(0, m.start() - 30):m.end() + 30]}...")
                 kb, bb = kpi.bounding_box(), box.bounding_box()
                 if kb and bb and bb["y"] - (kb["y"] + kb["height"]) > 80:
                     say(where, "the gap note is not next to the headline card")

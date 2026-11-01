@@ -145,6 +145,8 @@ function randText(c) {
 function randFull(c) { return c == null ? "" : "R" + (c / 100).toLocaleString("en-ZA", {minimumFractionDigits: 2, maximumFractionDigits: 2}); }
 function rand(c) { return c == null ? unknown() : el("span", {title: randFull(c)}, randText(c)); }
 function num(v, d = 2) { return v == null ? "" : Number(v).toLocaleString("en-ZA", {minimumFractionDigits: d, maximumFractionDigits: d}); }
+/* CHG-2026-047: one decimal with the en-ZA decimal comma (12,5), as the home page shows every decimal */
+function dec1(x) { return Number(x).toFixed(1).replace(".", ","); }
 function pct(x, d = 1) { return x == null ? null : (x * 100).toLocaleString("en-ZA", {maximumFractionDigits: d}) + "%"; }
 function fyLabel(fye) { fye = +fye; return `${fye - 1}/${String(fye).slice(-2)}`; }
 function natFy(fy) { fy = +fy; return `${fy}/${String(fy + 1).slice(-2)}`; }
@@ -235,7 +237,7 @@ async function vHome() {
   setView("Where does South Africa's public money go?",
     el("p", {class: "lead"}, "Budgets, spending, audit results and tenders for every municipality and national department - from official open data, with what is missing shown as clearly as what is there."),
     el("div", {class: "grid"},
-      kp(c.complete_pct == null ? "unknown" : c.complete_pct + "%", `of municipality-years have complete core data (${c.complete} of ${c.applicable} municipality-years; ${c.entities} municipalities, ${fyLabel(c.fye_min)}–${fyLabel(c.fye_max)})`),
+      kp(c.complete_pct == null ? "unknown" : dec1(c.complete_pct) + "%", `of municipality-years have complete core data (${c.complete} of ${c.applicable} municipality-years; ${c.entities} municipalities, ${fyLabel(c.fye_min)}–${fyLabel(c.fye_max)})`),
       gap,
       kp(ctr.municipalities, "municipalities and districts"),
       kp(ctr.departments, "national departments with budget data"),
