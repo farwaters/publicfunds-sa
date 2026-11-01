@@ -701,13 +701,13 @@ function headlineContextLines(cov) {
   const nxt = byYear[h.fye_max + 1];
   if (nxt && nxt.all_core_due === false) {
     const hc = h.complete, ha = h.applicable + nxt.applicable;
-    lines.push(`Prediction, not a result: from the first data update on or after 1 December ${nxt.fye}, the year ${nxt.fy} counts in the headline. If it then looks like ${cov.fy_labels[gaps[gaps.length - 1]]} does today (no municipality with complete data), the headline would fall to about ${tenths(hc, ha)}% (${hc} of ${ha} municipality-years), because ${nxt.fy} would count as a gap, not because anything got worse, if nothing else changes.`);
+    lines.push(`Projection, not data: from the first data update on or after 1 December ${nxt.fye}, the year ${nxt.fy} counts in the headline. If it then looks like ${cov.fy_labels[gaps[gaps.length - 1]]} does today (no municipality with complete data), the headline would fall to about ${tenths(hc, ha)}% (${hc} of ${ha} municipality-years), because ${nxt.fy} would count as a gap, not because anything got worse, if nothing else changes.`);
   }
   return lines;
 }
 /* ceiling:end */
 /* CHG-2026-034: the note under the headline, on the coverage page and on the report card (lines from coreGapLines) */
-const gapBox = (lines, o = {}) => lines.length ? el("div", {class: "gapnote" + (o.card ? "" : " card"), id: "gap-lines", role: "note", style: o.style || null}, lines.map(l => el("p", {}, el("b", {}, l))), (o.extra || []).map(l => el("p", {class: "small", "data-note": "context"}, l)),
+const gapBox = (lines, o = {}) => lines.length ? el("div", {class: "gapnote" + (o.card ? "" : " card"), id: "gap-lines", role: "note", style: o.style || null}, lines.map(l => el("p", {}, el("b", {}, l))), (o.extra || []).map(l => el("p", {class: "small", "data-note": "context", "data-kind": l.startsWith("Projection, not data: ") ? "projection" : null}, l)),
   o.link ? el("p", {class: "small"}, el("a", {href: "#/unknowns"}, "What is missing, by data type →")) : null) : null;
 
 /* ---------------------------------------------------------------- known unknowns (CHG-2026-008) */

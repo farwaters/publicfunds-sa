@@ -359,7 +359,7 @@ def test_gap_lines_have_no_jargon_or_published(name, mutate):
 
 # ------------------------------------------------------------------ 6. CHG-2026-034 review fixes: context beside the headline, labels, wording
 REAL_CONTEXT = ["Includes 2024/25, for which no municipality has complete data in what PublicFunds has loaded. 2019/20 to 2023/24 alone: 90,8% (1167 of 1285 municipality-years).",
-                "Prediction, not a result: from the first data update on or after 1 December 2026, the year 2025/26 counts in the headline. If it then looks "
+                "Projection, not data: from the first data update on or after 1 December 2026, the year 2025/26 counts in the headline. If it then looks "
                 "like 2024/25 does today (no municipality with complete data), the headline would fall to about 64,9% (1167 of 1799 municipality-years), because 2025/26 would count as a gap, not because anything got worse, if nothing else changes."]
 
 
@@ -481,4 +481,4 @@ def test_headline_context_says_municipality_years_with_decimal_commas_and_why_th
     assert "90,8%" in first and "(1167 of 1285 municipality-years)" in first and "90.8" not in first
     assert "64,9%" in second and "(1167 of 1799 municipality-years)" in second and "64.9" not in second
     assert second.endswith("because 2025/26 would count as a gap, not because anything got worse, if nothing else changes.")
-    assert second.startswith("Prediction, not a result: ")
+    assert second.startswith("Projection, not data: ")

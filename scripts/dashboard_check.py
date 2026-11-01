@@ -381,6 +381,11 @@ def check_gap_lines(page, vname, app, problems, cov):
             ctx = [re.sub(r"\s+", " ", t).strip() for t in box.locator('p[data-note="context"]').all_inner_texts()]
             if ctx != (want_ctx if where == "home" else []):
                 say(where, f"headline context lines read {ctx!r}, expected {(want_ctx if where == 'home' else [])!r}")
+            # CHG-2026-046: the yearly projection line is shown on home, starts with its label and is marked as a projection, not data
+            proj = [re.sub(r"\s+", " ", t).strip() for t in box.locator('p[data-kind="projection"]').all_inner_texts()]
+            want_proj = [x for x in want_ctx if x.startswith("Projection, not data: ")] if where == "home" else []
+            if proj != want_proj:
+                say(where, f"projection lines read {proj!r}, expected {want_proj!r}")
             if where == "home":
                 kpi = page.locator(".kpi").first
                 kt = re.sub(r"\s+", " ", kpi.inner_text())
