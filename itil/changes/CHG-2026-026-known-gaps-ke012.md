@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| Requested by / date (SAST) | Owner via Cavus backlog, 2026-10-24 ~08:26: fix the stale public KE-012 text. No GO to merge is given |
+| Requested by / date (SAST) | Owner backlog, as reported to the author (PublicFunds), 2026-10-24 ~08:26: fix the stale public KE-012 text. No GO to merge is given |
 | Environment | DEV build and test; PROD release via the nightly after the owner's merge GO |
 | Type | Standard (public wording only; no code, no data, no figures change) |
 | CIs affected | `config/public-data.yaml` (`known_gaps`, id KE-012), `itil/knowledge/known-errors.md` (KE-012 row; also published as manifest `known_errors[KE-012].symptom`), `itil/registers/change-log.md`, this record |

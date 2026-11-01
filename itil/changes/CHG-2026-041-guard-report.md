@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| Requested by / date (SAST) | Owner via Cavus backlog, 2026-10-26 (CSI-054). **No GO to merge is given; no owner sign-off is recorded** |
+| Requested by / date (SAST) | Owner backlog, as reported to the author (PublicFunds), 2026-10-26 (CSI-054). **No GO to merge is given; no owner sign-off is recorded** |
 | Environment | The merge target is `main`, which is PROD (the nightly runs `scripts/publish-public-data.sh` from `main`). The owner's GO must name `main` (PROD) and CHG-2026-041. Until then the work is on the branch `chg-2026-041-guard-report` (from origin/main `f3801f0`; nothing pushed to main) |
 | Type | **Normal-high** (see "Tier" below) |
 | CIs affected | `scripts/publish-public-data.sh` (one function, two call lines), `tests/test_publish_guard_line.py` (new), `docs/bot/skills/publicfunds-refresh/SKILL.md` (repo copy, step 4), this record, `itil/registers/change-log.md`, the CSI-054 row of `itil/registers/csi-register.md` |
