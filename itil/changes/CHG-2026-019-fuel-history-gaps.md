@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| Requested by / date (SAST) | Owner via Cavus, 2026-10-23 ~16:30 ("GO ahead, iterate until you've run out of design") for a DEV build of the top eligible roadmap item |
+| Requested by / date (SAST) | Owner, as reported to the author (PublicFunds), 2026-10-23 ~16:30 ("GO ahead, iterate until you've run out of design") for a DEV build of the top eligible roadmap item |
 | Environment | DEV only (branch `feat/next-chg019` from origin/main a90606b; PR open, not merged, nothing pushed to main) |
 | Type | **Normal** (parser change that alters public price data at the next nightly refresh after a merge) |
 | CIs affected | `thusa/parsers.py` (`fuel_history_pdf_rows`, new `_decimal_comma`), `tests/test_ppd_fuel.py`, `itil/knowledge/known-errors.md` (KE-012 text), this record, `itil/registers/change-log.md` |

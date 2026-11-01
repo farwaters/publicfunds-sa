@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| Requested by / date (SAST) | Owner via Cavus, 2026-10-23 ~17:46 ("GO"): DEV build of CSI-051 (label part only) |
+| Requested by / date (SAST) | Owner, as reported to the author (PublicFunds), 2026-10-23 ~17:46 ("GO"): DEV build of CSI-051 (label part only) |
 | Environment | DEV only (branch `feat/coast95-lrp` from origin/main 4667179; PR open, not merged, nothing pushed to main) |
 | Type | **Normal** (public label/note text changes at the next nightly refresh after a merge; no figures change) |
 | CIs affected | `thusa/parsers.py` (FUEL_GRADES label), `thusa/publish_data.py` (prices.fuel.about note), `tests/test_publish_data.py`, this record, `itil/registers/change-log.md`, `itil/registers/csi-register.md` |

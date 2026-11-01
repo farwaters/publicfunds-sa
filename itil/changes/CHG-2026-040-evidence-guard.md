@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| Requested by / date (SAST) | Owner via Cavus backlog, 2026-10-25 (CSI-053). **No GO to merge is given; no owner sign-off is recorded** |
+| Requested by / date (SAST) | Owner backlog, as reported to the author (PublicFunds), 2026-10-25 (CSI-053). **No GO to merge is given; no owner sign-off is recorded** |
 | Environment | The merge target is `main`, which is PROD (GitHub Pages serves `main`; the nightly build runs this code from `main`). The owner's GO must name `main` (PROD) and CHG-2026-040. Until then the work is on the branch `chg-2026-040-evidence-guard` (from origin/main `26b0b61`; PR #39 open, not merged, nothing pushed to main) |
 | Type | **Normal-high** (the "Normal — high" row of `itil/change-enablement.md`: "publishing pipeline"; unlike the fuel check of CHG-2026-035 this guard **can block the publish on purpose**) |
 | CIs affected | `thusa/evidence_guard.py` (new, pure), `thusa/publish_data.py` (new `_evidence_guard`, one call in `export`, one extra key in the returned dict), `config/evidence-guard-allow.yaml` (new, `allow: []`), `tests/test_evidence_guard.py` and `tests/fixtures/coverage_pinned_2026-10-25.json` (new), this record, `itil/registers/change-log.md`, the CSI-053 row of `itil/registers/csi-register.md` |
