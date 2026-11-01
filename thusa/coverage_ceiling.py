@@ -212,7 +212,7 @@ def headline_context_lines(cov):
     nxt = by_year.get(h["fye_max"] + 1)
     if nxt and nxt.get("all_core_due") is False:
         hc, ha = h["complete"], h["applicable"] + nxt["applicable"]
-        lines.append(f"Prediction, not a result: from the first data update on or after 1 December {nxt['fye']}, the year {nxt['fy']} counts in "
+        lines.append(f"Projection, not data: from the first data update on or after 1 December {nxt['fye']}, the year {nxt['fy']} counts in "
                      f"the headline. If it then looks like {cov['fy_labels'][gaps[-1]]} does today (no municipality with complete data), "
                      f"the headline would fall to about {_comma(_tenths(hc, ha))}% ({hc} of {ha} municipality-years), because {nxt['fy']} would "
                      f"count as a gap, not because anything got worse, if nothing else changes.")
