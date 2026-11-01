@@ -7,6 +7,13 @@
  "language": "en-ZA",
  "items": [
   {
+   "id": "B20261101T011413Z-25516d1230fe89aa",
+   "url": "https://publicfunds.grokforum.site/apps/public-dashboard/#/changes",
+   "title": "New public data: build B20261101T011413Z",
+   "content_text": "Figures updated or corrected in: departments.json, municipalities.json, prices.json.",
+   "date_published": "2026-11-01T03:15:24+02:00"
+  },
+  {
    "id": "B20261031T010617Z-8a6cd5a7b0de6863",
    "url": "https://publicfunds.grokforum.site/apps/public-dashboard/#/changes",
    "title": "New public data: build B20261031T010617Z",
