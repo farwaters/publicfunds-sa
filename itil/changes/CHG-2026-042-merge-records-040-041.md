@@ -43,8 +43,8 @@ Process records only; no personal information.
 Result: Merged as PR #41 (merge commit `139e18c`, GitHub mergedAt 31 Oct 2026 18:26:05 SAST, tag `snapshot-2026-10-31-1826`). The owner gave the GO in chat: "merge #41 GO". This record quotes the GO. Reviewers did not check the GO independently. No cooling-off record exists. Recorded by CHG-2026-043.
 
 ## Retro review (after merge)
-The reviewer wrote this note after the merge. The note is quoted word for word. Source: Cassian (Build), relayed by Cavus, 31 Oct 2026 18:59 SAST, as reported to the author (PublicFunds).
+The reviewer wrote this note after the merge. The note is quoted word for word. Source: Cassian (Build), 31 Oct 2026 18:59 SAST, as reported to the author (PublicFunds).
 
 > Reviewed after merge, head 1b8556df, FAIL as a gate. No human second reviewer. Cooling-off was not shown. Sign-off was quoted, and the reviewer did not re-check it. This note does not authorize the merge, and it does not undo it.
 
-This note is not an owner GO. Cassian is now the pre-merge reviewer, as relayed by Cavus. Recorded by CHG-2026-043.
+This note is not an owner GO. Cassian is now the pre-merge reviewer, as reported to the author (PublicFunds). Recorded by CHG-2026-043.

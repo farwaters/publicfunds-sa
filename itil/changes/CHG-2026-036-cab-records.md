@@ -28,7 +28,7 @@ The last entry in `changes/CAB-DECISION.md` is the 24 Oct 2026 11:07 SAST GO ("G
 - Change-log conflict: when merging #29 or #31 after #35, `itil/registers/change-log.md` conflicts; use the id-keyed resolver in the #31 RFC (an id-keyed 3-way merge that stops for a human; it takes #35's rows for 031/033/034/036 and adds only the new 030 or 032 row); do not keep all rows. A trial merge of #29 `b2d9139` on main `8708c77` (the merged heads of #35 `4bb020b` and #31 `883ef4b`) conflicts only in `itil/registers/change-log.md`; the resolver gives tree `8e299d1b360dd4fc858f4468039c43c793468644` with 35 rows and pytest 585 passed, 61 skipped, as reported by Validator and Scout and re-run by the author of this change. That tree is for main `8708c77` only and changes with any head, including once the CHG-2026-037 PR merges. #31 merged without #29 gives tree `cbca57cb38d5735bc363ab0c343017d587319dc6` with 34 change-log rows (measured; see the 21:39 SAST section of `changes/CAB-DECISION.md`).
 
 ## Not changed
-Any code, data, config, `public-data/`, `STATUS.md`; the CHG-2026-031 wording patch (branch `chg-2026-031-review-wording-note` stays separate); the wording "relayed by Cavus" in CHG-2026-034; no rows for 030, 032 or 035 exist on main and this PR adds none.
+Any code, data, config, `public-data/`, `STATUS.md`; the CHG-2026-031 wording patch (branch `chg-2026-031-review-wording-note` stays separate); the channel wording in CHG-2026-034 (reworded later by CHG-2026-048); no rows for 030, 032 or 035 exist on main and this PR adds none.
 
 ## Data identical before/after
 Yes. Only markdown under `itil/` and `changes/` changes.
