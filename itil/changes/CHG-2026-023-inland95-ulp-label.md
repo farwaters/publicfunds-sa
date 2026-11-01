@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| Requested by / date (SAST) | Owner via Cavus, 2026-10-23 ~18:42: DEV build of CSI-052 (Inland 95 label only) |
+| Requested by / date (SAST) | Owner, as reported to the author (PublicFunds), 2026-10-23 ~18:42: DEV build of CSI-052 (Inland 95 label only) |
 | Environment | DEV only (branch `feat/inland95-ulp` from origin/main a3c1e07; PR open, not merged, nothing pushed to main) |
 | Type | **Normal** (public label/note text changes at the next nightly refresh after a merge; no figures change) |
 | CIs affected | `thusa/parsers.py` (FUEL_GRADES label), `thusa/publish_data.py` (prices.fuel.about note), `tests/test_publish_data.py`, this record, `itil/registers/change-log.md`, `itil/registers/csi-register.md` |

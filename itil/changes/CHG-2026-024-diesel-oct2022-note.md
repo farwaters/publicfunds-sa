@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| Requested by / date (SAST) | Owner via Cavus, 2026-10-23 ~21:06: docs-only known-error note |
+| Requested by / date (SAST) | Owner, as reported to the author (PublicFunds), 2026-10-23 ~21:06: docs-only known-error note |
 | Environment | Built and tested in DEV (branch `chg-2026-024-diesel-oct2022-note` from origin/main da29dbc; PR open, not merged, nothing pushed to main); released to PROD only through the nightly publish after the owner's merge GO: the manifest `known_errors` gains KE-014 at the next nightly. One GO binds one RFC and one environment |
 | Type | **Standard** (documentation only; no code and no data change; the KE-014 symptom reaches the published manifest `known_errors` at the next nightly, nothing in `public-data/` is edited by hand) |
 | CIs affected | `itil/knowledge/known-errors.md` (KE-014 added), `itil/registers/change-log.md`, this record |

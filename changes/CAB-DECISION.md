@@ -4,7 +4,7 @@
 
 - Environment: PROD (https://publicfunds.grokforum.site/)
 - Change: the routine "PublicFunds nightly refresh and publish" (03:00 SAST), existing data refresh only.
-- Decision: GO, as a standing pre-approved change. Owner's words, relayed by Cavus: "Keep it as a standing approved change".
+- Decision: GO, as a standing pre-approved change. Owner's words, as reported to the author (PublicFunds): "Keep it as a standing approved change".
 - Scope: data refresh and publish only, when the quality gate passes. Any code or product change to the live site still needs its own RFC and GO.
 - Rollback: git history on main (revert the publish commit).
 
@@ -25,7 +25,7 @@
 ## 2026-10-23 15:30 SAST: PR #13 (CHG-2026-016) ratified after the fact
 - Environment: PROD (main).
 - Facts: PR #13 was merged at about 15:22 SAST without a quoted owner GO, so it was a PROD change made without a GO.
-- Decision: ratified by the owner, "fix it" (15:30 SAST, relayed by Cavus). Keep it merged, no revert. The same quote is the GO to merge only branch docs/status-pr13-no-go.
+- Decision: ratified by the owner, "fix it" (15:30 SAST, as reported to the author (PublicFunds)). Keep it merged, no revert. The same quote is the GO to merge only branch docs/status-pr13-no-go.
 - Rule: every merge to main needs the owner's quoted GO for that PR; the only standing exception is the nightly data refresh. The gate locks again after this merge.
 
 ## 2026-10-23 15:54 SAST: PR #15 (CHG-2026-017, Known unknowns v2) to PROD
@@ -56,12 +56,12 @@
 - Rollback: `git revert -m 1 d54e362` (merge commit of PR #19). The gate locks again after the merge.
 
 ## 2026-10-23 19:03 SAST: PR #20 (CHG-2026-022, Sept 2022 fuel row) to PROD
-- Owner's GO: "GO on both", given at 19:03 SAST on 23 Oct 2026 (asked in Cavus's chat: "Merge both PublicFunds PRs to the live site?"; verified).
+- Owner's GO: "GO on both", given at 19:03 SAST on 23 Oct 2026 (as reported to the author (PublicFunds); question asked: "Merge both PublicFunds PRs to the live site?"; verified).
 - Checks (TEAM-PROTOCOL): Validator gave expert PASS and charter PASS; Scout gave shadow PASS and drift PASS; popia-review PASS.
 - Rollback: `git revert -m 1 65bc8dd` (merge commit of PR #20). The gate locks again after the merge.
 
 ## 2026-10-23 19:03 SAST: PR #21 (CHG-2026-023, Inland 95 ULP label) to PROD
-- Owner's GO: "GO on both", given at 19:03 SAST on 23 Oct 2026 (asked in Cavus's chat: "Merge both PublicFunds PRs to the live site?"; verified).
+- Owner's GO: "GO on both", given at 19:03 SAST on 23 Oct 2026 (as reported to the author (PublicFunds); question asked: "Merge both PublicFunds PRs to the live site?"; verified).
 - Checks (TEAM-PROTOCOL): Validator gave expert PASS and charter PASS; Scout gave shadow PASS and drift PASS; popia-review PASS.
 - Rollback: `git revert -m 1 74456bc` (merge commit of PR #21). The gate locks again after the merge.
 

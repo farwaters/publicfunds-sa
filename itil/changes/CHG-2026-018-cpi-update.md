@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| Requested by / date (SAST) | Owner via Cavus, 2026-10-23 ~16:00 ("GO" for the DEV build of CSI-031) |
+| Requested by / date (SAST) | Owner, as reported to the author (PublicFunds), 2026-10-23 ~16:00 ("GO" for the DEV build of CSI-031) |
 | Environment | DEV only (branch `feat/cpi-update` from origin/main 142c0d4; PR open, not merged, nothing pushed to main) |
 | Type | **Normal**. New ingest source `imf_cpi`, parser, staging, curated selection rule, publisher label |
 | CIs affected | `thusa/connectors/prices.py`, `thusa/parsers.py`, `thusa/staging.py`, `thusa/cli.py`, `thusa/models/curated/090_price_benchmarks.sql`, `thusa/publish_data.py`, `thusa/dq.py`, `config/sources.yaml`, `config/public-data.yaml`, `apps/public-dashboard/index.html`, `tests/test_cpi_imf.py` (new), this record, `itil/registers/change-log.md` |

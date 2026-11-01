@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| Requested by / date (SAST) | Owner via Cavus backlog, 2026-10-24. No GO to merge is given |
+| Requested by / date (SAST) | Owner backlog, as reported to the author (PublicFunds), 2026-10-24. No GO to merge is given |
 | Environment | The merge target is `main`, which is PROD (GitHub Pages serves `main`; the nightly build runs this code from `main`). The owner's GO must name `main` (PROD) and CHG-2026-035. Until then the work is on the branch `chg-2026-035-fuel-continuity` (from origin/main `6abd695`, the pre-change commit; PR open, not merged, nothing pushed to main). **25 Oct 2026 (SAST):** main `d1ece5d` merged into the branch (merge commit, no rebase); only `itil/registers/change-log.md` conflicted and was resolved by the id-keyed resolver of CHG-2026-032 (38 rows, ids unique) |
 | Type | **Normal-high** (the "Normal — high" row of `itil/change-enablement.md`: it touches the data-quality gate in `thusa/dq.py` that guards the publish, which is the safer literal fit for "publishing pipeline". Normal-medium is defensible by the CHG-2026-018 precedent, which added the warn-only DQ check `cpi_fresh_imf_info` to `thusa/dq.py` as Normal. The owner still decides the tier. This is a wording change of the label only; the code is unchanged. A gap is warn-only and cannot fail a build; if the check itself errors it reports `error: ...`, which the build counts as a failure like any broken check (exit 2, publish blocked), see Risk) |
 | CIs affected | `thusa/dq.py` (new `FUEL_KNOWN_GAPS`, `month_gaps`, `fuel_continuity`, one extra result in `run()`), `scripts/fuel_continuity.py` (new), `tests/test_fuel_continuity.py` (new), this record, `itil/registers/change-log.md` |
